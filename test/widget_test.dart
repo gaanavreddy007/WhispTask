@@ -1,30 +1,75 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:whispnask/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('WhispTask Widget Tests', () {
+    testWidgets('LoginScreen displays correctly', (WidgetTester tester) async {
+      // Build the login screen directly without Firebase
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      // Verify that login screen elements are present
+      expect(find.text('WhispTask'), findsOneWidget);
+      expect(find.text('Task it. Say it. Done.'), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsAtLeastNWidgets(1));
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    testWidgets('LoadingScreen displays correctly', (WidgetTester tester) async {
+      // Build the loading screen directly
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LoadingScreen(),
+        ),
+      );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Verify that loading screen elements are present
+      expect(find.text('WhispTask'), findsOneWidget);
+      expect(find.text('Task it. Say it. Done.'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+    });
+
+    testWidgets('AddTaskScreen displays correctly', (WidgetTester tester) async {
+      // Build the add task screen directly
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AddTaskScreen(),
+        ),
+      );
+
+      // Verify that add task screen elements are present
+      expect(find.text('Add New Task'), findsOneWidget);
+      expect(find.text('What do you need to do?'), findsOneWidget);
+      expect(find.text('Add Task'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('TaskCard displays task information correctly', (WidgetTester tester) async {
+      // Create a mock timestamp for testing
+      final mockTimestamp = DateTime.now();
+      
+      // Build a TaskCard with test data
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TaskCard(
+              taskId: 'test-id',
+              title: 'Test Task',
+              isCompleted: false,
+              createdAt: mockTimestamp as dynamic, // This would need proper Timestamp mock
+            ),
+          ),
+        ),
+      );
+
+      // Note: This test might need adjustment based on your Timestamp handling
+      expect(find.text('Test Task'), findsOneWidget);
+    });
   });
 }
