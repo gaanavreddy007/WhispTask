@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ Added for Timestamp
 
-import 'package:whispnask/main.dart';
+import 'package:whisptask/main.dart';
+import 'package:whisptask/screens/add_task_screen.dart';
+import 'package:whisptask/screens/login_screen.dart';
+import 'package:whisptask/widgets/task_card.dart';
 
 void main() {
   group('WhispTask Widget Tests', () {
     testWidgets('LoginScreen displays correctly', (WidgetTester tester) async {
       // Build the login screen directly without Firebase
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: LoginScreen(),
         ),
       );
@@ -23,7 +27,7 @@ void main() {
     testWidgets('LoadingScreen displays correctly', (WidgetTester tester) async {
       // Build the loading screen directly
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: LoadingScreen(),
         ),
       );
@@ -38,7 +42,7 @@ void main() {
     testWidgets('AddTaskScreen displays correctly', (WidgetTester tester) async {
       // Build the add task screen directly
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: AddTaskScreen(),
         ),
       );
@@ -51,8 +55,8 @@ void main() {
     });
 
     testWidgets('TaskCard displays task information correctly', (WidgetTester tester) async {
-      // Create a mock timestamp for testing
-      final mockTimestamp = DateTime.now();
+      // ✅ Create a proper Firebase Timestamp for testing
+      final mockTimestamp = Timestamp.fromDate(DateTime.now());
       
       // Build a TaskCard with test data
       await tester.pumpWidget(
@@ -62,13 +66,13 @@ void main() {
               taskId: 'test-id',
               title: 'Test Task',
               isCompleted: false,
-              createdAt: mockTimestamp as dynamic, // This would need proper Timestamp mock
+              createdAt: mockTimestamp,
             ),
           ),
         ),
       );
 
-      // Note: This test might need adjustment based on your Timestamp handling
+      // Verify task title is displayed
       expect(find.text('Test Task'), findsOneWidget);
     });
   });

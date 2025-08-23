@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	 <!-- Voice Recognition Permissions -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>WhispTask needs access to your microphone to enable voice input for creating tasks</string>
+    
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>WhispTask uses speech recognition to convert your voice commands into tasks</string>
+    
 </dict>
 </plist>
