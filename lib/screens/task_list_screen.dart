@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import '../widgets/notification_test_widget.dart';
+import '../widgets/task_card.dart'; // Import your updated TaskCard
 import 'add_task_screen.dart';
 import 'voice_input_screen.dart';
 
@@ -15,18 +18,37 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   String _selectedCategory = 'all';
+  bool _showTestPanel = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this); // CHANGED: Added Reminders tab
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WhispTask'),
+        title: Row(
+          children: [
+            SizedBox(
+              height: 32,
+              width: 32,
+              child: Image.asset(
+                'assets/images/app_icon.png',  // Changed from logo.png
+                height: 32,
+                width: 32,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.task_alt, color: Colors.white, size: 24);
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text('WhispTask'),
+          ],
+        ),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -34,13 +56,40 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
+          isScrollable: true, // NEW: Make tabs scrollable
           tabs: const [
             Tab(text: 'All', icon: Icon(Icons.list)),
             Tab(text: 'Pending', icon: Icon(Icons.pending)),
             Tab(text: 'Completed', icon: Icon(Icons.check_circle)),
+            Tab(text: 'Reminders', icon: Icon(Icons.notifications)), // NEW: Reminders tab
           ],
         ),
         actions: [
+          // Debug menu in debug mode only
+          if (kDebugMode)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.bug_report, color: Colors.yellow),
+              tooltip: 'Debug Menu',
+              onSelected: (value) {
+                if (value == 'test_notifications') {
+                  setState(() {
+                    _showTestPanel = !_showTestPanel;
+                  });
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'test_notifications',
+                  child: Row(
+                    children: [
+                      Icon(_showTestPanel ? Icons.visibility_off : Icons.notifications_active),
+                      const SizedBox(width: 8),
+                      Text(_showTestPanel ? 'Hide Test Panel' : 'Show Test Panel'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
             onSelected: (value) {
@@ -69,41 +118,94 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           ),
         ],
       ),
-      body: Consumer<TaskProvider>(
-        builder: (context, taskProvider, child) {
-          if (taskProvider.isLoading && taskProvider.tasks.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (taskProvider.error != null && taskProvider.tasks.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${taskProvider.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      taskProvider.clearError();
-                    },
-                    child: const Text('Retry'),
+      body: Column(
+        children: [
+          // Notification Test Panel - Only show in debug mode
+          if (kDebugMode && _showTestPanel)
+            const NotificationTestWidget(),
+          
+          // NEW: Reminder Stats Bar
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              final remindersCount = taskProvider.tasksWithReminders.length;
+              final overdueCount = taskProvider.overdueReminders.length;
+              
+              if (remindersCount == 0) return const SizedBox.shrink();
+              
+              return Container(
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: overdueCount > 0 ? Colors.red[50] : Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: overdueCount > 0 ? Colors.red[200]! : Colors.blue[200]!,
                   ),
-                ],
-              ),
-            );
-          }
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      overdueCount > 0 ? Icons.warning : Icons.notifications_active,
+                      size: 16,
+                      color: overdueCount > 0 ? Colors.red[600] : Colors.blue[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      overdueCount > 0 
+                        ? '$overdueCount overdue reminder${overdueCount > 1 ? 's' : ''}'
+                        : '$remindersCount active reminder${remindersCount > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: overdueCount > 0 ? Colors.red[700] : Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          
+          // Main content
+          Expanded(
+            child: Consumer<TaskProvider>(
+              builder: (context, taskProvider, child) {
+                if (taskProvider.isLoading && taskProvider.tasks.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildTaskList(taskProvider, taskProvider.tasks),
-              _buildTaskList(taskProvider, taskProvider.incompleteTasks),
-              _buildTaskList(taskProvider, taskProvider.completedTasks),
-            ],
-          );
-        },
+                if (taskProvider.error != null && taskProvider.tasks.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error: ${taskProvider.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            taskProvider.clearError();
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildTaskList(taskProvider, taskProvider.tasks),
+                    _buildTaskList(taskProvider, taskProvider.incompleteTasks),
+                    _buildTaskList(taskProvider, taskProvider.completedTasks),
+                    _buildRemindersList(taskProvider), // NEW: Reminders tab
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -186,9 +288,88 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
         itemCount: filteredTasks.length,
         itemBuilder: (context, index) {
           final task = filteredTasks[index];
-          return TaskTile(task: task);
+          return TaskCard(task: task); // UPDATED: Use new TaskCard with full task object
         },
       ),
+    );
+  }
+
+  // NEW: Build reminders list
+  Widget _buildRemindersList(TaskProvider taskProvider) {
+    final tasksWithReminders = taskProvider.tasksWithReminders;
+    final overdueReminders = taskProvider.overdueReminders;
+    
+    if (tasksWithReminders.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'No reminders set.\nAdd reminders to your tasks!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Sort reminders by time
+    final sortedReminders = [...tasksWithReminders]
+      ..sort((a, b) {
+        if (a.reminderTime == null) return 1;
+        if (b.reminderTime == null) return -1;
+        return a.reminderTime!.compareTo(b.reminderTime!);
+      });
+
+    return Column(
+      children: [
+        // Overdue section
+        if (overdueReminders.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.red[600], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '${overdueReminders.length} Overdue Reminder${overdueReminders.length > 1 ? 's' : ''}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        
+        // Reminders list
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: sortedReminders.length,
+              itemBuilder: (context, index) {
+                final task = sortedReminders[index];
+                return TaskCard(task: task);
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -199,6 +380,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
   }
 }
 
+// UPDATED TaskTile with reminder indicators
 class TaskTile extends StatelessWidget {
   final Task task;
 
@@ -288,6 +470,21 @@ class TaskTile extends StatelessWidget {
                         case 'duplicate':
                           _duplicateTask(context, task);
                           break;
+                        // NEW: Reminder actions
+                        case 'snooze_5':
+                          Provider.of<TaskProvider>(context, listen: false)
+                              .snoozeReminder(task.id!, 5);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Reminder snoozed for 5 minutes')),
+                          );
+                          break;
+                        case 'cancel_reminder':
+                          Provider.of<TaskProvider>(context, listen: false)
+                              .cancelReminder(task.id!);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Reminder cancelled')),
+                          );
+                          break;
                       }
                     },
                     itemBuilder: (context) => [
@@ -311,6 +508,29 @@ class TaskTile extends StatelessWidget {
                           ],
                         ),
                       ),
+                      // NEW: Reminder options
+                      if (task.hasActiveReminder && !task.isCompleted) ...[
+                        const PopupMenuItem(
+                          value: 'snooze_5',
+                          child: Row(
+                            children: [
+                              Icon(Icons.snooze, size: 18),
+                              SizedBox(width: 8),
+                              Text('Snooze 5 min'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'cancel_reminder',
+                          child: Row(
+                            children: [
+                              Icon(Icons.notifications_off, size: 18),
+                              SizedBox(width: 8),
+                              Text('Cancel Reminder'),
+                            ],
+                          ),
+                        ),
+                      ],
                       const PopupMenuItem(
                         value: 'delete',
                         child: Row(
@@ -339,11 +559,50 @@ class TaskTile extends StatelessWidget {
                     _buildDueDateChip(task.dueDate!),
                   if (task.isRecurring)
                     _buildRecurringChip(task.recurringPattern ?? 'recurring'),
+                  // NEW: Reminder chip
+                  if (task.hasActiveReminder)
+                    _buildReminderChip(task),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // NEW: Build reminder chip
+  Widget _buildReminderChip(Task task) {
+    final isOverdue = task.reminderTime != null && 
+                     task.reminderTime!.isBefore(DateTime.now()) && 
+                     !task.isCompleted;
+    
+    final Color color = isOverdue ? Colors.red : Colors.blue;
+    final IconData icon = isOverdue ? Icons.warning : Icons.notifications_active;
+    final String text = isOverdue ? 'OVERDUE' : 'REMINDER';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        // ignore: deprecated_member_use
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color, width: 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -541,7 +800,11 @@ class TaskTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Are you sure you want to delete this task?'),
+              Text(
+                task.hasActiveReminder 
+                  ? 'This task has an active reminder. Deleting it will also cancel the reminder.'
+                  : 'Are you sure you want to delete this task?'
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -572,8 +835,12 @@ class TaskTile extends StatelessWidget {
                     if (success) {
                       // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Task deleted successfully'),
+                        SnackBar(
+                          content: Text(
+                            task.hasActiveReminder 
+                              ? 'Task and reminder deleted successfully'
+                              : 'Task deleted successfully'
+                          ),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -607,6 +874,9 @@ class TaskTile extends StatelessWidget {
       color: originalTask.color,
       isRecurring: originalTask.isRecurring,
       recurringPattern: originalTask.recurringPattern,
+      // NEW: Don't copy reminder settings for duplicated tasks
+      hasReminder: false,
+      reminderTime: null,
     );
 
     Navigator.push(
@@ -618,6 +888,7 @@ class TaskTile extends StatelessWidget {
   }
 }
 
+// UPDATED TaskDetailSheet with reminder information
 class TaskDetailSheet extends StatelessWidget {
   final Task task;
 
@@ -647,13 +918,42 @@ class TaskDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Title
-          Text(
-            task.title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          // Title with reminder indicator
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (task.hasActiveReminder)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.notifications_active, size: 14, color: Colors.blue[700]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'REMINDER',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
 
@@ -675,6 +975,22 @@ class TaskDetailSheet extends StatelessWidget {
               'Due Date',
               '${task.dueDate!.day}/${task.dueDate!.month}/${task.dueDate!.year} at ${task.dueDate!.hour}:${task.dueDate!.minute.toString().padLeft(2, '0')}',
             ),
+
+          // NEW: Reminder details
+          if (task.hasReminder) ...[
+            if (task.reminderTime != null)
+              _buildDetailRow(
+                'Reminder Time',
+                '${task.reminderTime!.day}/${task.reminderTime!.month}/${task.reminderTime!.year} at ${task.reminderTime!.hour}:${task.reminderTime!.minute.toString().padLeft(2, '0')}',
+              ),
+            _buildDetailRow('Reminder Type', task.reminderType.toUpperCase()),
+            if (task.notificationTone != 'default')
+              _buildDetailRow('Notification Tone', task.notificationTone.toUpperCase()),
+            if (task.repeatDays.isNotEmpty)
+              _buildDetailRow('Repeat Days', task.repeatDays.join(', ').toUpperCase()),
+            if (task.reminderMinutesBefore > 0)
+              _buildDetailRow('Remind Before', '${task.reminderMinutesBefore} minutes'),
+          ],
 
           if (task.isRecurring)
             _buildDetailRow(
@@ -731,6 +1047,47 @@ class TaskDetailSheet extends StatelessWidget {
             ],
           ),
 
+          // NEW: Reminder actions
+          if (task.hasActiveReminder && !task.isCompleted) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Provider.of<TaskProvider>(context, listen: false)
+                          .snoozeReminder(task.id!, 15);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Reminder snoozed for 15 minutes')),
+                      );
+                    },
+                    icon: const Icon(Icons.snooze),
+                    label: const Text('Snooze 15m'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Provider.of<TaskProvider>(context, listen: false)
+                          .cancelReminder(task.id!);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Reminder cancelled')),
+                      );
+                    },
+                    icon: const Icon(Icons.notifications_off),
+                    label: const Text('Cancel Reminder'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
           // Add bottom padding for safe area
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
@@ -745,7 +1102,7 @@ class TaskDetailSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 100,
             child: Text(
               label,
               style: const TextStyle(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import '../utils/notification_helper.dart'; // ADD THIS IMPORT
 
 class AddTaskScreen extends StatefulWidget {
   final Task? taskToEdit;
@@ -23,6 +24,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   TimeOfDay? _dueTime;
   bool _isRecurring = false;
   String? _recurringPattern;
+
+  // NEW: Reminder fields
+  bool _hasReminder = false;
+  DateTime? _reminderTime;
+  String _reminderType = 'once';
+  String _notificationTone = 'default';
+  List<String> _repeatDays = [];
 
   final List<String> _priorities = ['high', 'medium', 'low'];
   final List<String> _categories = ['general', 'work', 'personal', 'health', 'shopping', 'study'];
@@ -47,6 +55,34 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
     _isRecurring = task.isRecurring;
     _recurringPattern = task.recurringPattern;
+
+    // NEW: Populate reminder fields
+    _hasReminder = task.hasReminder;
+    _reminderTime = task.reminderTime;
+    _reminderType = task.reminderType;
+    _notificationTone = task.notificationTone;
+    _repeatDays = List.from(task.repeatDays);
+  }
+
+  // NEW: Select reminder method
+  Future<void> _selectReminder() async {
+    final result = await NotificationHelper.showReminderOptionsSheet(
+      context,
+      initialTime: _reminderTime ?? DateTime.now().add(const Duration(hours: 1)),
+      initialType: _reminderType,
+      initialTone: _notificationTone,
+      initialRepeatDays: _repeatDays,
+    );
+
+    if (result != null) {
+      setState(() {
+        _reminderTime = result['time'];
+        _reminderType = result['type'];
+        _notificationTone = result['tone'];
+        _repeatDays = List<String>.from(result['repeatDays']);
+        _hasReminder = true;
+      });
+    }
   }
 
   @override
@@ -299,6 +335,143 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // NEW: Reminder Section
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.notifications),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Reminder',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const Spacer(),
+                              Switch(
+                                value: _hasReminder,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _hasReminder = value;
+                                    if (!value) {
+                                      _reminderTime = null;
+                                      _reminderType = 'once';
+                                      _notificationTone = 'default';
+                                      _repeatDays = [];
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          
+                          if (_hasReminder) ...[
+                            const SizedBox(height: 12),
+                            ListTile(
+                              leading: const Icon(Icons.schedule),
+                              title: const Text('Set Reminder Time'),
+                              subtitle: Text(_reminderTime == null 
+                                  ? 'Tap to set reminder' 
+                                  : NotificationHelper.formatReminderTime(_reminderTime)),
+                              trailing: _reminderTime != null 
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        setState(() {
+                                          _reminderTime = null;
+                                        });
+                                      },
+                                    )
+                                  : const Icon(Icons.arrow_forward_ios),
+                              onTap: _selectReminder,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            
+                            if (_reminderTime != null) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(NotificationHelper.getReminderIcon(_reminderType), 
+                                             size: 16, color: Colors.blue),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Type: ${NotificationHelper.reminderTypes[_reminderType]}',
+                                          style: const TextStyle(fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(NotificationHelper.getNotificationToneIcon(_notificationTone), 
+                                             size: 16, color: Colors.blue),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Tone: ${NotificationHelper.notificationTones[_notificationTone]}',
+                                          style: const TextStyle(fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                    if (_reminderType == 'weekly' && _repeatDays.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.date_range, size: 16, color: Colors.blue),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              'Days: ${_repeatDays.map((d) => d.toUpperCase()).join(', ')}',
+                                              style: const TextStyle(fontWeight: FontWeight.w500),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            
+                            // Validation message for reminder
+                            if (_hasReminder && _reminderTime != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  NotificationHelper.getTimeUntilReminder(_reminderTime) == 'Overdue'
+                                      ? '⚠️ Reminder time is in the past'
+                                      : '✅ Reminder in ${NotificationHelper.getTimeUntilReminder(_reminderTime)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: NotificationHelper.getTimeUntilReminder(_reminderTime) == 'Overdue'
+                                        ? Colors.red
+                                        : Colors.green,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Recurring Task Section
                   Card(
                     child: Padding(
@@ -508,6 +681,17 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         return;
       }
 
+      // NEW: Validate reminder time
+      if (_hasReminder && _reminderTime != null && _reminderTime!.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reminder time cannot be in the past'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final task = Task(
         id: widget.taskToEdit?.id,
         title: _titleController.text.trim(),
@@ -521,6 +705,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         isRecurring: _isRecurring,
         recurringPattern: _recurringPattern,
         isCompleted: widget.taskToEdit?.isCompleted ?? false,
+        
+        // NEW: Include reminder fields
+        hasReminder: _hasReminder,
+        reminderTime: _reminderTime,
+        reminderType: _reminderType,
+        notificationTone: _notificationTone,
+        repeatDays: _repeatDays,
+        isReminderActive: _hasReminder,
       );
 
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
@@ -539,9 +731,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.taskToEdit == null 
-                ? 'Task added successfully' 
-                : 'Task updated successfully'),
+                ? '✅ Task added successfully ${_hasReminder ? "with reminder" : ""}' 
+                : '✅ Task updated successfully ${_hasReminder ? "with reminder" : ""}'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }

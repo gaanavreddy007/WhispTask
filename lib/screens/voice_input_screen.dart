@@ -5,7 +5,7 @@ import '../providers/task_provider.dart';
 import '../models/task.dart';
 
 class VoiceInputScreen extends StatefulWidget {
-  const VoiceInputScreen({Key? key}) : super(key: key);
+  const VoiceInputScreen({super.key});
 
   @override
   State<VoiceInputScreen> createState() => _VoiceInputScreenState();

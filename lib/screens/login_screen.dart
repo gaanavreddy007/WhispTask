@@ -33,10 +33,22 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.mic,
-                  size: 60,
-                  color: Color(0xFF1976D2),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(25),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Image.asset(
+                      'assets/images/app_icon.png',  // Changed from logo.png
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.mic,
+                          size: 60,
+                          color: Color(0xFF1976D2),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
               

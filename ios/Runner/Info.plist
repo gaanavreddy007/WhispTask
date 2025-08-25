@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Whispnask</string>
+	<string>WhispTask</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>whispnask</string>
+	<string>whisptask</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,12 +45,57 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	 <!-- Voice Recognition Permissions -->
-    <key>NSMicrophoneUsageDescription</key>
-    <string>WhispTask needs access to your microphone to enable voice input for creating tasks</string>
-    
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>WhispTask uses speech recognition to convert your voice commands into tasks</string>
-    
+	
+	<!-- Existing permissions -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WhispTask needs microphone access for voice commands and task input</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>WhispTask uses speech recognition to convert your voice to text for creating tasks</string>
+	
+	<!-- NEW - Notification permissions for Day 4 -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>WhispTask needs notification permission to remind you about your tasks and to-dos</string>
+	
+	<!-- NEW - Background modes for notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-processing</string>
+		<string>remote-notification</string>
+	</array>
+	
+	<!-- NEW - Firebase configuration -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	
+	<!-- NEW - Allow arbitrary loads for development (remove in production) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	
+	<!-- NEW - URL schemes for deep linking -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.computepool.whisptask</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>whisptask</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- NEW - Notification categories -->
+	<key>UIUserNotificationSettings</key>
+	<dict>
+		<key>UIUserNotificationTypeAlert</key>
+		<true/>
+		<key>UIUserNotificationTypeBadge</key>
+		<true/>
+		<key>UIUserNotificationTypeSound</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
