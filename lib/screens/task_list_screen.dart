@@ -1,10 +1,14 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/notification_test_widget.dart';
-import '../widgets/task_card.dart'; // Import your updated TaskCard
+import '../widgets/task_card.dart';
+import '../widgets/user_avatar.dart';
 import 'add_task_screen.dart';
 import 'voice_input_screen.dart';
 
@@ -36,7 +40,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
               height: 32,
               width: 32,
               child: Image.asset(
-                'assets/images/app_icon.png',  // Changed from logo.png
+                'assets/images/app_icon.png',
                 height: 32,
                 width: 32,
                 fit: BoxFit.contain,
@@ -49,26 +53,82 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             const Text('WhispTask'),
           ],
         ),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        // FORCE specific colors to override theme
+        backgroundColor: const Color(0xFF1976D2), // Force blue background
+        foregroundColor: Colors.white,            // Force white text/icons
+        elevation: 2,                            // Add slight elevation
+        centerTitle: false,                      // Align title to left
+        
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
-          isScrollable: true, // NEW: Make tabs scrollable
+          indicatorWeight: 3,
+          isScrollable: true,
           tabs: const [
-            Tab(text: 'All', icon: Icon(Icons.list)),
-            Tab(text: 'Pending', icon: Icon(Icons.pending)),
-            Tab(text: 'Completed', icon: Icon(Icons.check_circle)),
-            Tab(text: 'Reminders', icon: Icon(Icons.notifications)), // NEW: Reminders tab
+            Tab(text: 'All', icon: Icon(Icons.list, size: 20)),
+            Tab(text: 'Pending', icon: Icon(Icons.pending, size: 20)),
+            Tab(text: 'Completed', icon: Icon(Icons.check_circle, size: 20)),
+            Tab(text: 'Reminders', icon: Icon(Icons.notifications, size: 20)),
           ],
         ),
+        
         actions: [
+          // User Avatar - Navigate to Profile
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              if (authProvider.user != null) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      print('Profile button tapped'); // Debug print
+                      Navigator.pushNamed(context, '/profile');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: UserAvatar(
+                        user: authProvider.user!,
+                        radius: 18,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+
+          // Settings Icon - Navigate to Account Settings  
+          Container(
+            margin: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              icon: const Icon(
+                Icons.settings,
+                color: Colors.white, // Force white color
+                size: 24,
+              ),
+              tooltip: 'Account Settings',
+              onPressed: () {
+                print('Settings button tapped'); // Debug print
+                Navigator.pushNamed(context, '/account-settings');
+              },
+            ),
+          ),
+
           // Debug menu in debug mode only
           if (kDebugMode)
             PopupMenuButton<String>(
-              icon: const Icon(Icons.bug_report, color: Colors.yellow),
+              icon: const Icon(
+                Icons.bug_report, 
+                color: Colors.yellow,
+                size: 24,
+              ),
               tooltip: 'Debug Menu',
               onSelected: (value) {
                 if (value == 'test_notifications') {
@@ -90,31 +150,111 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                 ),
               ],
             ),
+
+          // Filter menu
           PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(
+              Icons.filter_list,
+              color: Colors.white, // Force white color
+              size: 24,
+            ),
+            tooltip: 'Filter Tasks',
             onSelected: (value) {
               setState(() {
                 _selectedCategory = value;
               });
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'all', child: Text('All Categories')),
-              const PopupMenuItem(value: 'general', child: Text('General')),
-              const PopupMenuItem(value: 'work', child: Text('Work')),
-              const PopupMenuItem(value: 'personal', child: Text('Personal')),
-              const PopupMenuItem(value: 'health', child: Text('Health')),
-              const PopupMenuItem(value: 'shopping', child: Text('Shopping')),
-              const PopupMenuItem(value: 'study', child: Text('Study')),
+              const PopupMenuItem(
+                value: 'all', 
+                child: Row(
+                  children: [
+                    Icon(Icons.all_inclusive),
+                    SizedBox(width: 8),
+                    Text('All Categories'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'general', 
+                child: Row(
+                  children: [
+                    Icon(Icons.category),
+                    SizedBox(width: 8),
+                    Text('General'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'work', 
+                child: Row(
+                  children: [
+                    Icon(Icons.work),
+                    SizedBox(width: 8),
+                    Text('Work'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'personal', 
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 8),
+                    Text('Personal'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'health', 
+                child: Row(
+                  children: [
+                    Icon(Icons.health_and_safety),
+                    SizedBox(width: 8),
+                    Text('Health'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'shopping', 
+                child: Row(
+                  children: [
+                    Icon(Icons.shopping_cart),
+                    SizedBox(width: 8),
+                    Text('Shopping'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'study', 
+                child: Row(
+                  children: [
+                    Icon(Icons.school),
+                    SizedBox(width: 8),
+                    Text('Study'),
+                  ],
+                ),
+              ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddTaskScreen()),
-              );
-            },
+          
+          // Add Task Button
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: const Icon(
+                Icons.add,
+                color: Colors.white, // Force white color
+                size: 28,
+              ),
+              tooltip: 'Add Task',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddTaskScreen()),
+                );
+              },
+            ),
           ),
         ],
       ),

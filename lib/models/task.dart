@@ -6,12 +6,14 @@ class Task {
   String? description;
   DateTime createdAt;
   DateTime? dueDate;
+  DateTime? completedAt;
   bool isCompleted;
   String priority; // 'high', 'medium', 'low'
   String category;
   String? color;
   bool isRecurring;
   String? recurringPattern; // 'daily', 'weekly', 'monthly'
+  String? userId; // User ID for task ownership
   
   // NEW - Reminder/Notification fields
   bool hasReminder;
@@ -29,12 +31,14 @@ class Task {
     this.description,
     required this.createdAt,
     this.dueDate,
+    this.completedAt,
     this.isCompleted = false,
     this.priority = 'medium',
     this.category = 'general',
     this.color,
     this.isRecurring = false,
     this.recurringPattern,
+    this.userId,
     // NEW reminder defaults
     this.hasReminder = false,
     this.reminderTime,
@@ -53,12 +57,14 @@ class Task {
       'description': description,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'dueDate': dueDate?.millisecondsSinceEpoch,
+      'completedAt': completedAt?.millisecondsSinceEpoch,
       'isCompleted': isCompleted,
       'priority': priority,
       'category': category,
       'color': color,
       'isRecurring': isRecurring,
       'recurringPattern': recurringPattern,
+      'userId': userId,
       // NEW reminder fields
       'hasReminder': hasReminder,
       'reminderTime': reminderTime?.millisecondsSinceEpoch,
@@ -83,12 +89,16 @@ class Task {
       dueDate: map['dueDate'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(map['dueDate']) 
           : null,
+      completedAt: map['completedAt'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(map['completedAt']) 
+          : null,
       isCompleted: map['isCompleted'] ?? false,
       priority: map['priority'] ?? 'medium',
       category: map['category'] ?? 'general',
       color: map['color'],
       isRecurring: map['isRecurring'] ?? false,
       recurringPattern: map['recurringPattern'],
+      userId: map['userId'],
       // NEW reminder fields with defaults
       hasReminder: map['hasReminder'] ?? false,
       reminderTime: map['reminderTime'] != null 
@@ -109,12 +119,14 @@ class Task {
     String? description,
     DateTime? createdAt,
     DateTime? dueDate,
+    DateTime? completedAt,
     bool? isCompleted,
     String? priority,
     String? category,
     String? color,
     bool? isRecurring,
     String? recurringPattern,
+    String? userId,
     bool? hasReminder,
     DateTime? reminderTime,
     String? reminderType,
@@ -130,12 +142,14 @@ class Task {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       dueDate: dueDate ?? this.dueDate,
+      completedAt: completedAt ?? this.completedAt,
       isCompleted: isCompleted ?? this.isCompleted,
       priority: priority ?? this.priority,
       category: category ?? this.category,
       color: color ?? this.color,
       isRecurring: isRecurring ?? this.isRecurring,
       recurringPattern: recurringPattern ?? this.recurringPattern,
+      userId: userId ?? this.userId,
       hasReminder: hasReminder ?? this.hasReminder,
       reminderTime: reminderTime ?? this.reminderTime,
       reminderType: reminderType ?? this.reminderType,

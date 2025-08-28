@@ -419,6 +419,32 @@ class NotificationService {
     debugPrint('🗑️ Cancelled notification: $id');
   }
 
+  // Static method for canceling notifications
+  static Future<void> cancelNotificationStatic(int id) async {
+    final instance = NotificationService();
+    await instance.cancelNotification(id);
+  }
+
+  // Schedule a notification (alias for scheduleTaskReminder)
+  Future<void> scheduleNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    String? payload,
+  }) async {
+    final task = Task(
+      id: id.toString(),
+      title: title,
+      description: body,
+      createdAt: DateTime.now(),
+      reminderTime: scheduledTime,
+      hasReminder: true,
+      notificationId: id.toString(),
+    );
+    await scheduleTaskReminder(task);
+  }
+
   // Cancel all notifications
   Future<void> cancelAllNotifications() async {
     await _flutterLocalNotificationsPlugin.cancelAll();

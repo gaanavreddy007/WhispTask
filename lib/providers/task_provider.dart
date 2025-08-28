@@ -1,411 +1,560 @@
-import 'package:flutter/foundation.dart';
+// ignore_for_file: avoid_print, unused_field
+
+import 'package:flutter/material.dart';
 import 'dart:async';
+
 import '../models/task.dart';
 import '../services/task_service.dart';
 import '../services/notification_service.dart';
+import '../providers/auth_provider.dart';
 
-class TaskProvider with ChangeNotifier {
+class TaskProvider extends ChangeNotifier {
+  // Private fields
   final TaskService _taskService = TaskService();
-  final NotificationService _notificationService = NotificationService();
+  AuthProvider? _authProvider;
+  String? _currentUserId;
   
   List<Task> _tasks = [];
-  List<Task> _upcomingReminders = [];
+  List<Task> _completedTasks = [];
+  List<Task> _pendingTasks = [];
+  List<Task> _overdueeTasks = [];
+  List<Task> _todayTasks = [];
+  
   bool _isLoading = false;
-  bool _isCreating = false;
-  bool _isUpdating = false;
-  bool _isDeleting = false;
-  bool _isSchedulingReminder = false;
-  String? _error;
-  StreamSubscription<List<Task>>? _tasksSubscription;
-  StreamSubscription<List<Task>>? _remindersSubscription;
-
+  String _errorMessage = '';
+  String _selectedCategory = 'All';
+  String _selectedPriority = 'All';
+  String _searchQuery = '';
+  
+  // Task statistics
+  Map<String, int> _taskStats = {
+    'total': 0,
+    'completed': 0,
+    'pending': 0,
+    'overdue': 0,
+  };
+  
+  // Stream subscriptions
+  StreamSubscription<List<Task>>? _tasksStreamSubscription;
+  
   // Getters
-  List<Task> get tasks => _tasks;
-  List<Task> get upcomingReminders => _upcomingReminders;
-  bool get isLoading => _isLoading;
-  bool get isCreating => _isCreating;
-  bool get isUpdating => _isUpdating;
-  bool get isDeleting => _isDeleting;
-  bool get isSchedulingReminder => _isSchedulingReminder;
-  String? get error => _error;
-
-  // Get tasks by status
-  List<Task> get completedTasks => _tasks.where((task) => task.isCompleted).toList();
-  List<Task> get incompleteTasks => _tasks.where((task) => !task.isCompleted).toList();
-
-  // Get tasks by priority
-  List<Task> get highPriorityTasks => _tasks.where((task) => task.priority == 'high').toList();
-  List<Task> get mediumPriorityTasks => _tasks.where((task) => task.priority == 'medium').toList();
-  List<Task> get lowPriorityTasks => _tasks.where((task) => task.priority == 'low').toList();
-
-  // Get overdue tasks
-  List<Task> get overdueTasks {
-    final now = DateTime.now();
-    return _tasks.where((task) => 
-      !task.isCompleted && 
-      task.dueDate != null && 
-      task.dueDate!.isBefore(now)
-    ).toList();
-  }
-
-  // Get today's tasks
-  List<Task> get todaysTasks {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    
-    return _tasks.where((task) => 
-      task.dueDate != null && 
-      task.dueDate!.isAfter(today) && 
-      task.dueDate!.isBefore(tomorrow)
-    ).toList();
-  }
-
-  // Get tasks with reminders
+  List<Task> get tasks => _filteredTasks;
+  List<Task> get completedTasks => _completedTasks;
+  List<Task> get pendingTasks => _pendingTasks;
+  List<Task> get overdueTasks => _overdueeTasks;
+  List<Task> get todayTasks => _todayTasks;
+  List<Task> get incompleteTasks => _pendingTasks;
   List<Task> get tasksWithReminders => _tasks.where((task) => task.hasActiveReminder).toList();
-
-  // Get overdue reminders
-  List<Task> get overdueReminders {
-    final now = DateTime.now();
-    return _tasks.where((task) => 
-      task.hasActiveReminder && 
-      task.reminderTime != null && 
-      task.reminderTime!.isBefore(now) &&
-      !task.isCompleted
-    ).toList();
+  List<Task> get overdueReminders => _tasks.where((task) => 
+    task.hasActiveReminder && 
+    task.reminderTime != null && 
+    task.reminderTime!.isBefore(DateTime.now()) && 
+    !task.isCompleted
+  ).toList();
+  
+  bool get isLoading => _isLoading;
+  String get errorMessage => _errorMessage;
+  String? get error => _errorMessage.isEmpty ? null : _errorMessage;
+  String get selectedCategory => _selectedCategory;
+  String get selectedPriority => _selectedPriority;
+  String get searchQuery => _searchQuery;
+  Map<String, int> get taskStats => _taskStats;
+  
+  bool get hasError => _errorMessage.isNotEmpty;
+  bool get hasTasks => _tasks.isNotEmpty;
+  bool get hasCompletedTasks => _completedTasks.isNotEmpty;
+  bool get hasPendingTasks => _pendingTasks.isNotEmpty;
+  bool get hasOverdueTasks => _overdueeTasks.isNotEmpty;
+  bool get hasTodayTasks => _todayTasks.isNotEmpty;
+  
+  // Computed properties
+  double get completionPercentage {
+    if (_taskStats['total'] == 0) return 0.0;
+    return (_taskStats['completed']! / _taskStats['total']!) * 100;
   }
-
-  TaskProvider() {
-    _initializeProvider();
+  
+  List<String> get categories {
+    final Set<String> categorySet = {'All'};
+    for (final task in _tasks) {
+      if (task.category.isNotEmpty) {
+        categorySet.add(task.category);
+      }
+    }
+    return categorySet.toList()..sort();
   }
-
-  Future<void> _initializeProvider() async {
-    await _notificationService.initialize();
-    _loadTasks();
-    _loadUpcomingReminders();
+  
+  List<String> get priorities => ['All', 'High', 'Medium', 'Low'];
+  
+  /// Get filtered tasks based on current filters
+  List<Task> get _filteredTasks {
+    List<Task> filtered = List.from(_tasks);
     
-    // Reschedule all existing reminders on app start
-    await _rescheduleAllReminders();
+    // Apply category filter
+    if (_selectedCategory != 'All') {
+      filtered = filtered.where((task) => task.category == _selectedCategory).toList();
+    }
+    
+    // Apply priority filter
+    if (_selectedPriority != 'All') {
+      filtered = filtered.where((task) => task.priority == _selectedPriority).toList();
+    }
+    
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered = filtered.where((task) {
+        return task.title.toLowerCase().contains(query) ||
+               (task.description?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
+    
+    return filtered;
   }
 
-  void _loadTasks() {
-    _isLoading = true;
-    notifyListeners();
+  /// Update auth provider and handle user changes
+  void updateAuth(AuthProvider authProvider) {
+    final String? newUserId = authProvider.currentUserId;
+    
+    // Check if user changed
+    if (newUserId != _currentUserId) {
+      _authProvider = authProvider;
+      _currentUserId = newUserId;
+      
+      // Cancel existing subscription
+      _tasksStreamSubscription?.cancel();
+      _tasksStreamSubscription = null;
+      
+      // Clear existing data
+      _clearData();
+      
+      // Load new user's data if logged in
+      if (authProvider.isLoggedIn && newUserId != null) {
+        _initializeUserData(newUserId);
+      }
+    } else {
+      _authProvider = authProvider;
+    }
+  }
 
-    _tasksSubscription = _taskService.getTasks().listen(
+  /// Initialize data for a user
+  void _initializeUserData(String userId) {
+    _loadUserTasks();
+    _setupTasksStream(userId);
+    _loadTaskStats();
+  }
+
+  /// Setup real-time task updates
+  void _setupTasksStream(String userId) {
+    _tasksStreamSubscription = _taskService.getUserTasksStream(userId).listen(
       (tasks) {
         _tasks = tasks;
-        _isLoading = false;
-        _error = null;
+        _updateTaskLists();
         notifyListeners();
       },
       onError: (error) {
-        _error = error.toString();
-        _isLoading = false;
-        notifyListeners();
+        _setError('Failed to load tasks: $error');
       },
     );
   }
 
-  void _loadUpcomingReminders() {
-    _remindersSubscription = _taskService.getTasksWithReminders().listen(
-      (reminders) {
-        _upcomingReminders = reminders;
-        notifyListeners();
-      },
-      onError: (error) {
-        debugPrint('Error loading reminders: $error');
-      },
-    );
-  }
-
-  // FIXED: Get notification ID from task ID consistently
-  int _getNotificationId(String taskId) {
-    return taskId.hashCode;
-  }
-
-// UPDATED: Add task with direct notification scheduling
-Future<bool> addTask(Task task) async {
-  try {
-    _isCreating = true;
-    _error = null;
+  /// Clear all data
+  void _clearData() {
+    _tasks.clear();
+    _completedTasks.clear();
+    _pendingTasks.clear();
+    _overdueeTasks.clear();
+    _todayTasks.clear();
+    _taskStats = {
+      'total': 0,
+      'completed': 0,
+      'pending': 0,
+      'overdue': 0,
+    };
+    _selectedCategory = 'All';
+    _selectedPriority = 'All';
+    _searchQuery = '';
+    _errorMessage = '';
     notifyListeners();
+  }
+
+  /// Load user tasks from Firestore
+  Future<void> _loadUserTasks() async {
+    if (_currentUserId == null) return;
     
-    // Create task in Firestore - the notification scheduling is now handled inside createTask
-    await _taskService.createTask(task);
-    
-    _isCreating = false;
-    notifyListeners();
-    return true;
-  } catch (e) {
-    _error = e.toString();
-    _isCreating = false;
-    notifyListeners();
-    return false;
+    _setLoading(true);
+    try {
+      _tasks = await _taskService.getUserTasks(_currentUserId!);
+      _updateTaskLists();
+      _clearError();
+    } catch (e) {
+      _setError('Failed to load tasks: $e');
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-  // FIXED: Update task with notification management
+  /// Update categorized task lists
+  void _updateTaskLists() {
+    _completedTasks = _tasks.where((task) => task.isCompleted).toList();
+    _pendingTasks = _tasks.where((task) => !task.isCompleted).toList();
+    
+    // Get overdue tasks
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    
+    _overdueeTasks = _tasks.where((task) {
+      return !task.isCompleted && 
+             task.dueDate != null && 
+             task.dueDate!.isBefore(today);
+    }).toList();
+    
+    // Get today's tasks
+    final DateTime endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    _todayTasks = _tasks.where((task) {
+      return !task.isCompleted && 
+             task.dueDate != null && 
+             task.dueDate!.isAfter(today) &&
+             task.dueDate!.isBefore(endOfToday);
+    }).toList();
+  }
+
+  /// Load task statistics
+  Future<void> _loadTaskStats() async {
+    if (_currentUserId == null) return;
+    
+    try {
+      _taskStats = await _taskService.getUserTaskStats(_currentUserId!);
+      notifyListeners();
+    } catch (e) {
+      print('Error loading task stats: $e');
+    }
+  }
+
+  /// Add a new task
+  Future<bool> addTask(Task task) async {
+    if (_currentUserId == null) {
+      _setError('User not authenticated');
+      return false;
+    }
+
+    _setLoading(true);
+    try {
+      final bool success = await _taskService.addTask(task, _currentUserId!);
+      
+      if (success) {
+        // Schedule notification if reminder is set
+        if (task.hasReminder && task.reminderTime != null) {
+          await NotificationService().scheduleNotification(
+            id: task.hashCode,
+            title: 'Task Reminder',
+            body: task.title,
+            scheduledTime: task.reminderTime!,
+            payload: task.id,
+          );
+        }
+        
+        await _loadTaskStats();
+        _clearError();
+      } else {
+        _setError('Failed to add task');
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to add task: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Update an existing task
   Future<bool> updateTask(Task task) async {
-    try {
-      _isUpdating = true;
-      _error = null;
-      notifyListeners();
-      
-      // Get the old task to compare reminders
-      final oldTask = _tasks.firstWhere((t) => t.id == task.id);
-      
-      // FIXED: Cancel old notification using task ID hash
-      if (oldTask.id != null) {
-        final notificationId = _getNotificationId(oldTask.id!);
-        await _notificationService.cancelNotification(notificationId);
-      }
-      
-      // Update task in Firestore
-      await _taskService.updateTask(task);
-      
-      // Schedule new notification if reminder is set and task isn't completed
-      if (task.hasReminder && task.reminderTime != null && !task.isCompleted) {
-        await _scheduleTaskReminder(task);
-      }
-      
-      _isUpdating = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isUpdating = false;
-      notifyListeners();
+    if (_currentUserId == null) {
+      _setError('User not authenticated');
       return false;
+    }
+
+    _setLoading(true);
+    try {
+      final bool success = await _taskService.updateTask(task, _currentUserId!);
+      
+      if (success) {
+        // Update notification
+        await NotificationService().cancelNotification(task.hashCode);
+        
+        if (task.hasReminder && task.reminderTime != null && !task.isCompleted) {
+          await NotificationService().scheduleNotification(
+            id: task.hashCode,
+            title: 'Task Reminder',
+            body: task.title,
+            scheduledTime: task.reminderTime!,
+            payload: task.id,
+          );
+        }
+        
+        await _loadTaskStats();
+        _clearError();
+      } else {
+        _setError('Failed to update task');
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to update task: $e');
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // FIXED: Delete task with notification cleanup
+  /// Delete a task
   Future<bool> deleteTask(String taskId) async {
+    if (_currentUserId == null) {
+      _setError('User not authenticated');
+      return false;
+    }
+
+    _setLoading(true);
     try {
-      _isDeleting = true;
-      _error = null;
-      notifyListeners();
+      final bool success = await _taskService.deleteTask(taskId, _currentUserId!);
       
-      // FIXED: Cancel notification using task ID hash
-      final notificationId = _getNotificationId(taskId);
-      await _notificationService.cancelNotification(notificationId);
+      if (success) {
+        // Cancel notification
+        final task = _tasks.firstWhere((t) => t.id == taskId);
+        await NotificationService().cancelNotification(task.hashCode);
+        
+        await _loadTaskStats();
+        _clearError();
+      } else {
+        _setError('Failed to delete task');
+      }
       
-      await _taskService.deleteTask(taskId);
-      _isDeleting = false;
-      notifyListeners();
-      return true;
+      return success;
     } catch (e) {
-      _error = e.toString();
-      _isDeleting = false;
-      notifyListeners();
+      _setError('Failed to delete task: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Toggle task completion
+  Future<bool> toggleTaskCompletion(String taskId) async {
+    if (_currentUserId == null) {
+      _setError('User not authenticated');
+      return false;
+    }
+
+    try {
+      final bool success = await _taskService.toggleTaskCompletion(taskId, _currentUserId!);
+      
+      if (success) {
+        final task = _tasks.firstWhere((t) => t.id == taskId);
+        
+        // Cancel notification if task is completed
+        if (!task.isCompleted) {
+          await NotificationService().cancelNotification(task.hashCode);
+        }
+        
+        await _loadTaskStats();
+        _clearError();
+      } else {
+        _setError('Failed to toggle task completion');
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to toggle task completion: $e');
       return false;
     }
   }
 
-  // FIXED: Toggle task with notification management
+  /// Search tasks
+  Future<void> searchTasks(String query) async {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  /// Set category filter
+  void setCategory(String category) {
+    _selectedCategory = category;
+    notifyListeners();
+  }
+
+  /// Set priority filter
+  void setPriority(String priority) {
+    _selectedPriority = priority;
+    notifyListeners();
+  }
+
+  /// Clear all filters
+  void clearFilters() {
+    _selectedCategory = 'All';
+    _selectedPriority = 'All';
+    _searchQuery = '';
+    notifyListeners();
+  }
+
+  /// Refresh tasks
+  Future<void> refreshTasks() async {
+    await _loadUserTasks();
+    await _loadTaskStats();
+  }
+
+  /// Get task by ID
+  Task? getTaskById(String taskId) {
+    try {
+      return _tasks.firstWhere((task) => task.id == taskId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get tasks by category
+  List<Task> getTasksByCategory(String category) {
+    if (category == 'All') return _tasks;
+    return _tasks.where((task) => task.category == category).toList();
+  }
+
+  /// Get tasks by priority
+  List<Task> getTasksByPriority(String priority) {
+    if (priority == 'All') return _tasks;
+    return _tasks.where((task) => task.priority == priority).toList();
+  }
+
+  /// Batch update tasks
+  Future<bool> batchUpdateTasks(List<Task> tasks) async {
+    if (_currentUserId == null) {
+      _setError('User not authenticated');
+      return false;
+    }
+
+    _setLoading(true);
+    try {
+      final bool success = await _taskService.batchUpdateTasks(tasks, _currentUserId!);
+      
+      if (success) {
+        await _loadTaskStats();
+        _clearError();
+      } else {
+        _setError('Failed to update tasks');
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to update tasks: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Migrate tasks from anonymous to registered user
+  Future<bool> migrateUserTasks(String fromUserId, String toUserId) async {
+    try {
+      final bool success = await _taskService.migrateUserTasks(fromUserId, toUserId);
+      
+      if (success) {
+        // Update current user ID and reload data
+        _currentUserId = toUserId;
+        await refreshTasks();
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to migrate tasks: $e');
+      return false;
+    }
+  }
+
+  /// Delete all user tasks (for account deletion)
+  Future<bool> deleteAllUserTasks() async {
+    if (_currentUserId == null) return false;
+    
+    try {
+      final bool success = await _taskService.deleteAllUserTasks(_currentUserId!);
+      
+      if (success) {
+        _clearData();
+      }
+      
+      return success;
+    } catch (e) {
+      _setError('Failed to delete all tasks: $e');
+      return false;
+    }
+  }
+
+  /// Toggle task completion
   Future<bool> toggleTask(String taskId, bool isCompleted) async {
-    try {
-      final task = _tasks.firstWhere((t) => t.id == taskId);
-      
-      // FIXED: Cancel notification when task is completed
-      if (isCompleted) {
-        final notificationId = _getNotificationId(taskId);
-        await _notificationService.cancelNotification(notificationId);
-      }
-      
-      // Reschedule notification when task is uncompleted
-      if (!isCompleted && task.hasReminder && task.reminderTime != null) {
-        await _scheduleTaskReminder(task);
-      }
-      
-      await _taskService.toggleTaskCompletion(taskId, isCompleted);
-      _error = null;
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
+    return await toggleTaskCompletion(taskId);
   }
 
-  // UPDATED: Helper method to schedule task reminder
-  Future<void> _scheduleTaskReminder(Task task) async {
-    try {
-      if (task.id == null) {
-        throw Exception('Task ID cannot be null');
-      }
+  /// Additional getters for UI state
+  bool get isCreating => _isLoading;
+  bool get isUpdating => _isLoading;
+  bool get isDeleting => _isLoading;
 
-      // Use the correct method from NotificationService
-      await _notificationService.scheduleTaskReminder(task);
-      
-      // FIXED: Update task with notification ID for tracking (as string)
-      final notificationId = _getNotificationId(task.id!);
-      final updatedTask = task.copyWith(notificationId: notificationId.toString());
-      await _taskService.updateTask(updatedTask);
-      
-    } catch (e) {
-      debugPrint('Error scheduling reminder: $e');
-      rethrow;
-    }
+  /// Clear error
+  void clearError() {
+    _clearError();
   }
 
-  // Reminder-specific methods
-  Future<bool> scheduleReminder(
-    String taskId,
-    DateTime reminderTime, {
-    String reminderType = 'once',
-    List<String> repeatDays = const [],
-    String notificationTone = 'default',
-  }) async {
-    try {
-      _isSchedulingReminder = true;
-      _error = null;
-      notifyListeners();
-
-      final task = _tasks.firstWhere((t) => t.id == taskId);
-      final updatedTask = task.copyWith(
-        hasReminder: true,
-        reminderTime: reminderTime,
-        reminderType: reminderType,
-        repeatDays: repeatDays,
-        notificationTone: notificationTone,
-        isReminderActive: true,
-      );
-
-      await updateTask(updatedTask);
-
-      _isSchedulingReminder = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isSchedulingReminder = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // FIXED: Cancel reminder
-  Future<bool> cancelReminder(String taskId) async {
-    try {
-      final task = _tasks.firstWhere((t) => t.id == taskId);
-      
-      // FIXED: Cancel the notification using task ID hash
-      final notificationId = _getNotificationId(taskId);
-      await _notificationService.cancelNotification(notificationId);
-      
-      // Update task to remove reminder
-      final updatedTask = task.copyWith(
-        hasReminder: false,
-        reminderTime: null,
-        isReminderActive: false,
-        notificationId: null,
-      );
-      
-      await updateTask(updatedTask);
-      _error = null;
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
+  /// Snooze reminder
   Future<bool> snoozeReminder(String taskId, int minutes) async {
     try {
-      final task = _tasks.firstWhere((t) => t.id == taskId);
+      final task = getTaskById(taskId);
+      if (task == null) return false;
+
       final newReminderTime = DateTime.now().add(Duration(minutes: minutes));
-      
       final updatedTask = task.copyWith(reminderTime: newReminderTime);
-      await updateTask(updatedTask);
       
-      _error = null;
-      return true;
+      return await updateTask(updatedTask);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _setError('Failed to snooze reminder: $e');
       return false;
     }
   }
 
-  Future<bool> updateReminderTone(String taskId, String tone) async {
+  /// Cancel reminder
+  Future<bool> cancelReminder(String taskId) async {
     try {
-      final task = _tasks.firstWhere((t) => t.id == taskId);
-      final updatedTask = task.copyWith(notificationTone: tone);
+      final task = getTaskById(taskId);
+      if (task == null) return false;
+
+      final updatedTask = task.copyWith(
+        hasReminder: false,
+        isReminderActive: false,
+        reminderTime: null,
+      );
       
-      await updateTask(updatedTask);
-      _error = null;
-      return true;
+      return await updateTask(updatedTask);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _setError('Failed to cancel reminder: $e');
       return false;
     }
   }
 
-  // UPDATED: Reschedule all reminders (useful on app start)
-  Future<void> _rescheduleAllReminders() async {
-    try {
-      for (final task in tasksWithReminders) {
-        if (task.reminderTime != null && task.reminderTime!.isAfter(DateTime.now())) {
-          await _scheduleTaskReminder(task);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error rescheduling reminders: $e');
-    }
-  }
-
-  // Send test notification
-  Future<bool> sendTestNotification() async {
-    try {
-      await _notificationService.sendTestNotification();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Get notification statistics
-  Future<Map<String, int>> getNotificationStats() async {
-    try {
-      final pendingNotifications = await _notificationService.getPendingNotifications();
-      
-      return {
-        'total_tasks': _tasks.length,
-        'tasks_with_reminders': tasksWithReminders.length,
-        'pending_notifications': pendingNotifications.length,
-        'overdue_reminders': overdueReminders.length,
-        'upcoming_reminders': _upcomingReminders.length,
-      };
-    } catch (e) {
-      return {};
-    }
-  }
-
-  void clearError() {
-    _error = null;
+  // Helper methods
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
   }
 
-  List<Task> getTasksByCategory(String category) {
-    return _tasks.where((task) => task.category == category).toList();
+  void _setError(String error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = '';
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    _tasksSubscription?.cancel();
-    _remindersSubscription?.cancel();
+    _tasksStreamSubscription?.cancel();
     super.dispose();
-  }
-
-  // FOR TESTING ONLY
-  @visibleForTesting
-  void setTasksForTesting(List<Task> tasks) {
-    _tasks = tasks;
   }
 }

@@ -3,9 +3,7 @@
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Widget child;
-  
-  const SplashScreen({super.key, required this.child});
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -39,16 +37,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Navigate to main app after 3 seconds
     Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => widget.child,
-            transitionDuration: const Duration(milliseconds: 500),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+        Navigator.pushReplacementNamed(context, '/auth-wrapper');
       }
     });
   }

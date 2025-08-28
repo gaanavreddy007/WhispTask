@@ -1,341 +1,276 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
-// Import debug widget
 
-// Import providers
+// Providers
+import 'providers/auth_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/voice_provider.dart';
 
-// Import screens
+// Screens
+import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/task_list_screen.dart';
-// ignore: unused_import
+import 'screens/signup_screen.dart';
 import 'screens/add_task_screen.dart';
-// ignore: unused_import
 import 'screens/voice_input_screen.dart';
-import 'screens/splash_screen.dart'; // Import the splash screen
+import 'screens/account_settings_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/change_password_screen.dart';
 
-// Import services
+// Services
 import 'services/notification_service.dart';
-import 'services/task_service.dart';
-import 'services/voice_service.dart';
-import 'services/voice_parser.dart';
+
+// Widgets
+import 'widgets/auth_wrapper.dart';
+
+// Initialize notification plugin globally
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = 
+    FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Initialize timezone data BEFORE other services
-    tz.initializeTimeZones();
-    // ignore: avoid_print
-    print('Timezone data initialized successfully');
-    
     // Initialize Firebase
     await Firebase.initializeApp();
-    // ignore: avoid_print
     print('Firebase initialized successfully');
     
-    // Initialize Notification Service
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-    // ignore: avoid_print
-    print('Notification service initialized successfully');
+    // Initialize timezone data for notifications
+    tz.initializeTimeZones();
     
-    runApp(const MyApp());
+    // Initialize notifications
+    await NotificationService().initialize();
+    print('Notification service initialized');
+    
   } catch (e) {
-    // ignore: avoid_print
-    print('Error during app initialization: $e');
-    runApp(ErrorApp(error: e.toString()));
+    print('Initialization error: $e');
   }
+  
+  runApp(const WhispTaskApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class WhispTaskApp extends StatelessWidget {
+  const WhispTaskApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TaskProvider()),
-        ChangeNotifierProvider(create: (_) => VoiceProvider()),
-        // Add service providers
-        Provider<TaskService>(create: (_) => TaskService()),
-        Provider<VoiceService>(create: (_) => VoiceService()),
-        Provider<VoiceParser>(create: (_) => VoiceParser()),
-        // Add notification service as singleton
-        Provider<NotificationService>(
-          create: (_) => NotificationService(),
+        // Auth Provider - Must be first as others depend on it
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ),
+        
+        // Task Provider with Auth dependency
+        ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
+          create: (_) => TaskProvider(),
+          update: (_, auth, previous) {
+            if (previous != null) {
+              previous.updateAuth(auth);
+              return previous;
+            } else {
+              final taskProvider = TaskProvider();
+              taskProvider.updateAuth(auth);
+              return taskProvider;
+            }
+          },
+        ),
+        
+        // Voice Provider - Independent
+        ChangeNotifierProvider(
+          create: (_) => VoiceProvider(),
         ),
       ],
-      child: MaterialApp(
-        title: 'WhispTask',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          primaryColor: const Color(0xFF1976D2),
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1976D2),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-        ),
-        
-        home: const SplashScreen(child: AuthWrapper()),
-      ),
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Show loading while checking auth state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingScreen();
-        }
-        
-        // Handle authentication errors
-        if (snapshot.hasError) {
-          return ErrorScreen(
-            error: 'Authentication Error: ${snapshot.error}',
-            onRetry: () {
-              // Trigger rebuild
-              (context as Element).markNeedsBuild();
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, _) {
+          return MaterialApp(
+            title: 'WhispTask',
+            debugShowCheckedModeBanner: false,
+            theme: _buildAppTheme(),
+            
+            // Show splash screen while initializing
+            home: authProvider.isInitialized 
+                ? const AuthWrapper() 
+                : const SplashScreen(),
+            
+            // Define all app routes
+            routes: {
+              '/splash': (context) => const SplashScreen(),
+              '/auth-wrapper': (context) => const AuthWrapper(),
+              '/login': (context) => const LoginScreen(),
+              '/signup': (context) => const SignupScreen(),
+              '/home': (context) => const TaskListScreen(),
+              '/add-task': (context) => const AddTaskScreen(),
+              '/voice-input': (context) => const VoiceInputScreen(),
+              '/profile': (context) => const ProfileScreen(),
+              '/account-settings': (context) => const AccountSettingsScreen(),
+              '/change-password': (context) => const ChangePasswordScreen(),
+            },
+            
+            // Handle unknown routes
+            onUnknownRoute: (settings) {
+              return MaterialPageRoute(
+                builder: (context) => const AuthWrapper(),
+              );
             },
           );
-        }
-        
-        // Show login if not authenticated
-        if (snapshot.data == null) {
-          return const LoginScreen();
-        }
-        
-        // Show main app if authenticated
-        return const TaskListScreen();
-      },
-    );
-  }
-}
-
-class LoadingScreen extends StatefulWidget {
-  const LoadingScreen({super.key});
-
-  @override
-  State<LoadingScreen> createState() => _LoadingScreenState();
-}
-
-class _LoadingScreenState extends State<LoadingScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    _animationController.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF6366F1),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Animated microphone icon
-            AnimatedBuilder(
-              animation: _scaleAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white24,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.mic,
-                      size: 60,
-                      color: Colors.white,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 30),
-            const Text(
-              'WhispTask',
-              style: TextStyle(
-                fontSize: 36,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Task it. Say it. Done.',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-                fontStyle: FontStyle.italic,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 50),
-            const SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Initializing your workspace...',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white60,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-          ],
-        ),
+        },
       ),
     );
   }
-}
 
-class ErrorScreen extends StatelessWidget {
-  final String error;
-  final VoidCallback? onRetry;
-
-  const ErrorScreen({
-    super.key,
-    required this.error,
-    this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF6366F1),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: Colors.white24,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_outline,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'Oops! Something went wrong',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  error,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 40),
-              if (onRetry != null)
-                ElevatedButton.icon(
-                  onPressed: onRetry,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
-                    ),
-                  ),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text(
-                    'Try Again',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-            ],
+  ThemeData _buildAppTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF1976D2), // Primary blue
+        brightness: Brightness.light,
+      ),
+      
+      // App Bar Theme
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+      
+      // Card Theme
+      cardTheme: const CardThemeData(
+        elevation: 2,
+        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+      ),
+      
+      // Elevated Button Theme
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
       ),
-    );
-  }
-}
-
-// Error app for initialization failures
-class ErrorApp extends StatelessWidget {
-  final String error;
-
-  const ErrorApp({super.key, required this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WhispTask - Error',
-      home: ErrorScreen(
-        error: 'Failed to initialize app: $error',
-        onRetry: () {
-          // Restart the app
-          main();
-        },
+      
+      // Input Decoration Theme
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      
+      // Floating Action Button Theme
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        elevation: 4,
+        backgroundColor: Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+      ),
+      
+      // Bottom Navigation Bar Theme
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        elevation: 8,
+        selectedItemColor: Color(0xFF1976D2),
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+      ),
+      
+      // Snackbar Theme
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+      ),
+      
+      // Progress Indicator Theme
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: Color(0xFF1976D2),
+      ),
+      
+      // Divider Theme
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFE0E0E0),
+        thickness: 1,
+      ),
+      
+      // Typography
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1976D2),
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF333333),
+        ),
+        headlineSmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF333333),
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF333333),
+        ),
+        titleMedium: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF333333),
+        ),
+        titleSmall: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF333333),
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          color: Color(0xFF333333),
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF666666),
+        ),
+        bodySmall: TextStyle(
+          fontSize: 12,
+          color: Color(0xFF999999),
+        ),
       ),
     );
   }
