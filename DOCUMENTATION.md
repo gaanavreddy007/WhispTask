@@ -4,11 +4,14 @@
 1. [Project Overview](#project-overview)
 2. [Directory Structure](#directory-structure)
 3. [Core Components](#core-components)
-4. [Screens](#screens)
-5. [Services](#services)
-6. [Utilities](#utilities)
-7. [Widgets](#widgets)
-8. [Development Guide](#development-guide)
+4. [Features](#features)
+5. [Development Guide](#development-guide)
+6. [Testing](#testing)
+7. [Building for Production](#building-for-production)
+8. [Architecture Overview](#architecture-overview)
+9. [Troubleshooting](#troubleshooting)
+10. [Contributing](#contributing)
+11. [License](#license)
 
 ## Project Overview
 A Flutter-based task management application with voice control capabilities, user authentication, and real-time notifications.
@@ -17,128 +20,218 @@ A Flutter-based task management application with voice control capabilities, use
 
 ### 1. Core Application
 - `main.dart` - Application entry point, initializes providers and runs the app
+- `lib/`
+  - `models/`
+    - `task.dart` - Task data model and related enums
+    - `user_model.dart` - User data model and authentication state
+  - `providers/`
+    - `auth_provider.dart` - Manages user authentication state
+    - `task_provider.dart` - Manages task state and business logic
+    - `voice_provider.dart` - Handles voice command processing
+    - `voice_notes_service.dart` - Handles voice recording, playback, and management
+    - `file_attachment_service.dart` - Manages file attachments including uploads and downloads
+  - `screens/`
+    - `account_settings_screen.dart` - User account management
+    - `add_task_screen.dart` - Task creation and editing
+    - `change_password_screen.dart` - Password update functionality
+    - `forgot_password_screen.dart` - Password recovery
+    - `home_screen.dart` - Main dashboard
+    - `login_screen.dart` - User authentication
+    - `profile_screen.dart` - User profile management
+    - `signup_screen.dart` - New user registration
+    - `task_list_screen.dart` - Displays user's task list
+    - `task_calendar.dart` - Calendar view for tasks with due dates
+  - `services/`
+    - `auth_service.dart` - Handles user authentication and account management
+    - `file_attachment_service.dart` - Manages file attachments for tasks
+    - `notification_service.dart` - Handles local and push notifications
+    - `task_service.dart` - Manages task-related operations and data
+    - `voice_notes_service.dart` - Handles voice recording and management
+    - `voice_parser.dart` - Processes and interprets voice commands
+    - `voice_service.dart` - Manages voice interaction features
+  - `utils/`
+    - `notification_helper.dart` - Helper methods for notifications
+    - `validators.dart` - Input validation utilities
+    - `voice_test_runner.dart` - Testing utilities for voice features
+    - `theme.dart` - App theming and styling
+  - `widgets/`
+    - `auth_text_field.dart` - Custom text field for auth forms
+    - `auth_wrapper.dart` - Handles auth state and routing
+    - `file_attachments_widget.dart` - Displays and manages file attachments for tasks
+    - `filter_dialog.dart` - Task filtering and sorting
+    - `notification_test_widget.dart` - Notification testing UI
+    - `password_strength_indicator.dart` - Visual password strength meter
+    - `task_calendar.dart` - Calendar view for tasks and deadlines
+    - `task_card.dart` - Reusable task item component
+    - `user_avatar.dart` - Displays user profile picture or initials
+    - `voice_notes_widget.dart` - UI component for recording and managing voice notes
+    - `file_attachments_widget.dart` - UI component for managing file attachments
 
-### 2. Models
-- `models/task.dart` - Task data model with properties like title, description, due date, status, etc.
-- `models/user_model.dart` - User data model containing user information and authentication details
+### 2. Platform-Specific Code
+- `android/` - Android platform configuration
+- `ios/` - iOS platform configuration
+- `web/` - Web platform configuration
+- `windows/` - Windows desktop configuration
+- `macos/` - macOS desktop configuration
+- `linux/` - Linux desktop configuration
 
-### 3. Providers (State Management)
-- `providers/auth_provider.dart` - Manages authentication state and user session
-- `providers/task_provider.dart` - Handles task-related state and operations
-- `providers/voice_provider.dart` - Manages voice command processing and state
-
-### 4. Screens
-- `screens/account_settings_screen.dart` - User account management and settings
-- `screens/add_task_screen.dart` - Interface for creating new tasks
-- `screens/login_screen.dart` - User authentication screen
-- `screens/profile_screen.dart` - Displays and manages user profile
-- `screens/signup_screen.dart` - New user registration
-- `screens/splash_screen.dart` - Initial loading screen with app branding
-- `screens/task_list_screen.dart` - Main screen displaying user's task list
-- `screens/voice_input_screen.dart` - Interface for voice command input
-
-### 5. Services
-- `services/auth_service.dart` - Handles authentication with backend
-- `services/notification_service.dart` - Manages local and push notifications
-- `services/task_service.dart` - API calls and operations for tasks
-- `services/voice_parser.dart` - Processes and interprets voice commands
-- `services/voice_service.dart` - Handles voice recognition functionality
-
-### 6. Utils
-- `utils/notification_helper.dart` - Helper functions for notification handling
-- `utils/validators.dart` - Input validation utilities
-- `utils/voice_test_runner.dart` - Testing utilities for voice features
-
-### 7. Widgets
-- `widgets/auth_text_field.dart` - Custom text field for authentication forms
-- `widgets/auth_wrapper.dart` - Handles authentication state and routing
-- `widgets/notification_test_widget.dart` - Widget for testing notifications
-- `widgets/password_strength_indicator.dart` - Visual indicator for password strength
-- `widgets/task_card.dart` - Reusable task item widget
-- `widgets/user_avatar.dart` - Displays user profile picture or initials
+### 3. Assets
+- `assets/`
+  - `images/` - App icons and images
+  - `sounds/` - Notification sounds and audio feedback
 
 ## Core Components
 
 ### State Management
-The app uses Provider pattern for state management with three main providers:
-1. **AuthProvider**: Manages user authentication state
-2. **TaskProvider**: Handles all task-related state
-3. **VoiceProvider**: Manages voice command processing
+The app uses Provider pattern for state management with several providers:
+- `AuthProvider`: Manages user authentication state
+- `TaskProvider`: Handles task-related state and operations
+- `VoiceProvider`: Manages voice command processing
+- `VoiceNotesService`: Handles voice recording and playback
+- `FileAttachmentService`: Manages file attachments
 
-### Data Flow
-1. **UI Layer**: Screens and Widgets
-2. **State Management**: Providers
-3. **Services**: API and business logic
-4. **Models**: Data structures
+### Features
+- **User Authentication**: Email/password sign-in and registration
+- **Task Management**: Create, read, update, and delete tasks
+- **Voice Notes**: Record and attach voice memos to tasks
+- **File Attachments**: Attach files and images to tasks
+- **Voice Commands**: Control the app using voice
+- **Notifications**: Local notifications for task reminders
+- **Calendar View**: Visualize tasks on a calendar
+- **Cross-Platform**: Works on mobile, web, and desktop
 
 ## Development Guide
 
-### Adding a New Feature
-1. **Create a new screen** in `lib/screens/`
-2. **Add necessary providers** in `lib/providers/`
-3. **Create services** in `lib/services/` for business logic
-4. **Add models** in `lib/models/` for data structures
-5. **Create reusable widgets** in `lib/widgets/`
+### Prerequisites
+- Flutter SDK (latest stable version)
+- Dart SDK (compatible with Flutter version)
+- Firebase project (for authentication, storage, and database)
+- Platform-specific setup for voice recording (microphone permissions, etc.)
 
-### Code Organization
-- Keep business logic in services
-- Use providers for state management
-- Keep UI components in widgets
-- Group related features together
+### Setup Instructions
+1. Clone the repository
+2. Run `flutter pub get` to install dependencies
+3. Configure Firebase:
+   - Add your `google-services.json` to `android/app/`
+   - Add your `GoogleService-Info.plist` to iOS/Runner/
+4. Set up platform-specific configurations:
+   - Android: Update `AndroidManifest.xml` with required permissions
+   - iOS: Update `Info.plist` with usage descriptions for microphone and file access
+5. Run `flutter run` to start the app
+
+### Key Dependencies
+- `record`: For audio recording functionality
+- `just_audio`: For audio playback
+- `firebase_storage`: For storing voice notes and file attachments
+- `file_picker`: For selecting files and images
+- `table_calendar`: For the calendar view
+- `image_picker`: For capturing/selecting images
 
 ### Testing
-- Unit tests: `test/`
-- Widget tests: `test/widgets/`
-- Integration tests: `test_driver/`
-
-## Dependencies
-- Flutter SDK
-- Provider (state management)
-- Firebase (authentication, database)
-- Speech to Text (voice commands)
-- Local Notifications
-- Shared Preferences
-
-## Getting Started
-1. Clone the repository
-2. Run `flutter pub get`
-3. Set up Firebase configuration
-4. Run `flutter run`
-
-## Architecture Diagram
-```
-┌───────────────────────┐     ┌───────────────────────┐
-│                       │     │                       │
-│      UI Layer         │◄───►│    Providers         │
-│   (Screens/Widgets)   │     │   (State Management) │
-│                       │     │                       │
-└───────────┬───────────┘     └───────────┬───────────┘
-            │                             │
-            ▼                             ▼
-┌───────────────────────┐     ┌───────────────────────┐
-│                       │     │                       │
-│      Services         │◄────┤      Models          │
-│ (Business Logic/APIs) │     │   (Data Structures)  │
-│                       │     │                       │
-└───────────────────────┘     └───────────────────────┘
+Run tests using:
+```bash
+flutter test
 ```
 
-## Common Patterns
-1. **Dependency Injection**: Used throughout the app for better testability
-2. **Repository Pattern**: For data layer abstraction
-3. **Observer Pattern**: Used in state management
-4. **Factory Pattern**: For creating complex objects
+### Building for Production
+```bash
+# For Android
+flutter build apk --release
 
-## Best Practices
-1. Follow Flutter's official style guide
-2. Write meaningful comments and documentation
-3. Keep widget trees shallow
-4. Use const constructors where possible
-5. Handle errors gracefully
-6. Write tests for critical functionality
+# For iOS
+flutter build ios --release
+
+# For Web
+flutter build web --release
+```
+
+## Architecture Overview
+
+The app follows a clean architecture with clear separation of concerns:
+
+```mermaid
+graph TD
+    A[UI Layer] -->|Uses| B[Providers]
+    B -->|Manages| C[Services]
+    C -->|Interacts with| D[Models]
+    C -->|Uses| E[Firebase]
+    
+    subgraph UI Layer
+    A1[Screens]
+    A2[Widgets]
+    end
+    
+    subgraph Business Logic
+    B1[Auth Provider]
+    B2[Task Provider]
+    B3[Voice Provider]
+    B4[Voice Notes Service]
+    B5[File Attachment Service]
+    end
+    
+    subgraph Data Layer
+    C1[Auth Service]
+    C2[Task Service]
+    C3[Notification Service]
+    C4[Firebase Storage]
+    end
+    
+    subgraph External Services
+    D1[Firebase Auth]
+    D2[Firestore]
+    D3[Local Storage]
+    D4[Device Storage]
+    end
+```
+
+## New Features
+
+### Voice Notes
+- Record and attach voice memos to tasks
+- Playback and manage voice recordings
+- Transcribe voice to text (basic implementation)
+- Store recordings locally and optionally in the cloud
+
+### File Attachments
+- Attach files and images to tasks
+- Support for multiple file types
+- Preview supported file types
+- Local and cloud storage options
+
+### Calendar View
+- Visualize tasks on a calendar
+- Filter tasks by date range
+- View task details directly from the calendar
 
 ## Troubleshooting
-- **Voice not working**: Check microphone permissions
-- **Authentication issues**: Verify Firebase configuration
-- **UI not updating**: Ensure `notifyListeners()` is called after state changes
-- **Build errors**: Run `flutter clean` and `flutter pub get`
+
+### Common Issues
+1. **Firebase Not Initialized**
+   - Ensure Firebase configuration files are correctly placed
+   - Verify Firebase dependencies in `pubspec.yaml`
+
+2. **Build Failures**
+   - Run `flutter clean` and `flutter pub get`
+   - Ensure all dependencies are compatible
+
+3. **Notification Issues**
+   - Check notification permissions
+   - Verify notification channel setup on Android
+
+4. **Voice Recording**
+   - Ensure microphone permissions are granted
+   - Check platform-specific setup for audio recording
+
+5. **File Access**
+   - Verify storage permissions
+   - Check file size limits and supported formats
+
+## Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Write tests for new features
+5. Submit a pull request
+
+## License
+[Specify your license here]

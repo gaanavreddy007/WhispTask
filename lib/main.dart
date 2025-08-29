@@ -14,13 +14,15 @@ import 'providers/voice_provider.dart';
 // Screens
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/task_list_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/add_task_screen.dart';
 import 'screens/voice_input_screen.dart';
 import 'screens/account_settings_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/change_password_screen.dart';
+
+// Widgets
+import 'widgets/task_calendar.dart';
 
 // Services
 import 'services/notification_service.dart';
@@ -104,12 +106,13 @@ class WhispTaskApp extends StatelessWidget {
               '/auth-wrapper': (context) => const AuthWrapper(),
               '/login': (context) => const LoginScreen(),
               '/signup': (context) => const SignupScreen(),
-              '/home': (context) => const TaskListScreen(),
+              '/home': (context) => const AuthWrapper(),
               '/add-task': (context) => const AddTaskScreen(),
               '/voice-input': (context) => const VoiceInputScreen(),
               '/profile': (context) => const ProfileScreen(),
               '/account-settings': (context) => const AccountSettingsScreen(),
               '/change-password': (context) => const ChangePasswordScreen(),
+              '/calendar': (context) => const TaskCalendar(),
             },
             
             // Handle unknown routes

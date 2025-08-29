@@ -21,6 +21,7 @@ class VoiceProvider extends ChangeNotifier {
 
   // Initialize voice service
   Future<void> initialize() async {
+    if (_isInitialized) return;
     try {
       _isInitialized = await _voiceService.initialize();
       _errorMessage = _isInitialized ? '' : 'Failed to initialize voice recognition';
@@ -98,5 +99,11 @@ class VoiceProvider extends ChangeNotifier {
   // Validate current task
   bool isCurrentTaskValid() {
     return _previewTask != null && VoiceParser.isValidTask(_previewTask!);
+  }
+
+  @override
+  void dispose() {
+    _voiceService.dispose();
+    super.dispose();
   }
 }

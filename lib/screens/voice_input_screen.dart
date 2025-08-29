@@ -31,10 +31,6 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
       curve: Curves.easeInOut,
     ));
 
-    // Initialize voice provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VoiceProvider>().initialize();
-    });
   }
 
   @override

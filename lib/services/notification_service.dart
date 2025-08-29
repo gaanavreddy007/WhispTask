@@ -393,7 +393,7 @@ class NotificationService {
 
   // Convert DateTime to TZDateTime
   tz.TZDateTime _convertToTZDateTime(DateTime dateTime) {
-    final tz.Location local = tz.getLocation('Asia/Kolkata'); // Indian timezone
+    final tz.Location local = tz.local; // Use the device's local timezone
     return tz.TZDateTime.from(dateTime, local);
   }
 
@@ -432,6 +432,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
     String? payload,
+    String reminderType = 'once', // Default to 'once'
   }) async {
     final task = Task(
       id: id.toString(),
@@ -440,7 +441,8 @@ class NotificationService {
       createdAt: DateTime.now(),
       reminderTime: scheduledTime,
       hasReminder: true,
-      notificationId: id.toString(),
+      notificationId: id,
+      reminderType: reminderType, // Pass reminderType
     );
     await scheduleTaskReminder(task);
   }

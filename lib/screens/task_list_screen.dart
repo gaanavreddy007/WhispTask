@@ -1,14 +1,14 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, prefer_final_fields, deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
-import '../providers/auth_provider.dart';
 import '../widgets/notification_test_widget.dart';
 import '../widgets/task_card.dart';
-import '../widgets/user_avatar.dart';
+import '../widgets/filter_dialog.dart';
+import '../utils/notification_helper.dart';
 import 'add_task_screen.dart';
 import 'voice_input_screen.dart';
 
@@ -27,7 +27,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this); // CHANGED: Added Reminders tab
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -35,29 +35,24 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 32,
-              width: 32,
-              child: Image.asset(
-                'assets/images/app_icon.png',
-                height: 32,
-                width: 32,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.task_alt, color: Colors.white, size: 24);
-                },
-              ),
+            Image.asset(
+              'assets/images/app_icon.png',
+              height: 24, // Smaller icon
+              width: 24,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.task_alt, size: 24);
+              },
             ),
             const SizedBox(width: 8),
             const Text('WhispTask'),
           ],
         ),
-        // FORCE specific colors to override theme
-        backgroundColor: const Color(0xFF1976D2), // Force blue background
-        foregroundColor: Colors.white,            // Force white text/icons
-        elevation: 2,                            // Add slight elevation
-        centerTitle: false,                      // Align title to left
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        centerTitle: false,
         
         bottom: TabBar(
           controller: _tabController,
@@ -75,196 +70,122 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
         ),
         
         actions: [
-          // User Avatar - Navigate to Profile
-          Consumer<AuthProvider>(
-            builder: (context, authProvider, child) {
-              if (authProvider.user != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      print('Profile button tapped'); // Debug print
-                      Navigator.pushNamed(context, '/profile');
-                    },
+          // Voice input button
+          IconButton(
+            icon: const Icon(Icons.mic),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const VoiceInputScreen()),
+            ),
+            tooltip: 'Voice Input',
+          ),
+          
+          // Filter button with indicator
+          Stack(
+            children: [
+              Consumer<TaskProvider>(
+                builder: (context, taskProvider, child) {
+                  return IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: () => _showFilterDialog(),
+                  );
+                },
+              ),
+              Consumer<TaskProvider>(
+                builder: (context, taskProvider, child) {
+                  final hasActiveFilters = taskProvider.selectedCategories.isNotEmpty ||
+                      taskProvider.selectedPriorities.isNotEmpty ||
+                      taskProvider.selectedStatuses.isNotEmpty;
+                  
+                  if (!hasActiveFilters) return const SizedBox.shrink();
+                  
+                  return Positioned(
+                    right: 8,
+                    top: 8,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: UserAvatar(
-                        user: authProvider.user!,
-                        radius: 18,
                       ),
                     ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          // Settings Icon - Navigate to Account Settings  
-          Container(
-            margin: const EdgeInsets.only(right: 4),
-            child: IconButton(
-              icon: const Icon(
-                Icons.settings,
-                color: Colors.white, // Force white color
-                size: 24,
-              ),
-              tooltip: 'Account Settings',
-              onPressed: () {
-                print('Settings button tapped'); // Debug print
-                Navigator.pushNamed(context, '/account-settings');
-              },
-            ),
-          ),
-
-          // Debug menu in debug mode only
-          if (kDebugMode)
-            PopupMenuButton<String>(
-              icon: const Icon(
-                Icons.bug_report, 
-                color: Colors.yellow,
-                size: 24,
-              ),
-              tooltip: 'Debug Menu',
-              onSelected: (value) {
-                if (value == 'test_notifications') {
-                  setState(() {
-                    _showTestPanel = !_showTestPanel;
-                  });
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'test_notifications',
-                  child: Row(
-                    children: [
-                      Icon(_showTestPanel ? Icons.visibility_off : Icons.notifications_active),
-                      const SizedBox(width: 8),
-                      Text(_showTestPanel ? 'Hide Test Panel' : 'Show Test Panel'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-          // Filter menu
-          PopupMenuButton<String>(
-            icon: const Icon(
-              Icons.filter_list,
-              color: Colors.white, // Force white color
-              size: 24,
-            ),
-            tooltip: 'Filter Tasks',
-            onSelected: (value) {
-              setState(() {
-                _selectedCategory = value;
-              });
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'all', 
-                child: Row(
-                  children: [
-                    Icon(Icons.all_inclusive),
-                    SizedBox(width: 8),
-                    Text('All Categories'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'general', 
-                child: Row(
-                  children: [
-                    Icon(Icons.category),
-                    SizedBox(width: 8),
-                    Text('General'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'work', 
-                child: Row(
-                  children: [
-                    Icon(Icons.work),
-                    SizedBox(width: 8),
-                    Text('Work'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'personal', 
-                child: Row(
-                  children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 8),
-                    Text('Personal'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'health', 
-                child: Row(
-                  children: [
-                    Icon(Icons.health_and_safety),
-                    SizedBox(width: 8),
-                    Text('Health'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'shopping', 
-                child: Row(
-                  children: [
-                    Icon(Icons.shopping_cart),
-                    SizedBox(width: 8),
-                    Text('Shopping'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'study', 
-                child: Row(
-                  children: [
-                    Icon(Icons.school),
-                    SizedBox(width: 8),
-                    Text('Study'),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
           
-          // Add Task Button
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              icon: const Icon(
-                Icons.add,
-                color: Colors.white, // Force white color
-                size: 28,
-              ),
-              tooltip: 'Add Task',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AddTaskScreen()),
-                );
-              },
-            ),
+          // Overflow menu
+          PopupMenuButton<String>(
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'profile', child: Text('Profile')),
+              const PopupMenuItem(value: 'calendar', child: Text('Calendar View')),
+              const PopupMenuItem(value: 'settings', child: Text('Settings')),
+              if (kDebugMode) const PopupMenuItem(value: 'test_notifications', child: Text('Test Notifications')),
+              const PopupMenuItem(value: 'logout', child: Text('Logout')),
+            ],
           ),
         ],
       ),
       body: Column(
         children: [
-          // Notification Test Panel - Only show in debug mode
           if (kDebugMode && _showTestPanel)
             const NotificationTestWidget(),
           
-          // NEW: Reminder Stats Bar
+          // Active Filters Display
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              if (!taskProvider.hasActiveFilters) return const SizedBox.shrink();
+              
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.filter_alt, size: 16, color: Colors.blue[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Active Filters:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blue[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            taskProvider.clearAllFilters();
+                            setState(() {});
+                          },
+                          child: Text(
+                            'Clear All',
+                            style: TextStyle(
+                              color: Colors.red[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: _buildActiveFilterChips(taskProvider),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          
+          // Reminder Stats Bar
           Consumer<TaskProvider>(
             builder: (context, taskProvider, child) {
               final remindersCount = taskProvider.tasksWithReminders.length;
@@ -290,13 +211,15 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                       color: overdueCount > 0 ? Colors.red[600] : Colors.blue[600],
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      overdueCount > 0 
-                        ? '$overdueCount overdue reminder${overdueCount > 1 ? 's' : ''}'
-                        : '$remindersCount active reminder${remindersCount > 1 ? 's' : ''}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: overdueCount > 0 ? Colors.red[700] : Colors.blue[700],
+                    Expanded(
+                      child: Text(
+                        overdueCount > 0 
+                          ? '$overdueCount overdue reminder${overdueCount > 1 ? 's' : ''}'
+                          : '$remindersCount active reminder${remindersCount > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: overdueCount > 0 ? Colors.red[700] : Colors.blue[700],
+                        ),
                       ),
                     ),
                   ],
@@ -336,10 +259,10 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildTaskList(taskProvider, taskProvider.tasks),
-                    _buildTaskList(taskProvider, taskProvider.incompleteTasks),
-                    _buildTaskList(taskProvider, taskProvider.completedTasks),
-                    _buildRemindersList(taskProvider), // NEW: Reminders tab
+                    _buildTaskList(taskProvider, taskProvider.filteredTasks),
+                    _buildTaskList(taskProvider, taskProvider.filteredTasks.where((t) => !t.isCompleted).toList()),
+                    _buildTaskList(taskProvider, taskProvider.filteredTasks.where((t) => t.isCompleted).toList()),
+                    _buildRemindersList(taskProvider),
                   ],
                 );
               },
@@ -347,43 +270,148 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddTaskScreen()),
+          );
+        },
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        elevation: 12.0,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 32),
+      ),
+    );
+  }
+
+  List<Widget> _buildActiveFilterChips(TaskProvider taskProvider) {
+    List<Widget> chips = [];
+
+    // Category filters
+    for (String category in taskProvider.selectedCategories) {
+      chips.add(_buildFilterChip(
+        label: category.toUpperCase(),
+        icon: _getCategoryIcon(category),
+        onRemove: () {
+          taskProvider.toggleCategoryFilter(category);
+          setState(() {});
+        },
+      ));
+    }
+
+    // Priority filters
+    for (String priority in taskProvider.selectedPriorities) {
+      chips.add(_buildFilterChip(
+        label: priority.toUpperCase(),
+        icon: _getPriorityIcon(priority),
+        color: _getPriorityColor(priority),
+        onRemove: () {
+          taskProvider.togglePriorityFilter(priority);
+          setState(() {});
+        },
+      ));
+    }
+
+    // Status filters
+    for (String status in taskProvider.selectedStatuses) {
+      chips.add(_buildFilterChip(
+        label: status.toUpperCase(),
+        icon: status == 'completed' ? Icons.check_circle : Icons.pending,
+        color: status == 'completed' ? Colors.green : Colors.orange,
+        onRemove: () {
+          taskProvider.toggleStatusFilter(status);
+          setState(() {});
+        },
+      ));
+    }
+
+    // Date range filter
+    if (taskProvider.hasDateFilter) {
+      chips.add(_buildFilterChip(
+        label: taskProvider.getDateFilterLabel(),
+        icon: Icons.date_range,
+        color: Colors.purple,
+        onRemove: () {
+          taskProvider.clearDateFilter();
+          setState(() {});
+        },
+      ));
+    }
+
+    // Special filters
+    if (taskProvider.showOverdueOnly) {
+      chips.add(_buildFilterChip(
+        label: 'OVERDUE',
+        icon: Icons.warning,
+        color: Colors.red,
+        onRemove: () {
+          taskProvider.setOverdueFilter(false);
+          setState(() {});
+        },
+      ));
+    }
+
+    if (taskProvider.showRecurringOnly) {
+      chips.add(_buildFilterChip(
+        label: 'RECURRING',
+        icon: Icons.repeat,
+        color: Colors.purple,
+        onRemove: () {
+          taskProvider.setRecurringFilter(false);
+          setState(() {});
+        },
+      ));
+    }
+
+    if (taskProvider.showRemindersOnly) {
+      chips.add(_buildFilterChip(
+        label: 'REMINDERS',
+        icon: Icons.notifications_active,
+        color: Colors.blue,
+        onRemove: () {
+          taskProvider.setRemindersFilter(false);
+          setState(() {});
+        },
+      ));
+    }
+
+    return chips;
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    Color? color,
+    required VoidCallback onRemove,
+  }) {
+    final chipColor = color ?? Colors.blue;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.1),
+        border: Border.all(color: chipColor),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Voice Input Button
-          FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const VoiceInputScreen(),
-                ),
-              );
-            },
-            heroTag: "voice",
-            backgroundColor: Colors.red.shade400,
-            child: const Icon(
-              Icons.mic,
-              color: Colors.white,
+          Icon(icon, size: 14, color: chipColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: chipColor,
             ),
           ),
-          const SizedBox(height: 10),
-          // Regular Add Button
-          FloatingActionButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddTaskScreen(),
-                ),
-              );
-            },
-            heroTag: "add",
-            backgroundColor: const Color(0xFF1976D2),
-            child: const Icon(
-              Icons.add,
-              color: Colors.white,
-            ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(Icons.close, size: 14, color: chipColor),
           ),
         ],
       ),
@@ -391,9 +419,11 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
   }
 
   Widget _buildTaskList(TaskProvider taskProvider, List<Task> tasks) {
-    List<Task> filteredTasks = _selectedCategory == 'all' 
-        ? tasks 
-        : tasks.where((task) => task.category == _selectedCategory).toList();
+    List<Task> filteredTasks = taskProvider.hasActiveFilters 
+        ? tasks
+        : (_selectedCategory == 'all' 
+            ? tasks 
+            : tasks.where((task) => task.category == _selectedCategory).toList());
 
     if (filteredTasks.isEmpty) {
       return Center(
@@ -401,18 +431,33 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _selectedCategory == 'all' ? Icons.task_alt : Icons.filter_list_off,
+              taskProvider.hasActiveFilters 
+                  ? Icons.filter_list_off
+                  : (_selectedCategory == 'all' ? Icons.task_alt : Icons.filter_list_off),
               size: 64,
               color: Colors.grey,
             ),
             const SizedBox(height: 16),
             Text(
-              _selectedCategory == 'all' 
-                  ? 'No tasks yet.\nAdd your first task!' 
-                  : 'No tasks in this category.',
+              taskProvider.hasActiveFilters 
+                  ? 'No tasks match your filters.\nTry adjusting your criteria.'
+                  : (_selectedCategory == 'all' 
+                      ? 'No tasks yet.\nAdd your first task!' 
+                      : 'No tasks in this category.'),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
+            if (taskProvider.hasActiveFilters) ...[
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  taskProvider.clearAllFilters();
+                  setState(() {});
+                },
+                icon: const Icon(Icons.clear_all),
+                label: const Text('Clear Filters'),
+              ),
+            ],
           ],
         ),
       );
@@ -420,7 +465,6 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Refresh will happen automatically via stream
         await Future.delayed(const Duration(milliseconds: 500));
       },
       child: ListView.builder(
@@ -428,13 +472,12 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
         itemCount: filteredTasks.length,
         itemBuilder: (context, index) {
           final task = filteredTasks[index];
-          return TaskCard(task: task); // UPDATED: Use new TaskCard with full task object
+          return TaskCard(task: task);
         },
       ),
     );
   }
 
-  // NEW: Build reminders list
   Widget _buildRemindersList(TaskProvider taskProvider) {
     final tasksWithReminders = taskProvider.tasksWithReminders;
     final overdueReminders = taskProvider.overdueReminders;
@@ -456,7 +499,6 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
       );
     }
 
-    // Sort reminders by time
     final sortedReminders = [...tasksWithReminders]
       ..sort((a, b) {
         if (a.reminderTime == null) return 1;
@@ -466,7 +508,6 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
 
     return Column(
       children: [
-        // Overdue section
         if (overdueReminders.isNotEmpty) ...[
           Container(
             width: double.infinity,
@@ -481,11 +522,13 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
               children: [
                 Icon(Icons.warning, color: Colors.red[600], size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  '${overdueReminders.length} Overdue Reminder${overdueReminders.length > 1 ? 's' : ''}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red[700],
+                Expanded(
+                  child: Text(
+                    '${overdueReminders.length} Overdue Reminder${overdueReminders.length > 1 ? 's' : ''}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
                   ),
                 ),
               ],
@@ -493,7 +536,6 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           ),
         ],
         
-        // Reminders list
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -513,6 +555,67 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
     );
   }
 
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'work': return Icons.work;
+      case 'personal': return Icons.person;
+      case 'health': return Icons.health_and_safety;
+      case 'shopping': return Icons.shopping_cart;
+      case 'study': return Icons.school;
+      default: return Icons.category;
+    }
+  }
+
+  IconData _getPriorityIcon(String priority) {
+    switch (priority) {
+      case 'high': return Icons.keyboard_arrow_up;
+      case 'medium': return Icons.remove;
+      case 'low': return Icons.keyboard_arrow_down;
+      default: return Icons.remove;
+    }
+  }
+
+  Color _getPriorityColor(String priority) {
+    switch (priority) {
+      case 'high': return Colors.red;
+      case 'medium': return Colors.orange;
+      case 'low': return Colors.green;
+      default: return Colors.grey;
+    }
+  }
+
+  // Add the missing filter dialog method
+  void _showFilterDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const FilterDialog(),
+    );
+    
+    if (result == true) {
+      setState(() {});
+    }
+  }
+
+  // Add the menu handler method
+  void _handleMenuAction(String value) {
+    switch (value) {
+      case 'profile':
+        Navigator.pushNamed(context, '/profile');
+        break;
+      case 'calendar':
+        Navigator.pushNamed(context, '/calendar');
+        break;
+      case 'settings':
+        Navigator.pushNamed(context, '/account-settings');
+        break;
+      case 'debug':
+        setState(() {
+          _showTestPanel = !_showTestPanel;
+        });
+        break;
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -520,7 +623,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
   }
 }
 
-// UPDATED TaskTile with reminder indicators
+// TaskTile class - Updated with reminder indicators
 class TaskTile extends StatelessWidget {
   final Task task;
 
@@ -542,7 +645,6 @@ class TaskTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title and Checkbox Row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -610,7 +712,6 @@ class TaskTile extends StatelessWidget {
                         case 'duplicate':
                           _duplicateTask(context, task);
                           break;
-                        // NEW: Reminder actions
                         case 'snooze_5':
                           Provider.of<TaskProvider>(context, listen: false)
                               .snoozeReminder(task.id!, 5);
@@ -648,7 +749,6 @@ class TaskTile extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // NEW: Reminder options
                       if (task.hasActiveReminder && !task.isCompleted) ...[
                         const PopupMenuItem(
                           value: 'snooze_5',
@@ -688,7 +788,6 @@ class TaskTile extends StatelessWidget {
               
               const SizedBox(height: 8),
               
-              // Tags Row
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
@@ -699,7 +798,6 @@ class TaskTile extends StatelessWidget {
                     _buildDueDateChip(task.dueDate!),
                   if (task.isRecurring)
                     _buildRecurringChip(task.recurringPattern ?? 'recurring'),
-                  // NEW: Reminder chip
                   if (task.hasActiveReminder)
                     _buildReminderChip(task),
                 ],
@@ -711,7 +809,6 @@ class TaskTile extends StatelessWidget {
     );
   }
 
-  // NEW: Build reminder chip
   Widget _buildReminderChip(Task task) {
     final isOverdue = task.reminderTime != null && 
                      task.reminderTime!.isBefore(DateTime.now()) && 
@@ -724,7 +821,6 @@ class TaskTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: color.withOpacity(0.1),
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(12),
@@ -771,7 +867,6 @@ class TaskTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: color.withOpacity(0.1),
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(12),
@@ -798,7 +893,6 @@ class TaskTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: Colors.blue.withOpacity(0.1),
         border: Border.all(color: Colors.blue, width: 1),
         borderRadius: BorderRadius.circular(12),
@@ -806,7 +900,7 @@ class TaskTile extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_getCategoryIcon(category), size: 12, color: Colors.blue),
+          Icon(NotificationHelper.getCategoryIcon(category), size: 12, color: Colors.blue),
           const SizedBox(width: 4),
           Text(
             category.toUpperCase(),
@@ -851,7 +945,6 @@ class TaskTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: color.withOpacity(0.1),
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(12),
@@ -878,7 +971,6 @@ class TaskTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
         color: Colors.purple.withOpacity(0.1),
         border: Border.all(color: Colors.purple, width: 1),
         borderRadius: BorderRadius.circular(12),
@@ -899,23 +991,6 @@ class TaskTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'work':
-        return Icons.work;
-      case 'personal':
-        return Icons.person;
-      case 'health':
-        return Icons.health_and_safety;
-      case 'shopping':
-        return Icons.shopping_cart;
-      case 'study':
-        return Icons.school;
-      default:
-        return Icons.category;
-    }
   }
 
   void _showTaskDetails(BuildContext context) {
@@ -969,11 +1044,9 @@ class TaskTile extends StatelessWidget {
                 return TextButton(
                   onPressed: taskProvider.isDeleting ? null : () async {
                     final success = await taskProvider.deleteTask(task.id!);
-                    // ignore: use_build_context_synchronously
                     Navigator.of(context).pop();
                     
                     if (success) {
-                      // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -1014,7 +1087,6 @@ class TaskTile extends StatelessWidget {
       color: originalTask.color,
       isRecurring: originalTask.isRecurring,
       recurringPattern: originalTask.recurringPattern,
-      // NEW: Don't copy reminder settings for duplicated tasks
       hasReminder: false,
       reminderTime: null,
     );
@@ -1028,7 +1100,7 @@ class TaskTile extends StatelessWidget {
   }
 }
 
-// UPDATED TaskDetailSheet with reminder information
+// TaskDetailSheet class
 class TaskDetailSheet extends StatelessWidget {
   final Task task;
 
@@ -1045,7 +1117,6 @@ class TaskDetailSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle bar
           Center(
             child: Container(
               width: 40,
@@ -1058,7 +1129,6 @@ class TaskDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Title with reminder indicator
           Row(
             children: [
               Expanded(
@@ -1097,7 +1167,6 @@ class TaskDetailSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Description
           if (task.description != null && task.description!.isNotEmpty) ...[
             Text(
               task.description!,
@@ -1106,7 +1175,6 @@ class TaskDetailSheet extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
-          // Details
           _buildDetailRow('Priority', task.priority.toUpperCase()),
           _buildDetailRow('Category', task.category.toUpperCase()),
           
@@ -1116,7 +1184,6 @@ class TaskDetailSheet extends StatelessWidget {
               '${task.dueDate!.day}/${task.dueDate!.month}/${task.dueDate!.year} at ${task.dueDate!.hour}:${task.dueDate!.minute.toString().padLeft(2, '0')}',
             ),
 
-          // NEW: Reminder details
           if (task.hasReminder) ...[
             if (task.reminderTime != null)
               _buildDetailRow(
@@ -1150,7 +1217,6 @@ class TaskDetailSheet extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Actions
           Row(
             children: [
               Expanded(
@@ -1187,7 +1253,6 @@ class TaskDetailSheet extends StatelessWidget {
             ],
           ),
 
-          // NEW: Reminder actions
           if (task.hasActiveReminder && !task.isCompleted) ...[
             const SizedBox(height: 12),
             Row(
@@ -1228,7 +1293,6 @@ class TaskDetailSheet extends StatelessWidget {
             ),
           ],
 
-          // Add bottom padding for safe area
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),

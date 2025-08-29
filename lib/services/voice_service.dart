@@ -73,4 +73,10 @@ class VoiceService {
   Future<List<LocaleName>> getLocales() async {
     return await _speechToText.locales();
   }
+
+  // Dispose of the service
+  void dispose() {
+    _speechToText.stop();
+    _speechToText.cancel();
+  }
 }

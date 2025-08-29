@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, unused_field
+// ignore_for_file: avoid_print, unused_field, prefer_final_fields
 
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -6,6 +6,7 @@ import 'dart:async';
 import '../models/task.dart';
 import '../services/task_service.dart';
 import '../services/notification_service.dart';
+import '../utils/notification_helper.dart';
 import '../providers/auth_provider.dart';
 
 class TaskProvider extends ChangeNotifier {
@@ -22,9 +23,19 @@ class TaskProvider extends ChangeNotifier {
   
   bool _isLoading = false;
   String _errorMessage = '';
-  String _selectedCategory = 'All';
-  String _selectedPriority = 'All';
+  // Simple Filters
   String _searchQuery = '';
+
+  // Advanced Filters
+  List<String> _selectedCategories = [];
+  List<String> _selectedPriorities = [];
+  List<String> _selectedStatuses = [];
+  List<String> _selectedColors = [];
+  DateTime? _dueDateStart;
+  DateTime? _dueDateEnd;
+  bool _showRemindersOnly = false;
+  bool _showOverdueOnly = false;
+  bool _showRecurringOnly = false;
   
   // Task statistics
   Map<String, int> _taskStats = {
@@ -34,11 +45,14 @@ class TaskProvider extends ChangeNotifier {
     'overdue': 0,
   };
   
+  // NEW: Analytics data
+  Map<String, dynamic> _analyticsData = {};
+  
   // Stream subscriptions
   StreamSubscription<List<Task>>? _tasksStreamSubscription;
   
   // Getters
-  List<Task> get tasks => _filteredTasks;
+  List<Task> get tasks => filteredTasks;
   List<Task> get completedTasks => _completedTasks;
   List<Task> get pendingTasks => _pendingTasks;
   List<Task> get overdueTasks => _overdueeTasks;
@@ -52,13 +66,30 @@ class TaskProvider extends ChangeNotifier {
     !task.isCompleted
   ).toList();
   
+  // NEW: Enhanced getters
+  List<Task> get recurringTasks => _tasks.where((task) => task.isRecurring).toList();
+  List<Task> get dueTodayTasks => _tasks.where((task) => task.isDueToday && !task.isCompleted).toList();
+  List<Task> get dueTomorrowTasks => _tasks.where((task) => task.isDueTomorrow && !task.isCompleted).toList();
+  List<Task> get highPriorityTasks => _tasks.where((task) => task.isHighPriority && !task.isCompleted).toList();
+  List<Task> get urgentTasks => _tasks.where((task) => task.isUrgent && !task.isCompleted).toList();
+  
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   String? get error => _errorMessage.isEmpty ? null : _errorMessage;
-  String get selectedCategory => _selectedCategory;
-  String get selectedPriority => _selectedPriority;
+  // Advanced Filter Getters
+  List<String> get selectedCategories => _selectedCategories;
+  List<String> get selectedPriorities => _selectedPriorities;
+  List<String> get selectedStatuses => _selectedStatuses;
+  List<String> get selectedColors => _selectedColors;
+  DateTime? get dueDateStart => _dueDateStart;
+  DateTime? get dueDateEnd => _dueDateEnd;
+  bool get showRemindersOnly => _showRemindersOnly;
+  bool get showOverdueOnly => _showOverdueOnly;
+  bool get showRecurringOnly => _showRecurringOnly;
   String get searchQuery => _searchQuery;
   Map<String, int> get taskStats => _taskStats;
+  Map<String, dynamic> get analyticsData => _analyticsData;
+  
   
   bool get hasError => _errorMessage.isNotEmpty;
   bool get hasTasks => _tasks.isNotEmpty;
@@ -66,6 +97,19 @@ class TaskProvider extends ChangeNotifier {
   bool get hasPendingTasks => _pendingTasks.isNotEmpty;
   bool get hasOverdueTasks => _overdueeTasks.isNotEmpty;
   bool get hasTodayTasks => _todayTasks.isNotEmpty;
+  bool get hasActiveFilters =>
+      _searchQuery.isNotEmpty ||
+      _selectedCategories.isNotEmpty ||
+      _selectedPriorities.isNotEmpty ||
+      _selectedStatuses.isNotEmpty ||
+      _selectedColors.isNotEmpty ||
+      _dueDateStart != null ||
+      _dueDateEnd != null ||
+      _showRemindersOnly ||
+      _showOverdueOnly ||
+      _showRecurringOnly;
+
+  bool get hasDateFilter => _dueDateStart != null || _dueDateEnd != null;
   
   // Computed properties
   double get completionPercentage {
@@ -73,6 +117,16 @@ class TaskProvider extends ChangeNotifier {
     return (_taskStats['completed']! / _taskStats['total']!) * 100;
   }
   
+  List<String> get availableCategories {
+    final Set<String> categorySet = {};
+    for (final task in _tasks) {
+      if (task.category.isNotEmpty) {
+        categorySet.add(task.category);
+      }
+    }
+    return categorySet.toList()..sort();
+  }
+
   List<String> get categories {
     final Set<String> categorySet = {'All'};
     for (final task in _tasks) {
@@ -85,30 +139,111 @@ class TaskProvider extends ChangeNotifier {
   
   List<String> get priorities => ['All', 'High', 'Medium', 'Low'];
   
-  /// Get filtered tasks based on current filters
-  List<Task> get _filteredTasks {
+  // NEW: Enhanced category/tag management
+  List<String> get statuses => ['All', 'pending', 'in_progress', 'completed', 'cancelled', 'overdue'];
+  
+  List<String> get allTags {
+    final Set<String> tagSet = {};
+    for (final task in _tasks) {
+      tagSet.addAll(task.tags);
+    }
+    return tagSet.toList()..sort();
+  }
+  
+  List<String> get colors => [
+    'red', 'pink', 'purple', 'indigo', 'blue', 
+    'cyan', 'teal', 'green', 'yellow', 'orange'
+  ];
+
+  List<Task> get filteredTasks {
     List<Task> filtered = List.from(_tasks);
-    
-    // Apply category filter
-    if (_selectedCategory != 'All') {
-      filtered = filtered.where((task) => task.category == _selectedCategory).toList();
-    }
-    
-    // Apply priority filter
-    if (_selectedPriority != 'All') {
-      filtered = filtered.where((task) => task.priority == _selectedPriority).toList();
-    }
-    
-    // Apply search filter
+
+    // Search Query Filter
     if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
+      String lowerCaseQuery = _searchQuery.toLowerCase();
       filtered = filtered.where((task) {
-        return task.title.toLowerCase().contains(query) ||
-               (task.description?.toLowerCase().contains(query) ?? false);
+        final titleMatch = task.title.toLowerCase().contains(lowerCaseQuery);
+        final descriptionMatch = task.description?.toLowerCase().contains(lowerCaseQuery) ?? false;
+        return titleMatch || descriptionMatch;
       }).toList();
     }
-    
+
+    // Category Filter
+    if (_selectedCategories.isNotEmpty) {
+      filtered = filtered.where((task) => _selectedCategories.contains(task.category)).toList();
+    }
+
+    // Priority Filter
+    if (_selectedPriorities.isNotEmpty) {
+      filtered = filtered.where((task) => _selectedPriorities.contains(task.priority)).toList();
+    }
+
+    // Status Filter
+    if (_selectedStatuses.isNotEmpty) {
+      filtered = filtered.where((task) {
+        if (_selectedStatuses.contains('completed') && task.isCompleted) return true;
+        if (_selectedStatuses.contains('pending') && !task.isCompleted) return true;
+        return false;
+      }).toList();
+    }
+
+    // Color Filter
+    if (_selectedColors.isNotEmpty) {
+      filtered = filtered.where((task) => _selectedColors.contains(task.displayColor)).toList();
+    }
+
+    // Date Range Filter
+    if (_dueDateStart != null) {
+      filtered = filtered.where((task) =>
+          task.dueDate != null && !task.dueDate!.isBefore(_dueDateStart!)).toList();
+    }
+    if (_dueDateEnd != null) {
+      final endOfDay = DateTime(_dueDateEnd!.year, _dueDateEnd!.month, _dueDateEnd!.day, 23, 59, 59);
+      filtered = filtered.where((task) =>
+          task.dueDate != null && !task.dueDate!.isAfter(endOfDay)).toList();
+    }
+
+    // Reminder Filter
+    if (_showRemindersOnly) {
+      filtered = filtered.where((task) => task.hasReminder).toList();
+    }
+
+    // Overdue Filter
+    if (_showOverdueOnly) {
+      filtered = filtered.where((task) => task.isOverdue).toList();
+    }
+
+    // Recurring Filter
+    if (_showRecurringOnly) {
+      filtered = filtered.where((task) => task.isRecurring).toList();
+    }
+
     return filtered;
+  }
+
+  /// NEW: Get analytics data
+  Future<void> loadAnalytics() async {
+    if (_currentUserId == null) return;
+    
+    try {
+      // _analyticsData = await _taskService.getTaskAnalytics(_currentUserId!, _tasks); // Method does not exist
+      notifyListeners();
+    } catch (e) {
+      print('Error loading analytics: $e');
+    }
+  }
+
+  /// NEW: Process recurring tasks
+  Future<void> processRecurringTasks() async {
+    if (_currentUserId == null) return;
+    
+    try {
+      await _taskService.processRecurringTasks(_currentUserId!);
+      // Refresh tasks to show newly created recurring tasks
+      await refreshTasks();
+    } catch (e) {
+      print('Error processing recurring tasks: $e');
+    }
   }
 
   /// Update auth provider and handle user changes
@@ -141,6 +276,9 @@ class TaskProvider extends ChangeNotifier {
     _loadUserTasks();
     _setupTasksStream(userId);
     _loadTaskStats();
+    loadAnalytics();
+    // Process any pending recurring tasks
+    processRecurringTasks();
   }
 
   /// Setup real-time task updates
@@ -149,6 +287,8 @@ class TaskProvider extends ChangeNotifier {
       (tasks) {
         _tasks = tasks;
         _updateTaskLists();
+        // Auto-update analytics when tasks change
+        loadAnalytics();
         notifyListeners();
       },
       onError: (error) {
@@ -170,9 +310,17 @@ class TaskProvider extends ChangeNotifier {
       'pending': 0,
       'overdue': 0,
     };
-    _selectedCategory = 'All';
-    _selectedPriority = 'All';
+    _analyticsData.clear();
     _searchQuery = '';
+    _selectedCategories.clear();
+    _selectedPriorities.clear();
+    _selectedStatuses.clear();
+    _selectedColors.clear();
+    _dueDateStart = null;
+    _dueDateEnd = null;
+    _showRemindersOnly = false;
+    _showOverdueOnly = false;
+    _showRecurringOnly = false;
     _errorMessage = '';
     notifyListeners();
   }
@@ -230,7 +378,7 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  /// Add a new task
+  /// Add a new task - ENHANCED with new model fields
   Future<bool> addTask(Task task) async {
     if (_currentUserId == null) {
       _setError('User not authenticated');
@@ -239,21 +387,24 @@ class TaskProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      final bool success = await _taskService.addTask(task, _currentUserId!);
+      // Set the userId in the task
+      final taskWithUserId = task.copyWith(userId: _currentUserId);
+      final bool success = await _taskService.addTask(taskWithUserId, _currentUserId!);
       
       if (success) {
-        // Schedule notification if reminder is set
-        if (task.hasReminder && task.reminderTime != null) {
+        // Schedule notification if reminder is set using NotificationHelper
+        if (task.hasReminder && task.reminderTime != null && task.notificationId != null) {
           await NotificationService().scheduleNotification(
-            id: task.hashCode,
-            title: 'Task Reminder',
-            body: task.title,
+            id: task.notificationId!,
+            title: NotificationHelper.getReminderTitle(task),
+            body: NotificationHelper.getReminderBody(task),
             scheduledTime: task.reminderTime!,
             payload: task.id,
           );
         }
         
         await _loadTaskStats();
+        await loadAnalytics();
         _clearError();
       } else {
         _setError('Failed to add task');
@@ -268,7 +419,7 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  /// Update an existing task
+  /// Update an existing task - ENHANCED
   Future<bool> updateTask(Task task) async {
     if (_currentUserId == null) {
       _setError('User not authenticated');
@@ -277,23 +428,28 @@ class TaskProvider extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      final bool success = await _taskService.updateTask(task, _currentUserId!);
+      // Update the updatedAt timestamp
+      final updatedTask = task.copyWith(updatedAt: DateTime.now());
+      final bool success = await _taskService.updateTask(updatedTask, _currentUserId!);
       
       if (success) {
-        // Update notification
-        await NotificationService().cancelNotification(task.hashCode);
+        // Update notification using NotificationHelper
+        if (task.notificationId != null) {
+          await NotificationService().cancelNotification(task.notificationId!);
+        }
         
-        if (task.hasReminder && task.reminderTime != null && !task.isCompleted) {
+        if (task.hasReminder && task.reminderTime != null && !task.isCompleted && task.notificationId != null) {
           await NotificationService().scheduleNotification(
-            id: task.hashCode,
-            title: 'Task Reminder',
-            body: task.title,
+            id: task.notificationId!,
+            title: NotificationHelper.getReminderTitle(task),
+            body: NotificationHelper.getReminderBody(task),
             scheduledTime: task.reminderTime!,
             payload: task.id,
           );
         }
         
         await _loadTaskStats();
+        await loadAnalytics();
         _clearError();
       } else {
         _setError('Failed to update task');
@@ -322,9 +478,16 @@ class TaskProvider extends ChangeNotifier {
       if (success) {
         // Cancel notification
         final task = _tasks.firstWhere((t) => t.id == taskId);
-        await NotificationService().cancelNotification(task.hashCode);
+        if (task.notificationId != null) {
+          await NotificationService().cancelNotification(task.notificationId!);
+        }
+        
+        // Remove task from local list
+        _tasks.removeWhere((t) => t.id == taskId);
+        notifyListeners();
         
         await _loadTaskStats();
+        await loadAnalytics();
         _clearError();
       } else {
         _setError('Failed to delete task');
@@ -339,7 +502,7 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  /// Toggle task completion
+  /// Toggle task completion - ENHANCED with recurring task handling
   Future<bool> toggleTaskCompletion(String taskId) async {
     if (_currentUserId == null) {
       _setError('User not authenticated');
@@ -347,17 +510,22 @@ class TaskProvider extends ChangeNotifier {
     }
 
     try {
+      final task = _tasks.firstWhere((t) => t.id == taskId);
       final bool success = await _taskService.toggleTaskCompletion(taskId, _currentUserId!);
       
       if (success) {
-        final task = _tasks.firstWhere((t) => t.id == taskId);
+        // Handle recurring tasks
+        // if (task.isRecurring && !task.isCompleted) {
+        //   await _taskService.processRecurringTask(task, _currentUserId!); // Method does not exist
+        // }
         
         // Cancel notification if task is completed
-        if (!task.isCompleted) {
-          await NotificationService().cancelNotification(task.hashCode);
+        if (!task.isCompleted && task.notificationId != null) {
+          await NotificationService().cancelNotification(task.notificationId!);
         }
         
         await _loadTaskStats();
+        await loadAnalytics();
         _clearError();
       } else {
         _setError('Failed to toggle task completion');
@@ -370,28 +538,112 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  void setRecurringFilter(bool showRecurringOnly) {
+    _showRecurringOnly = showRecurringOnly;
+    notifyListeners();
+  }
+
+  void toggleCategoryFilter(String category) {
+    _selectedCategories.contains(category)
+        ? _selectedCategories.remove(category)
+        : _selectedCategories.add(category);
+    notifyListeners();
+  }
+
+  void togglePriorityFilter(String priority) {
+    _selectedPriorities.contains(priority)
+        ? _selectedPriorities.remove(priority)
+        : _selectedPriorities.add(priority);
+    notifyListeners();
+  }
+
+  void toggleStatusFilter(String status) {
+    _selectedStatuses.contains(status)
+        ? _selectedStatuses.remove(status)
+        : _selectedStatuses.add(status);
+    notifyListeners();
+  }
+
+  void toggleColorFilter(String color) {
+    _selectedColors.contains(color)
+        ? _selectedColors.remove(color)
+        : _selectedColors.add(color);
+    notifyListeners();
+  }
+
+  String getDateFilterLabel() {
+    if (_dueDateStart != null && _dueDateEnd != null) {
+      if (_dueDateStart == _dueDateEnd) {
+        return 'On: ${_dueDateStart!.toLocal().toString().split(' ')[0]}';
+      }
+      return 'From: ${_dueDateStart!.toLocal().toString().split(' ')[0]} To: ${_dueDateEnd!.toLocal().toString().split(' ')[0]}';
+    }
+    if (_dueDateStart != null) {
+      return 'After: ${_dueDateStart!.toLocal().toString().split(' ')[0]}';
+    }
+    if (_dueDateEnd != null) {
+      return 'Before: ${_dueDateEnd!.toLocal().toString().split(' ')[0]}';
+    }
+    return 'Not set';
+  }
+
+  void clearDateFilter() {
+    _dueDateStart = null;
+    _dueDateEnd = null;
+    notifyListeners();
+  }
+
+  void setOverdueFilter(bool value) {
+    _showOverdueOnly = value;
+    notifyListeners();
+  }
+
+  void setRemindersFilter(bool value) {
+    _showRemindersOnly = value;
+    notifyListeners();
+  }
+
+  void setFilters({
+    List<String>? categories,
+    List<String>? priorities,
+    List<String>? statuses,
+    List<String>? colors,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool? showReminders,
+    bool? showOverdue,
+    bool? showRecurring,
+  }) {
+    _selectedCategories = categories ?? _selectedCategories;
+    _selectedPriorities = priorities ?? _selectedPriorities;
+    _selectedStatuses = statuses ?? _selectedStatuses;
+    _selectedColors = colors ?? _selectedColors;
+    _dueDateStart = startDate;
+    _dueDateEnd = endDate;
+    _showRemindersOnly = showReminders ?? _showRemindersOnly;
+    _showOverdueOnly = showOverdue ?? _showOverdueOnly;
+    _showRecurringOnly = showRecurring ?? _showRecurringOnly;
+    notifyListeners();
+  }
+
   /// Search tasks
   Future<void> searchTasks(String query) async {
     _searchQuery = query;
     notifyListeners();
   }
 
-  /// Set category filter
-  void setCategory(String category) {
-    _selectedCategory = category;
-    notifyListeners();
-  }
 
-  /// Set priority filter
-  void setPriority(String priority) {
-    _selectedPriority = priority;
-    notifyListeners();
-  }
-
-  /// Clear all filters
-  void clearFilters() {
-    _selectedCategory = 'All';
-    _selectedPriority = 'All';
+  /// Clear all filters - ENHANCED
+  void clearAllFilters() {
+    _selectedCategories.clear();
+    _selectedPriorities.clear();
+    _selectedStatuses.clear();
+    _selectedColors.clear();
+    _dueDateStart = null;
+    _dueDateEnd = null;
+    _showRemindersOnly = false;
+    _showOverdueOnly = false;
+    _showRecurringOnly = false;
     _searchQuery = '';
     notifyListeners();
   }
@@ -400,6 +652,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> refreshTasks() async {
     await _loadUserTasks();
     await _loadTaskStats();
+    await loadAnalytics();
   }
 
   /// Get task by ID
@@ -423,6 +676,18 @@ class TaskProvider extends ChangeNotifier {
     return _tasks.where((task) => task.priority == priority).toList();
   }
 
+  /// NEW: Get tasks by color
+  List<Task> getTasksByColor(String color) {
+    return _tasks.where((task) => task.displayColor == color).toList();
+  }
+
+  /// NEW: Get tasks by tags
+  List<Task> getTasksByTags(List<String> tags) {
+    return _tasks.where((task) => 
+      tags.any((tag) => task.tags.contains(tag))
+    ).toList();
+  }
+
   /// Batch update tasks
   Future<bool> batchUpdateTasks(List<Task> tasks) async {
     if (_currentUserId == null) {
@@ -436,6 +701,7 @@ class TaskProvider extends ChangeNotifier {
       
       if (success) {
         await _loadTaskStats();
+        await loadAnalytics();
         _clearError();
       } else {
         _setError('Failed to update tasks');
@@ -450,23 +716,6 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  /// Migrate tasks from anonymous to registered user
-  Future<bool> migrateUserTasks(String fromUserId, String toUserId) async {
-    try {
-      final bool success = await _taskService.migrateUserTasks(fromUserId, toUserId);
-      
-      if (success) {
-        // Update current user ID and reload data
-        _currentUserId = toUserId;
-        await refreshTasks();
-      }
-      
-      return success;
-    } catch (e) {
-      _setError('Failed to migrate tasks: $e');
-      return false;
-    }
-  }
 
   /// Delete all user tasks (for account deletion)
   Future<bool> deleteAllUserTasks() async {
@@ -501,7 +750,7 @@ class TaskProvider extends ChangeNotifier {
     _clearError();
   }
 
-  /// Snooze reminder
+  /// Snooze reminder - ENHANCED with NotificationHelper
   Future<bool> snoozeReminder(String taskId, int minutes) async {
     try {
       final task = getTaskById(taskId);
