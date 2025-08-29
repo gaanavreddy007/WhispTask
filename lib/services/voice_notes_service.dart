@@ -331,7 +331,6 @@ class VoiceNotesService {
   // Transcribe voice note (placeholder for future Speech-to-Text integration)
   Future<String?> transcribeVoiceNote(VoiceNote voiceNote) async {
     try {
-      // TODO: Integrate with Google Speech-to-Text or OpenAI Whisper
       // For now, return placeholder
       await Future.delayed(const Duration(seconds: 2)); // Simulate API call
       

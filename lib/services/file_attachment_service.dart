@@ -263,7 +263,6 @@ class FileAttachmentService {
       }
       
       // For now, just check if file exists
-      // TODO: Integrate with platform-specific file opening
       // You might want to use packages like:
       // - open_file: for opening files with default system apps
       // - url_launcher: for opening files in browser
