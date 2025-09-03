@@ -27,11 +27,13 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols
@@ -44,4 +46,162 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Firebase Configuration Files (SENSITIVE - DO NOT COMMIT)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+web/firebase-config.js
+macos/Runner/GoogleService-Info.plist
+windows/firebase_options.dart
+linux/firebase_options.dart
+
+# API Keys and Environment Files (SENSITIVE)
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+lib/config/api_keys.dart
+lib/config/secrets.dart
+
+# Signing Keys and Certificates (SENSITIVE)
+*.keystore
+*.jks
+*.p12
+*.key
+*.pem
+android/app/key.properties
+android/key.properties
+ios/Runner/Runner.entitlements
+android/app/upload-keystore.jks
+android/app/release-keystore.jks
+
+# RevenueCat/Stripe Keys (SENSITIVE)
+lib/config/revenue_cat_config.dart
+lib/config/stripe_config.dart
+
+# Sentry Configuration (SENSITIVE)
 sentry.properties
+android/sentry.properties
+ios/sentry.properties
+
+# Platform-specific build outputs
+**/build/
+**/Build/
+**/DerivedData/
+**/Pods/
+ios/Pods/
+ios/Podfile.lock
+android/.gradle/
+android/gradle/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+
+# macOS specific
+macos/Pods/
+macos/Podfile.lock
+**/Flutter/ephemeral/
+**/Pods/
+**/ServiceDefinitions.json
+**/Runner.xcworkspace/xcuserdata/
+**/Runner.xcodeproj/xcuserdata/
+**/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Windows specific
+windows/flutter/ephemeral/
+windows/CMakeFiles/
+windows/cmake_install.cmake
+windows/CMakeCache.txt
+
+# Linux specific
+linux/flutter/ephemeral/
+linux/CMakeFiles/
+linux/cmake_install.cmake
+linux/CMakeCache.txt
+
+# Web specific
+web/firebase-config.js
+web/.firebase/
+.firebase/
+
+# Testing and Coverage
+test/.test_coverage.dart
+test/coverage/
+coverage/
+test_coverage/
+*.coverage
+*.lcov
+
+# Logs and temporary files
+*.tmp
+*.temp
+logs/
+*.log.*
+flutter_*.log
+dart_tool/
+
+# IDE and Editor files
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# Package manager files
+pubspec.lock
+.packages
+.package_config.json
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+*.config.dart
+lib/l10n/app_localizations_*.dart
+!lib/l10n/app_localizations.dart
+!lib/l10n/app_localizations_en.dart
+!lib/l10n/app_localizations_hi.dart
+!lib/l10n/app_localizations_kn.dart
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.dart_tool/package_config.json
+.dart_tool/package_config_subset
+.dart_tool/version
+
+# Firebase Hosting
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc
+
+# Fastlane (iOS/Android deployment)
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+ios/fastlane/
+android/fastlane/
+
+# App Store Connect API Key (iOS)
+ios/AuthKey_*.p8
+
+# Google Play Console API Key (Android)
+android/play-console-*.json
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Network files
+.nfs*
