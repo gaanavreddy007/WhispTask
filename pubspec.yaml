@@ -10,16 +10,32 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Firebase Core and Services (Updated to latest compatible versions)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.3
   firebase_messaging: ^15.1.3
+  firebase_app_check: ^0.3.1+3
+  firebase_analytics: ^11.6.0
   
-  # Voice Recognition and Permissions (Updated)
+  # Error Tracking
+  sentry_flutter: ^7.14.0
+  
+  # Widget Support
+  home_widget: ^0.6.0
+  
+  # Voice Recognition and Permissions (Updated for Day 8)
   speech_to_text: ^7.0.0
   permission_handler: ^11.3.1
+  flutter_tts: ^4.0.2
+  
+  # Wake Word Detection (NEW for Day 8)
+  picovoice_flutter: ^3.0.2
+  rhino_flutter: ^3.0.1
+  porcupine_flutter: ^3.0.1
   
   # State Management
   provider: ^6.1.2
@@ -29,10 +45,10 @@ dependencies:
   timezone: ^0.9.4
   
   # Audio for custom notification tones (Updated)
-  audioplayers: ^6.1.0
+  audioplayers: ^6.5.0
   
   # Formatting and Utilities (Updated)
-  intl: ^0.19.0
+  intl: ^0.20.2
   rxdart: ^0.28.0
   
   # UI Components
@@ -46,9 +62,18 @@ dependencies:
   mime: ^2.0.0
   table_calendar: ^3.1.3
   image_picker: ^1.2.0
+  local_auth: ^2.1.6
+  shared_preferences: ^2.2.2
+  
+  # Premium Features (Day 11) - RevenueCat Integration
+  purchases_flutter: ^9.4.0
+  google_mobile_ads: ^5.1.0
 
 dev_dependencies:
+  sentry_dart_plugin: ^3.1.1
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.13.1
@@ -58,11 +83,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # FIXED: Proper indentation for assets (2 spaces under flutter:)
+  # Assets for Day 8 wake word models and voice feedback
   assets:
     - assets/
     - assets/images/
-
+    - assets/sounds/
+   
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
@@ -72,7 +98,7 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/images/app_icon.png"
     background_color: "#FFFFFF"
-    theme_color: "#1976D2"  # Changed to your app color
+    theme_color: "#1976D2"
   windows:
     generate: true
     image_path: "assets/images/app_icon.png"
@@ -80,3 +106,8 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "assets/images/app_icon.png"
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  project: flutter
+  org: gaanav-reddy

@@ -1,10 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import '../l10n/app_localizations.dart';
 
 enum CalendarViewType { month, week, day }
 
@@ -24,7 +25,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Calendar'),
+        title: Text(AppLocalizations.of(context).taskCalendar),
         actions: [
           PopupMenuButton<CalendarViewType>(
             icon: const Icon(Icons.view_module),
@@ -34,9 +35,9 @@ class _TaskCalendarState extends State<TaskCalendar> {
               });
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: CalendarViewType.month, child: Text('Month View')),
-              const PopupMenuItem(value: CalendarViewType.week, child: Text('Week View')),
-              const PopupMenuItem(value: CalendarViewType.day, child: Text('Day View')),
+              PopupMenuItem(value: CalendarViewType.month, child: Text(AppLocalizations.of(context).monthView)),
+              PopupMenuItem(value: CalendarViewType.week, child: Text(AppLocalizations.of(context).weekView)),
+              PopupMenuItem(value: CalendarViewType.day, child: Text(AppLocalizations.of(context).dayView)),
             ],
           ),
         ],
@@ -53,7 +54,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
                   calendarFormat: _viewType == CalendarViewType.week 
                       ? CalendarFormat.week 
                       : CalendarFormat.month,
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  selectedDayPredicate: (day) => _isSameDay(_selectedDay, day),
                   eventLoader: (day) => _getTasksForDay(taskProvider.tasks, day),
                   startingDayOfWeek: StartingDayOfWeek.monday,
                   onDaySelected: (selectedDay, focusedDay) {
@@ -62,10 +63,10 @@ class _TaskCalendarState extends State<TaskCalendar> {
                       _focusedDay = focusedDay;
                     });
                   },
-                  calendarStyle: CalendarStyle(
+                  calendarStyle: const CalendarStyle(
                     outsideDaysVisible: false,
                     markerDecoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
+                      color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -86,7 +87,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
   List<Task> _getTasksForDay(List<Task> tasks, DateTime day) {
     return tasks.where((task) {
       if (task.dueDate == null) return false;
-      return isSameDay(task.dueDate!, day);
+      return _isSameDay(task.dueDate!, day);
     }).toList();
   }
   
@@ -100,14 +101,14 @@ class _TaskCalendarState extends State<TaskCalendar> {
           padding: const EdgeInsets.all(16),
           child: Text(
             _viewType == CalendarViewType.day 
-                ? "Today's Tasks"
-                : 'Tasks for ${targetDay.day}/${targetDay.month}/${targetDay.year}',
+                ? AppLocalizations.of(context).todaysTasks
+                : '${AppLocalizations.of(context).tasksFor} ${targetDay.day}/${targetDay.month}/${targetDay.year}',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
         Expanded(
           child: dayTasks.isEmpty
-              ? const Center(child: Text('No tasks for this day'))
+              ? Center(child: Text(AppLocalizations.of(context).noTasksForThisDay))
               : ListView.builder(
                   itemCount: dayTasks.length,
                   itemBuilder: (context, index) {
@@ -138,7 +139,7 @@ class _TaskCalendarState extends State<TaskCalendar> {
                   const Icon(Icons.mic, size: 16, color: Colors.blue),
                 if (task.hasAttachments) 
                   const Icon(Icons.attach_file, size: 16, color: Colors.orange),
-                Text('Priority: ${task.priority}'),
+                Text('${AppLocalizations.of(context).priority}: ${task.priority}'),
               ],
             ),
           ],
@@ -146,11 +147,11 @@ class _TaskCalendarState extends State<TaskCalendar> {
         trailing: PopupMenuButton(
           itemBuilder: (context) => [
             PopupMenuItem(
-              child: const Text('Edit'),
+              child: Text(AppLocalizations.of(context).edit),
               onTap: () => _editTask(task),
             ),
             PopupMenuItem(
-              child: const Text('Delete'),
+              child: Text(AppLocalizations.of(context).delete),
               onTap: () => _deleteTask(task),
             ),
           ],
@@ -168,5 +169,10 @@ class _TaskCalendarState extends State<TaskCalendar> {
     if (task.id != null) {
       Provider.of<TaskProvider>(context, listen: false).deleteTask(task.id!);
     }
+  }
+  
+  bool _isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

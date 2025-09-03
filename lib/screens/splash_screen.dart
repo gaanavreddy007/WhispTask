@@ -1,6 +1,7 @@
 // Create a new file: lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -101,9 +102,9 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 30),
                     // App Name
-                    const Text(
-                      'WhispTask',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).whispTask,
+                      style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -112,9 +113,9 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 10),
                     // Tagline
-                    const Text(
-                      'Voice-Powered Task Management',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).voicePoweredTaskManagement,
+                      style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
                         fontWeight: FontWeight.w300,

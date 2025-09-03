@@ -1,12 +1,20 @@
+// ignore_for_file: unused_import, unnecessary_import, avoid_print
+
 import 'dart:ui';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/task.dart';
 
 class NotificationService {
@@ -49,20 +57,26 @@ class NotificationService {
 
       _isInitialized = true;
       debugPrint('🎉 NotificationService initialized successfully');
-
-      // Send test notification to verify setup
-      await sendTestNotification();
       
     } catch (e) {
-      debugPrint('❌ NotificationService initialization failed: $e');
-      rethrow;
+      print('Error initializing notifications: $e');
+      await Sentry.captureException(
+        e,
+        stackTrace: StackTrace.current,
+        withScope: (scope) {
+          scope.setTag('service', 'notification');
+          scope.setTag('operation', 'initialize');
+          scope.level = SentryLevel.error;
+        },
+      );
+      _isInitialized = false;
     }
   }
 
   // Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -195,10 +209,21 @@ class NotificationService {
       return;
     }
 
-    final int notificationId = task.id.hashCode;
+    final int notificationId = task.id.hashCode.abs();
     
     try {
       debugPrint('⏰ Scheduling reminder for task: ${task.title}');
+      
+      // Check permissions first
+      final hasPermission = await _hasNotificationPermission();
+      if (!hasPermission) {
+        debugPrint('⚠️ No notification permission - requesting...');
+        final granted = await _requestNotificationPermission();
+        if (!granted) {
+          debugPrint('❌ Notification permission denied');
+          return;
+        }
+      }
       
       // Cancel existing notification
       await cancelNotification(notificationId);
@@ -247,7 +272,18 @@ class NotificationService {
 
       debugPrint('✅ Scheduled ${task.reminderType} reminder for: ${task.title} at $scheduledDate');
     } catch (e) {
-      debugPrint('❌ Failed to schedule notification: $e');
+      print('Error scheduling notification: $e');
+      await Sentry.captureException(
+        e,
+        stackTrace: StackTrace.current,
+        withScope: (scope) {
+          scope.setTag('service', 'notification');
+          scope.setTag('operation', 'schedule_notification');
+          scope.setExtra('notification_id', notificationId);
+          scope.setExtra('scheduled_time', task.reminderTime.toString());
+          scope.level = SentryLevel.warning;
+        },
+      );
       rethrow;
     }
   }
@@ -366,7 +402,7 @@ class NotificationService {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       color: const Color(0xFF6366F1), // Indigo color
       ledColor: const Color(0xFF6366F1),
       ledOnMs: 1000,
@@ -451,6 +487,44 @@ class NotificationService {
   Future<void> cancelAllNotifications() async {
     await _flutterLocalNotificationsPlugin.cancelAll();
     debugPrint('🗑️ Cancelled all notifications');
+  }
+
+  // Check if notification permission is granted
+  Future<bool> _hasNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+        return status.isGranted;
+      } else if (Platform.isIOS) {
+        final settings = await _firebaseMessaging.getNotificationSettings();
+        return settings.authorizationStatus == AuthorizationStatus.authorized;
+      }
+      return true; // Default for other platforms
+    } catch (e) {
+      debugPrint('Error checking notification permission: $e');
+      return false;
+    }
+  }
+
+  // Request notification permission
+  Future<bool> _requestNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.request();
+        return status.isGranted;
+      } else if (Platform.isIOS) {
+        final settings = await _firebaseMessaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return settings.authorizationStatus == AuthorizationStatus.authorized;
+      }
+      return true; // Default for other platforms
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+      return false;
+    }
   }
 
   // Get pending notifications (for debugging)

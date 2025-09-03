@@ -6,18 +6,24 @@ plugins {
 }
 
 android {
-    namespace = "com.example.whispnask"
+    namespace = "com.example.whisptask"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.whispnask"
+        applicationId = "com.example.whisptask"
         
         // Use property assignment syntax for Kotlin DSL with Flutter properties
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Force notification icon
+        manifestPlaceholders["notificationIcon"] = "@drawable/ic_notification"
+        
+        // RevenueCat App ID for Google Play
+        manifestPlaceholders["revenueCatAppId"] = "app6d8de76b03"
     }
 
     buildTypes {
@@ -33,9 +39,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
 }
 
 flutter {

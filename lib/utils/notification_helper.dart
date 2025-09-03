@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/task.dart';
+import '../l10n/app_localizations.dart';
 
 class NotificationHelper {
   // Available notification tones (matching your task service)
@@ -192,14 +193,14 @@ class NotificationHelper {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.notifications_active, color: Colors.blue),
               SizedBox(width: 8),
-              Text('Enable Notifications'),
+              Text(AppLocalizations.of(context).enableNotifications),
             ],
           ),
-          content: const Column(
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -213,20 +214,20 @@ class NotificationHelper {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 4),
-              Text('• Never miss important deadlines'),
-              Text('• Stay organized and productive'),
-              Text('• Customizable reminder tones'),
-              Text('• Flexible scheduling options'),
+              Text(AppLocalizations.of(context).neverMissDeadlines),
+              Text(AppLocalizations.of(context).stayOrganized),
+              Text(AppLocalizations.of(context).customizableReminders),
+              Text(AppLocalizations.of(context).flexibleScheduling),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Not Now'),
+              child: Text(AppLocalizations.of(context).notNow),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Enable'),
+              child: Text(AppLocalizations.of(context).enable),
             ),
           ],
         );
@@ -240,9 +241,9 @@ class NotificationHelper {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Permission Required'),
-          content: const Text(
-            'Notifications are disabled. Please enable them in your device settings to receive task reminders.',
+          title: Text(AppLocalizations.of(context).permissionRequired),
+          content: Text(
+            AppLocalizations.of(context).notificationsDisabled,
           ),
           actions: [
             TextButton(
@@ -254,7 +255,7 @@ class NotificationHelper {
                 Navigator.of(context).pop();
                 openAppSettings();
               },
-              child: const Text('Open Settings'),
+              child: Text(AppLocalizations.of(context).openSettings),
             ),
           ],
         );
@@ -1008,45 +1009,6 @@ class NotificationHelper {
     );
   }
 
-  // Show notification test dialog
-  static Future<void> showNotificationTest(BuildContext context) async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.notification_important),
-              SizedBox(width: 8),
-              Text('Test Notification'),
-            ],
-          ),
-          content: const Text(
-            'A test notification will be sent immediately to verify your notification settings.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Here you would trigger a test notification
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Test notification sent!'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              child: const Text('Send Test'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // Show reminder deletion confirmation
   static Future<bool> showDeleteReminderDialog(BuildContext context) async {

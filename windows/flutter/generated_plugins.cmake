@@ -9,8 +9,11 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   firebase_core
   firebase_storage
+  flutter_tts
+  local_auth_windows
   permission_handler_windows
   record_windows
+  sentry_flutter
   speech_to_text_windows
 )
 

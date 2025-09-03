@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/password_strength_indicator.dart';
 import '../utils/validators.dart';
+import '../l10n/app_localizations.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -71,7 +72,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Change Password'),
+        title: Text(AppLocalizations.of(context).changePassword),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black87,
@@ -136,9 +137,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Change Your Password',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).changePasswordTitle,
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -146,7 +147,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Keep your account secure by using a strong, unique password',
+            AppLocalizations.of(context).changePasswordSubtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
@@ -178,9 +179,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Password Information',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context).passwordInformation,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -190,7 +191,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
             
             // Current Password
             Text(
-              'Current Password',
+              AppLocalizations.of(context).currentPassword,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -203,7 +204,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
               obscureText: !_showCurrentPassword,
               validator: Validators.validatePassword,
               decoration: InputDecoration(
-                hintText: 'Enter your current password',
+                hintText: AppLocalizations.of(context).enterCurrentPassword,
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -227,7 +228,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
             
             // New Password
             Text(
-              'New Password',
+              AppLocalizations.of(context).newPassword,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -241,7 +242,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
               validator: Validators.validateStrongPassword,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Enter your new password',
+                hintText: AppLocalizations.of(context).enterNewPassword,
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -271,7 +272,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
             
             // Confirm Password
             Text(
-              'Confirm New Password',
+              AppLocalizations.of(context).confirmNewPassword,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -287,7 +288,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
                 _newPasswordController.text,
               ),
               decoration: InputDecoration(
-                hintText: 'Confirm your new password',
+                hintText: AppLocalizations.of(context).confirmNewPasswordHint,
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -332,9 +333,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text(
-                        'Change Password',
-                        style: TextStyle(
+                    : Text(
+                        AppLocalizations.of(context).changePassword,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -364,7 +365,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
               Icon(Icons.security, color: Colors.blue[700], size: 20),
               const SizedBox(width: 8),
               Text(
-                'Security Tips',
+                AppLocalizations.of(context).securityTips,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -375,11 +376,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
           ),
           const SizedBox(height: 16),
           
-          _buildTipItem('Use at least 8 characters'),
-          _buildTipItem('Include uppercase and lowercase letters'),
-          _buildTipItem('Add numbers and special characters'),
-          _buildTipItem('Avoid personal information'),
-          _buildTipItem('Don\'t reuse passwords from other accounts'),
+          _buildTipItem(AppLocalizations.of(context).tip1),
+          _buildTipItem(AppLocalizations.of(context).tip2),
+          _buildTipItem(AppLocalizations.of(context).tip3),
+          _buildTipItem(AppLocalizations.of(context).tip4),
+          _buildTipItem(AppLocalizations.of(context).tip5),
         ],
       ),
     );
@@ -430,17 +431,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
       
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Password changed successfully!'),
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context).passwordChangedSuccess),
             ],
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
       

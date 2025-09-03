@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unused_import, use_build_context_synchronously, duplicate_ignore
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +8,7 @@ import '../utils/notification_helper.dart';
 import '../widgets/voice_notes_widget.dart';
 import '../widgets/file_attachments_widget.dart';
 import '../services/transcription_service.dart';
+import '../l10n/app_localizations.dart';
 
 class AddTaskScreen extends StatefulWidget {
   final Task? taskToEdit;
@@ -29,6 +30,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   TimeOfDay? _dueTime;
   bool _isRecurring = false;
   String? _recurringPattern;
+  int _recurringInterval = 1;
 
   // NEW: Reminder fields
   bool _hasReminder = false;
@@ -52,7 +54,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   final List<String> _priorities = ['high', 'medium', 'low'];
   final List<String> _categories = ['general', 'work', 'personal', 'health', 'shopping', 'study'];
-  final List<String> _recurringPatterns = ['daily', 'weekly', 'monthly'];
+  final List<String> _recurringPatterns = ['daily', 'weekly', 'monthly', 'yearly'];
 
   @override
   void initState() {
@@ -83,6 +85,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
     _isRecurring = task.isRecurring;
     _recurringPattern = task.recurringPattern;
+    _recurringInterval = task.recurringInterval ?? 1;
 
     // NEW: Populate reminder fields
     _hasReminder = task.hasReminder;
@@ -119,7 +122,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.taskToEdit == null ? 'Add Task' : 'Edit Task'),
+        title: Text(widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
@@ -185,18 +188,18 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   // Title Field
                   TextFormField(
                     controller: _titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Task Title *',
-                      hintText: 'Enter your task...',
+                    decoration: InputDecoration(
+                      labelText: '${AppLocalizations.of(context).taskTitle} *',
+                      hintText: AppLocalizations.of(context).taskTitleHint,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.task),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a task title';
+                        return AppLocalizations.of(context).pleaseEnterTaskTitle;
                       }
                       if (value.length > 100) {
-                        return 'Title must be less than 100 characters';
+                        return AppLocalizations.of(context).titleTooLong;
                       }
                       return null;
                     },
@@ -207,9 +210,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   // Description Field
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description (Optional)',
-                      hintText: 'Add more details...',
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context).descriptionOptional,
+                      hintText: AppLocalizations.of(context).addMoreDetails,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.description),
                       alignLabelWithHint: true,
@@ -218,7 +221,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     maxLength: 500,
                     validator: (value) {
                       if (value != null && value.length > 500) {
-                        return 'Description must be less than 500 characters';
+                        return AppLocalizations.of(context).descriptionTooLong;
                       }
                       return null;
                     },
@@ -244,15 +247,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   else
                     Container(
                       padding: const EdgeInsets.all(16),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          SizedBox(
+                          const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          SizedBox(width: 12),
-                          Text('Initializing voice services...'),
+                          const SizedBox(width: 12),
+                          Text(AppLocalizations.of(context).initializingVoiceServices),
                         ],
                       ),
                     ),
@@ -287,7 +290,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Task Properties',
+                          AppLocalizations.of(context).taskProperties,
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.grey[700],
@@ -302,7 +305,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                               child: DropdownButtonFormField<String>(
                                 value: _priority,
                                 decoration: InputDecoration(
-                                  labelText: 'Priority',
+                                  labelText: AppLocalizations.of(context).priority,
                                   prefixIcon: Icon(_getPriorityIcon(_priority), 
                                                  color: _getPriorityColor(_priority)),
                                   border: OutlineInputBorder(
@@ -314,11 +317,18 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                                   return DropdownMenuItem(
                                     value: priority,
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(_getPriorityIcon(priority), 
-                                             size: 16, color: _getPriorityColor(priority)),
-                                        const SizedBox(width: 8),
-                                        Text(priority.toUpperCase()),
+                                             size: 14, color: _getPriorityColor(priority)),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: Text(
+                                            priority.toUpperCase(),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
@@ -335,7 +345,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                               child: DropdownButtonFormField<String>(
                                 value: _category,
                                 decoration: InputDecoration(
-                                  labelText: 'Category',
+                                  labelText: AppLocalizations.of(context).category,
                                   prefixIcon: Icon(_getCategoryIcon(_category)),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -346,10 +356,17 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                                   return DropdownMenuItem(
                                     value: category,
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(_getCategoryIcon(category), size: 16),
-                                        const SizedBox(width: 8),
-                                        Text(category.toUpperCase()),
+                                        Icon(_getCategoryIcon(category), size: 13),
+                                        const SizedBox(width: 3),
+                                        Flexible(
+                                          child: Text(
+                                            category.toUpperCase(),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 11),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
@@ -732,6 +749,31 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                                 return null;
                               },
                             ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              initialValue: _recurringInterval.toString(),
+                              decoration: const InputDecoration(
+                                labelText: 'Repeat Every (number)',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.numbers),
+                                helperText: 'e.g., 2 for every 2 days/weeks/months',
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (value) {
+                                setState(() {
+                                  _recurringInterval = int.tryParse(value) ?? 1;
+                                });
+                              },
+                              validator: (value) {
+                                if (_isRecurring) {
+                                  final interval = int.tryParse(value ?? '');
+                                  if (interval == null || interval < 1) {
+                                    return 'Please enter a valid interval (1 or greater)';
+                                  }
+                                }
+                                return null;
+                              },
+                            ),
                           ],
                         ],
                       ),
@@ -916,6 +958,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         color: _taskColor,
         isRecurring: _isRecurring,
         recurringPattern: _isRecurring ? _recurringPattern : null,
+        recurringInterval: _isRecurring ? _recurringInterval : null,
         hasReminder: _hasReminder,
         reminderTime: _hasReminder ? _reminderTime : null,
         reminderType: _hasReminder ? _reminderType : 'once',
@@ -942,8 +985,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.taskToEdit == null 
-                ? '✅ Task added successfully ${_hasReminder ? "with reminder" : ""}' 
-                : '✅ Task updated successfully ${_hasReminder ? "with reminder" : ""}'),
+                ? '✅ ${AppLocalizations.of(context).taskAddedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}' 
+                : '✅ ${AppLocalizations.of(context).taskUpdatedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),

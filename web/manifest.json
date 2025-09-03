@@ -1,10 +1,10 @@
 {
-    "name": "whispnask",
-    "short_name": "whispnask",
+    "name": "whisptask",
+    "short_name": "whisptask",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
-    "theme_color": "#FFFFFF",
+    "theme_color": "#1976D2",
     "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,

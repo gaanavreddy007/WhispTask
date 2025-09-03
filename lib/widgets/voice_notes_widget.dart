@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/voice_notes_service.dart';
 import '../services/transcription_service.dart';
+import '../l10n/app_localizations.dart';
 
 class EnhancedVoiceNotesWidget extends StatefulWidget {
   final String taskId;
@@ -60,7 +61,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Voice Notes', style: Theme.of(context).textTheme.titleMedium),
+        Text(AppLocalizations.of(context).voiceNotes, style: Theme.of(context).textTheme.titleMedium),
         SizedBox(height: 8),
         
         // Recording Controls
@@ -76,7 +77,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
             ),
             if (_isRecording) ...[
               SizedBox(width: 8),
-              Text('Recording...', style: TextStyle(color: Colors.red)),
+              Text(AppLocalizations.of(context).recording, style: TextStyle(color: Colors.red)),
             ],
             if (_isTranscribing) ...[
               SizedBox(width: 8),
@@ -86,7 +87,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 8),
-              Text('Transcribing...'),
+              Text(AppLocalizations.of(context).transcribing),
             ],
           ],
         ),
@@ -103,7 +104,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Live Transcription:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(AppLocalizations.of(context).liveTranscription, style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 4),
                 Text(_currentTranscription),
               ],
@@ -114,7 +115,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
         // Existing Voice Notes
         if (_voiceNotes.isNotEmpty) ...[
           SizedBox(height: 16),
-          Text('Recorded Notes:', style: Theme.of(context).textTheme.titleSmall),
+          Text(AppLocalizations.of(context).recordedNotes, style: Theme.of(context).textTheme.titleSmall),
           SizedBox(height: 8),
           ListView.builder(
             shrinkWrap: true,
@@ -141,7 +142,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
                 Icon(Icons.audiotrack, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Duration: ${note.formattedDuration}',
+                  '${AppLocalizations.of(context).duration}: ${note.formattedDuration}',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Spacer(),
@@ -168,7 +169,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Transcription:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(AppLocalizations.of(context).transcription, style: TextStyle(fontWeight: FontWeight.bold)),
                     SizedBox(height: 4),
                     Text(note.transcription!),
                   ],
@@ -177,7 +178,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
             ],
             SizedBox(height: 4),
             Text(
-              'Created: ${note.recordedAt.day}/${note.recordedAt.month}/${note.recordedAt.year}',
+              '${AppLocalizations.of(context).created}: ${note.recordedAt.day}/${note.recordedAt.month}/${note.recordedAt.year}',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -198,7 +199,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
       _recordingPath = path;
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to start recording')),
+        SnackBar(content: Text(AppLocalizations.of(context).failedToStartRecording)),
       );
       setState(() => _isRecording = false);
       return;
@@ -213,7 +214,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
       },
       onError: (error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Transcription error: $error')),
+          SnackBar(content: Text('${AppLocalizations.of(context).transcriptionError}: $error')),
         );
       },
     );
@@ -228,7 +229,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
     // Stop recording and transcription
     if (_recordingPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Recording path not found')),
+        SnackBar(content: Text(AppLocalizations.of(context).recordingPathNotFound)),
       );
       setState(() {
         _isRecording = false;
@@ -242,8 +243,15 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
 
     if (voiceNote != null) {
       // Add transcription to the new voice note
-      final newNoteWithTranscription = voiceNote.copyWith(
+      final newNoteWithTranscription = VoiceNote(
+        id: voiceNote.id,
+        taskId: voiceNote.taskId,
+        filePath: voiceNote.filePath,
+        recordedAt: voiceNote.recordedAt,
+        duration: voiceNote.duration,
+        fileSize: voiceNote.fileSize,
         transcription: _currentTranscription,
+        cloudUrl: voiceNote.cloudUrl,
       );
 
       setState(() {
@@ -259,16 +267,16 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
         _isTranscribing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save voice note')),
+        SnackBar(content: Text(AppLocalizations.of(context).failedToSaveVoiceNote)),
       );
     }
   }
 
   Future<void> _playVoiceNote(VoiceNote note) async {
     if (_voiceService.isPlaying && _voiceService.currentPlayingNoteId == note.id) {
-      await _voiceService.pausePlayback();
+      await _voiceService.stopPlayback();
     } else {
-      await _voiceService.playVoiceNote(note);
+      await _voiceService.playVoiceNote(note.id, note.filePath);
     }
   }
 
@@ -388,12 +396,12 @@ class _QuickVoiceRecordButtonState extends State<QuickVoiceRecordButton> {
       if (path != null) {
         _recordingPath = path;
       } else {
-        throw Exception('Failed to start recording');
+        throw Exception(AppLocalizations.of(context).failedToStartRecordingException);
       }
     } catch (e) {
       setState(() => _isRecording = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Recording failed: $e')),
+        SnackBar(content: Text('${AppLocalizations.of(context).recordingFailed}: $e')),
       );
     }
   }
@@ -408,12 +416,12 @@ class _QuickVoiceRecordButtonState extends State<QuickVoiceRecordButton> {
         widget.onVoiceNoteAdded(voiceNote);
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Voice note saved')),
+          SnackBar(content: Text(AppLocalizations.of(context).voiceNoteSaved)),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(content: Text('${AppLocalizations.of(context).failedToSave}: $e')),
       );
     } finally {
       setState(() {

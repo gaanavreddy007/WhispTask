@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../utils/validators.dart';
 import '../screens/signup_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -143,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
         
         // Welcome Text
         Text(
-          'Welcome Back',
+          AppLocalizations.of(context).welcomeBack,
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
             color: const Color(0xFF1976D2),
             fontWeight: FontWeight.bold,
@@ -153,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 8),
         
         Text(
-          'Sign in to continue managing your tasks',
+          AppLocalizations.of(context).signInToContinue,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: Colors.grey[600],
           ),
@@ -181,8 +182,8 @@ class _LoginScreenState extends State<LoginScreen>
                   // Email Field
                   AuthTextField(
                     controller: _emailController,
-                    label: 'Email',
-                    hint: 'Enter your email address',
+                    label: AppLocalizations.of(context).email,
+                    hint: AppLocalizations.of(context).enterEmailHint,
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: Validators.validateEmail,
@@ -194,8 +195,8 @@ class _LoginScreenState extends State<LoginScreen>
                   // Password Field
                   AuthTextField(
                     controller: _passwordController,
-                    label: 'Password',
-                    hint: 'Enter your password',
+                    label: AppLocalizations.of(context).password,
+                    hint: AppLocalizations.of(context).enterPasswordHint,
                     prefixIcon: Icons.lock_outline,
                     obscureText: true,
                     showPasswordToggle: true,
@@ -216,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen>
                         },
                         activeColor: const Color(0xFF1976D2),
                       ),
-                      const Text('Remember me'),
+                      Text(AppLocalizations.of(context).rememberMe),
                       
                       const Spacer(),
                       
@@ -229,9 +230,9 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           );
                         },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(color: Color(0xFF1976D2)),
+                        child: Text(
+                          AppLocalizations.of(context).forgotPassword,
+                          style: const TextStyle(color: Color(0xFF1976D2)),
                         ),
                       ),
                     ],
@@ -260,9 +261,9 @@ class _LoginScreenState extends State<LoginScreen>
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text(
-                            'Sign In',
-                            style: TextStyle(
+                        : Text(
+                            AppLocalizations.of(context).signIn,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -321,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'OR',
+                    AppLocalizations.of(context).or,
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w500,
@@ -338,7 +339,7 @@ class _LoginScreenState extends State<LoginScreen>
             OutlinedButton.icon(
               onPressed: authProvider.isLoading ? null : _handleGuestLogin,
               icon: const Icon(Icons.person_outline),
-              label: const Text('Continue as Guest'),
+              label: Text(AppLocalizations.of(context).continueAsGuest),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF1976D2),
                 side: const BorderSide(color: Color(0xFF1976D2)),
@@ -362,7 +363,7 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Don\'t have an account? ',
+              AppLocalizations.of(context).dontHaveAccount,
               style: TextStyle(color: Colors.grey[600]),
             ),
             TextButton(
@@ -374,8 +375,8 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 );
               },
-              child: const Text(
-                'Sign Up',
+              child: Text(
+                AppLocalizations.of(context).signUp,
                 style: TextStyle(
                   color: Color(0xFF1976D2),
                   fontWeight: FontWeight.w600,
@@ -389,7 +390,7 @@ class _LoginScreenState extends State<LoginScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            'By continuing, you agree to our Terms of Service and Privacy Policy',
+            AppLocalizations.of(context).byContingTermsPrivacy,
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 12,
@@ -487,7 +488,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: Text(AppLocalizations.of(context).resetPassword),
         backgroundColor: const Color(0xFF1976D2),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -509,7 +510,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 24),
               
               Text(
-                'Forgot Password?',
+                AppLocalizations.of(context).forgotPasswordTitle,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -518,7 +519,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 8),
               
               Text(
-                'Enter your email address and we\'ll send you a link to reset your password.',
+                AppLocalizations.of(context).forgotPasswordDesc,
                 style: TextStyle(color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
@@ -540,8 +541,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       children: [
                         AuthTextField(
                           controller: _emailController,
-                          label: 'Email Address',
-                          hint: 'Enter your email address',
+                          label: AppLocalizations.of(context).emailAddress,
+                          hint: AppLocalizations.of(context).enterEmailAddress,
                           prefixIcon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: Validators.validateEmail,
@@ -569,8 +570,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
-                              : const Text(
-                                  'Send Reset Link',
+                              : Text(
+                                  AppLocalizations.of(context).sendResetLink,
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -587,8 +588,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Back to Sign In',
+                child: Text(
+                  AppLocalizations.of(context).backToSignIn,
                   style: TextStyle(color: Color(0xFF1976D2)),
                 ),
               ),
@@ -615,8 +616,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password reset link sent to your email'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).passwordResetSent),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),

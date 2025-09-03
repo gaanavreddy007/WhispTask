@@ -3,6 +3,7 @@
 import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../models/task.dart';
 import '../services/notification_service.dart';
@@ -178,6 +179,17 @@ class TaskService {
 
       return tasks;
     } catch (e) {
+      await Sentry.captureException(
+        e,
+        stackTrace: StackTrace.current,
+        withScope: (scope) {
+          scope.setTag('service', 'task');
+          scope.setTag('operation', 'get_user_tasks');
+          scope.setExtra('user_id', userId);
+          scope.setExtra('filters_applied', 'user_tasks_query');
+          scope.level = SentryLevel.error;
+        },
+      );
       if (e is FirebaseException) {
         throw Exception('Failed to load tasks: ${e.message}');
       }

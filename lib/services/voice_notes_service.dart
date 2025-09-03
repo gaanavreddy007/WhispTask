@@ -1,6 +1,6 @@
 // lib/services/voice_notes_service.dart
 
-// ignore_for_file: unused_import, unnecessary_brace_in_string_interps, unnecessary_string_interpolations
+// ignore_for_file: unused_import, unnecessary_brace_in_string_interps, unnecessary_string_interpolations, avoid_print, unused_element
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -24,6 +24,7 @@ class VoiceNotesService {
   bool _isRecording = false;
   bool _isPlaying = false;
   String? _currentPlayingNoteId;
+  bool _isDisposed = false;
   
   // Getters
   bool get isRecording => _isRecording;
@@ -53,6 +54,8 @@ class VoiceNotesService {
 
   // Start recording voice note
   Future<String?> startRecording(String taskId) async {
+    if (_isDisposed) return null;
+    
     try {
       if (_isRecording) {
         throw Exception('Already recording');
@@ -101,8 +104,10 @@ class VoiceNotesService {
     }
   }
 
-  // Stop recording and return voice note
-  Future<VoiceNote?> stopRecording(String taskId, String filePath) async {
+  // Stop recording voice note
+  Future<VoiceNote?> stopRecording(String taskId, String? recordingPath) async {
+    if (_isDisposed) return null;
+    
     try {
       if (!_isRecording) {
         throw Exception('Not currently recording');
@@ -113,13 +118,12 @@ class VoiceNotesService {
       _isRecording = false;
       
       if (recordedPath == null) {
-        throw Exception('Recording failed - no file created');
+        throw Exception('Recording failed - no file path returned');
       }
       
-      // Get file info
       final file = File(recordedPath);
       if (!await file.exists()) {
-        throw Exception('Recording file does not exist');
+        throw Exception('Recording failed - file not found');
       }
       
       final fileStats = await file.stat();
@@ -161,27 +165,24 @@ class VoiceNotesService {
   }
 
   // Play voice note
-  Future<bool> playVoiceNote(VoiceNote voiceNote) async {
+  Future<bool> playVoiceNote(String noteId, String filePath) async {
+    if (_isDisposed) return false;
+    
     try {
       // Stop any current playback
       await stopPlayback();
       
-      final file = File(voiceNote.filePath);
+      final file = File(filePath);
       if (!await file.exists()) {
-        // Try to download from cloud if local file missing
-        if (voiceNote.cloudUrl != null) {
-          await _downloadVoiceNote(voiceNote);
-        } else {
-          throw Exception('Voice note file not found');
-        }
+        throw Exception('Voice note file not found');
       }
       
       // Play audio
-      await _player.setFilePath(voiceNote.filePath);
+      await _player.setFilePath(filePath);
       await _player.play();
       
       _isPlaying = true;
-      _currentPlayingNoteId = voiceNote.id;
+      _currentPlayingNoteId = noteId;
       
       // Listen for completion
       _player.playerStateStream.listen((state) {
@@ -191,7 +192,7 @@ class VoiceNotesService {
         }
       });
       
-      debugPrint('Playing voice note: ${voiceNote.id}');
+      debugPrint('Playing voice note: $noteId');
       return true;
       
     } catch (e) {
@@ -202,6 +203,8 @@ class VoiceNotesService {
 
   // Stop playback
   Future<void> stopPlayback() async {
+    if (_isDisposed) return;
+    
     try {
       if (_isPlaying) {
         await _player.stop();
@@ -411,7 +414,36 @@ class VoiceNotesService {
 
   // Dispose resources
   void dispose() {
-    _recorder.dispose();
-    _player.dispose();
+    if (_isDisposed) return;
+    _isDisposed = true;
+    
+    try {
+      if (_isRecording) {
+        _recorder.stop();
+        _isRecording = false;
+      }
+    } catch (e) {
+      print('Error stopping recorder: $e');
+    }
+    
+    try {
+      if (_isPlaying) {
+        _player.stop();
+        _isPlaying = false;
+      }
+    } catch (e) {
+      print('Error stopping player: $e');
+    }
+    
+    try {
+      _recorder.dispose();
+    } catch (e) {
+      print('Error disposing recorder: $e');
+    }
+    try {
+      _player.dispose();
+    } catch (e) {
+      print('Error disposing player: $e');
+    }
   }
 }

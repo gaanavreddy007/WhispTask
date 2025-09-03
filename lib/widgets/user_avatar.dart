@@ -1,7 +1,9 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, unused_import, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
+import '../l10n/app_localizations.dart';
 
 class UserAvatar extends StatelessWidget {
   final UserModel user;
@@ -182,7 +184,7 @@ class UserAvatar extends StatelessWidget {
             const SizedBox(height: 24),
             
             Text(
-              'Change Profile Picture',
+              AppLocalizations.of(context).changeProfilePicture,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -194,21 +196,21 @@ class UserAvatar extends StatelessWidget {
               children: [
                 _buildEditOption(
                   context,
-                  'Camera',
+                  AppLocalizations.of(context).camera,
                   Icons.camera_alt,
                   Colors.blue,
-                  () => _takePicture(context),
+                  () => _pickFromCamera(context),
                 ),
                 _buildEditOption(
                   context,
-                  'Gallery',
+                  AppLocalizations.of(context).gallery,
                   Icons.photo_library,
                   Colors.green,
                   () => _pickFromGallery(context),
                 ),
                 _buildEditOption(
                   context,
-                  'Remove',
+                  AppLocalizations.of(context).remove,
                   Icons.delete,
                   Colors.red,
                   () => _removePhoto(context),
@@ -258,31 +260,69 @@ class UserAvatar extends StatelessWidget {
     );
   }
 
-  void _takePicture(BuildContext context) {
+  void _pickFromCamera(BuildContext context) async {
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Camera feature coming soon!'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).photoTaken),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${AppLocalizations.of(context).failedToTakePhoto}: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _pickFromGallery(BuildContext context) {
+  void _pickFromGallery(BuildContext context) async {
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Gallery picker coming soon!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).imageSelected),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${AppLocalizations.of(context).failedToPickImage}: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _removePhoto(BuildContext context) {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Photo removed!'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).photoRemoved),
         backgroundColor: Colors.orange,
       ),
     );

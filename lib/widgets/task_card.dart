@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../models/task.dart';
 import '../utils/notification_helper.dart';
+import '../l10n/app_localizations.dart';
+import '../screens/add_task_screen.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -60,6 +62,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
         return Transform.scale(
           scale: _scaleAnimation.value,
           child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
             onTapDown: (_) {
               setState(() => _isPressed = true);
               _animationController.forward();
@@ -186,7 +189,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
                                   if (widget.task.isRecurring)
                                     _buildStatusChip(
                                       icon: Icons.repeat,
-                                      label: 'RECURRING',
+                                      label: AppLocalizations.of(context).recurringLabel,
                                       color: Colors.purple,
                                     ),
                                   
@@ -327,19 +330,21 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
                       ),
                     ),
                     
-                    // Completion overlay
+                    // Completion overlay (doesn't block touch events)
                     if (widget.task.isCompleted)
                       Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.check_circle,
-                              size: 48,
-                              color: Colors.green.withOpacity(0.3),
+                        child: IgnorePointer(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.check_circle,
+                                size: 48,
+                                color: Colors.green.withOpacity(0.3),
+                              ),
                             ),
                           ),
                         ),
@@ -466,36 +471,39 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
 
   // Build options menu
   Widget _buildOptionsMenu(TaskProvider taskProvider) {
-    return PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_vert,
-        color: Colors.grey[600],
-        size: 20,
-      ),
-      offset: const Offset(0, 40),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (value) => _handleMenuAction(context, taskProvider, value),
-      itemBuilder: (context) => [
+    return Material(
+      color: Colors.transparent,
+      child: PopupMenuButton<String>(
+        icon: Icon(
+          Icons.more_vert,
+          color: Colors.grey[600],
+          size: 20,
+        ),
+        offset: const Offset(0, 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onSelected: (value) => _handleMenuAction(context, taskProvider, value),
+        splashRadius: 20,
+        itemBuilder: (context) => [
         // Edit option
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'edit',
           child: Row(
             children: [
               Icon(Icons.edit, size: 16, color: Colors.blue),
               SizedBox(width: 12),
-              Text('Edit Task'),
+              Text(AppLocalizations.of(context).edit),
             ],
           ),
         ),
         
         // Duplicate option
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'duplicate',
           child: Row(
             children: [
               Icon(Icons.copy, size: 16, color: Colors.green),
               SizedBox(width: 12),
-              Text('Duplicate'),
+              Text(AppLocalizations.of(context).duplicate),
             ],
           ),
         ),
@@ -503,43 +511,43 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
         // Reminder actions (if has active reminder)
         if (widget.task.hasActiveReminder && !widget.task.isCompleted) ...[
           const PopupMenuDivider(),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'snooze_5',
             child: Row(
               children: [
                 Icon(Icons.snooze, size: 16, color: Colors.orange),
                 SizedBox(width: 12),
-                Text('Snooze 5 min'),
+                Text(AppLocalizations.of(context).snooze5min),
               ],
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'snooze_30',
             child: Row(
               children: [
                 Icon(Icons.snooze, size: 16, color: Colors.orange),
                 SizedBox(width: 12),
-                Text('Snooze 30 min'),
+                Text(AppLocalizations.of(context).snooze30min),
               ],
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'snooze_1h',
             child: Row(
               children: [
                 Icon(Icons.access_time, size: 16, color: Colors.orange),
                 SizedBox(width: 12),
-                Text('Snooze 1 hour'),
+                Text(AppLocalizations.of(context).snooze1hour),
               ],
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'cancel_reminder',
             child: Row(
               children: [
                 Icon(Icons.notifications_off, size: 16, color: Colors.grey),
                 SizedBox(width: 12),
-                Text('Cancel Reminder'),
+                Text(AppLocalizations.of(context).cancel),
               ],
             ),
           ),
@@ -548,13 +556,13 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
         // Add reminder (if no active reminder)
         if (!widget.task.hasActiveReminder) ...[
           const PopupMenuDivider(),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'add_reminder',
             child: Row(
               children: [
                 Icon(Icons.add_alert, size: 16, color: Colors.blue),
                 SizedBox(width: 12),
-                Text('Add Reminder'),
+                Text(AppLocalizations.of(context).setReminder),
               ],
             ),
           ),
@@ -562,17 +570,18 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
         
         // Delete option
         const PopupMenuDivider(),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'delete',
           child: Row(
             children: [
               Icon(Icons.delete, size: 16, color: Colors.red),
               SizedBox(width: 12),
-              Text('Delete'),
+              Text(AppLocalizations.of(context).delete),
             ],
           ),
         ),
       ],
+      ),
     );
   }
 
@@ -787,8 +796,8 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
     if (widget.task.id == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Task ID is missing'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).errorTaskIdMissing),
             backgroundColor: Colors.red,
           ),
         );
@@ -834,10 +843,11 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
   ) async {
     switch (action) {
       case 'edit':
-        // Navigate to edit screen (implement based on your navigation)
-        // Navigator.pushNamed(context, '/edit_task', arguments: widget.task);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Edit feature coming soon!')),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddTaskScreen(taskToEdit: widget.task),
+          ),
         );
         break;
         
@@ -881,16 +891,13 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
         await taskProvider.cancelReminder(widget.task.id!);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Reminder cancelled')),
+            SnackBar(content: Text(AppLocalizations.of(context).reminderCancelled)),
           );
         }
         break;
         
       case 'add_reminder':
-        // Navigate to add reminder screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add reminder feature coming soon!')),
-        );
+        await _showAddReminderDialog(context, taskProvider);
         break;
         
       case 'delete':
@@ -925,7 +932,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
             children: [
               Icon(Icons.warning, color: Colors.red[600]),
               const SizedBox(width: 8),
-              const Text('Delete Task'),
+              Text(AppLocalizations.of(context).deleteTask),
             ],
           ),
           content: Column(
@@ -998,7 +1005,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Delete'),
+              child: Text(AppLocalizations.of(context).delete),
             ),
           ],
         );
@@ -1009,7 +1016,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
       // Show loading indicator
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
               SizedBox(
@@ -1018,7 +1025,7 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 12),
-              Text('Deleting task...'),
+              Text(AppLocalizations.of(context).deletingTask),
             ],
           ),
           duration: Duration(seconds: 2),
@@ -1051,6 +1058,118 @@ class _TaskCardState extends State<TaskCard> with SingleTickerProviderStateMixin
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
+          ),
+        );
+      }
+    }
+  }
+
+  // Show add reminder dialog
+  Future<void> _showAddReminderDialog(BuildContext context, TaskProvider taskProvider) async {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.add_alert, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Text(AppLocalizations.of(context).setReminder),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${AppLocalizations.of(context).setReminderFor} "${widget.task.title}"'),
+                  const SizedBox(height: 16),
+                  
+                  // Date picker
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(selectedDate != null 
+                        ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                        : 'Select Date'),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null) {
+                        setState(() => selectedDate = date);
+                      }
+                    },
+                  ),
+                  
+                  // Time picker
+                  ListTile(
+                    leading: const Icon(Icons.access_time),
+                    title: Text(selectedTime != null 
+                        ? selectedTime!.format(context)
+                        : 'Select Time'),
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      if (time != null) {
+                        setState(() => selectedTime = time);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(AppLocalizations.of(context).cancel),
+                ),
+                ElevatedButton(
+                  onPressed: selectedDate != null && selectedTime != null
+                      ? () => Navigator.of(context).pop(true)
+                      : null,
+                  child: Text(AppLocalizations.of(context).setReminder),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true && selectedDate != null && selectedTime != null && mounted) {
+      final reminderDateTime = DateTime(
+        selectedDate!.year,
+        selectedDate!.month,
+        selectedDate!.day,
+        selectedTime!.hour,
+        selectedTime!.minute,
+      );
+
+      final updatedTask = widget.task.copyWith(
+        hasReminder: true,
+        isReminderActive: true,
+        reminderTime: reminderDateTime,
+        reminderType: 'once',
+        notificationId: widget.task.id?.hashCode.abs(),
+      );
+
+      final success = await taskProvider.updateTask(updatedTask);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success 
+                ? 'Reminder set for ${selectedTime!.format(context)} on ${selectedDate!.day}/${selectedDate!.month}'
+                : 'Failed to set reminder'),
+            backgroundColor: success ? Colors.green : Colors.red,
           ),
         );
       }

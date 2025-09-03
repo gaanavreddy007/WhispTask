@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>402878727922-3jbb4ie5se24542ee3j45cc30qqotqnt.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.402878727922-3jbb4ie5se24542ee3j45cc30qqotqnt</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDAK4jPkCmBaWB__4JLyD-6JLAVJ934TC4</string>
 	<key>GCM_SENDER_ID</key>
@@ -9,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.whispnask</string>
+	<string>com.example.whisptask</string>
 	<key>PROJECT_ID</key>
 	<string>whisptask</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:402878727922:ios:6369f258f49cf12c9c726b</string>
+	<string>1:402878727922:ios:512a20f575f11ef99c726b</string>
 </dict>
 </plist>

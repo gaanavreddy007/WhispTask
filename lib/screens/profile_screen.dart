@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/user_avatar.dart';
 import '../utils/validators.dart';
+import '../l10n/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -76,7 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(AppLocalizations.of(context).profile),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black87,
@@ -85,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             TextButton.icon(
               onPressed: () => setState(() => _isEditing = true),
               icon: const Icon(Icons.edit_outlined, size: 20),
-              label: const Text('Edit'),
+              label: Text(AppLocalizations.of(context).edit),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFF1976D2),
               ),
@@ -97,8 +98,18 @@ class _ProfileScreenState extends State<ProfileScreen>
           final user = authProvider.user;
           
           if (user == null) {
+            // If user is null but auth state shows logged in, there's a sync issue
+            // Navigate to login to resolve the state
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login',
+                  (route) => false,
+                );
+              }
+            });
             return const Center(
-              child: Text('No user data available'),
+              child: CircularProgressIndicator(),
             );
           }
 
@@ -209,9 +220,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Account Statistics',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).accountStatistics,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -222,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Expanded(
                 child: _buildStatItem(
-                  'Total Tasks',
+                  AppLocalizations.of(context).totalTasks,
                   user.taskCount.toString(),
                   Icons.assignment_outlined,
                   const Color(0xFF1976D2),
@@ -230,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               Expanded(
                 child: _buildStatItem(
-                  'Completed',
+                  AppLocalizations.of(context).completed,
                   user.completedTaskCount.toString(),
                   Icons.check_circle_outline,
                   Colors.green,
@@ -243,7 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Expanded(
                 child: _buildStatItem(
-                  'Completion Rate',
+                  AppLocalizations.of(context).completionRate,
                   '${user.completionPercentage.toStringAsFixed(1)}%',
                   Icons.trending_up,
                   Colors.purple,
@@ -251,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               Expanded(
                 child: _buildStatItem(
-                  'Member Since',
+                  AppLocalizations.of(context).memberSince,
                   user.memberSince,
                   Icons.calendar_today_outlined,
                   Colors.orange,
@@ -320,9 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Profile Information',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context).profileInformation,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -334,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       setState(() => _isEditing = false);
                       _initializeControllers(); // Reset changes
                     },
-                    child: const Text('Cancel'),
+                    child: Text(AppLocalizations.of(context).cancel),
                   ),
               ],
             ),
@@ -342,7 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             
             AuthTextField(
               controller: _nameController,
-              label: 'Display Name',
+              label: AppLocalizations.of(context).displayName,
               prefixIcon: Icons.person_outline,
               enabled: _isEditing,
               validator: Validators.validateDisplayName,
@@ -352,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (!authProvider.user!.isAnonymous)
               AuthTextField(
                 controller: _emailController,
-                label: 'Email Address',
+                label: AppLocalizations.of(context).emailAddress,
                 prefixIcon: Icons.email_outlined,
                 enabled: _isEditing,
                 keyboardType: TextInputType.emailAddress,
@@ -382,9 +393,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
-                          'Save Changes',
-                          style: TextStyle(
+                      : Text(
+                          AppLocalizations.of(context).saveChanges,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -415,9 +426,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Account Actions',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).accountActions,
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -427,16 +438,16 @@ class _ProfileScreenState extends State<ProfileScreen>
           
           if (authProvider.user!.isAnonymous)
             _buildActionButton(
-              'Upgrade Account',
-              'Create a permanent account to sync across devices',
+              AppLocalizations.of(context).upgradeAccount,
+              AppLocalizations.of(context).upgradeAccountDesc,
               Icons.upgrade_outlined,
               Colors.green,
               () => Navigator.pushNamed(context, '/signup', arguments: true),
             )
           else ...[
             _buildActionButton(
-              'Change Password',
-              'Update your account password',
+              AppLocalizations.of(context).changePassword,
+              AppLocalizations.of(context).changePasswordDesc,
               Icons.lock_outline,
               const Color(0xFF1976D2),
               () => Navigator.pushNamed(context, '/change-password'),
@@ -445,8 +456,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ],
           
           _buildActionButton(
-            'Account Settings',
-            'Manage privacy and security settings',
+            AppLocalizations.of(context).accountSettings,
+            AppLocalizations.of(context).accountSettingsDesc,
             Icons.settings_outlined,
             Colors.grey[700]!,
             () => Navigator.pushNamed(context, '/account-settings'),
@@ -454,8 +465,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(height: 12),
           
           _buildActionButton(
-            'Sign Out',
-            'Sign out of your account',
+            AppLocalizations.of(context).signOut,
+            AppLocalizations.of(context).signOutDesc,
             Icons.logout,
             Colors.orange,
             () => _showSignOutDialog(context, authProvider),
@@ -545,8 +556,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (success) {
       setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully!'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).profileUpdatedSuccess),
           backgroundColor: Colors.green,
         ),
       );
@@ -567,25 +578,31 @@ class _ProfileScreenState extends State<ProfileScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('Sign Out'),
-        content: const Text(
-          'Are you sure you want to sign out of your account?',
+        title: Text(AppLocalizations.of(context).signOutTitle),
+        content: Text(
+          AppLocalizations.of(context).signOutConfirm,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await authProvider.signOut();
+              final success = await authProvider.signOut();
+              if (success && mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login',
+                  (route) => false,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Sign Out'),
+            child: Text(AppLocalizations.of(context).signOut),
           ),
         ],
       ),

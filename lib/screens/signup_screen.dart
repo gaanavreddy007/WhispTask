@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../utils/validators.dart';
+import '../l10n/app_localizations.dart';
 
 class SignupScreen extends StatefulWidget {
   final bool isLinkingAccount;
@@ -78,8 +79,8 @@ class _SignupScreenState extends State<SignupScreen>
     
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the Terms of Service'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).acceptTermsError),
           backgroundColor: Colors.red,
         ),
       );
@@ -180,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          widget.isLinkingAccount ? 'Create Your Account' : 'Join WhispTask',
+          widget.isLinkingAccount ? AppLocalizations.of(context).createAccount : AppLocalizations.of(context).joinWhispTask,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -189,8 +190,8 @@ class _SignupScreenState extends State<SignupScreen>
         const SizedBox(height: 8),
         Text(
           widget.isLinkingAccount 
-              ? 'Convert your guest account to a permanent account'
-              : 'Start organizing your tasks with voice commands',
+              ? AppLocalizations.of(context).convertGuestAccount
+              : AppLocalizations.of(context).startOrganizingTasks,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: Colors.grey[600],
             height: 1.4,
@@ -203,8 +204,8 @@ class _SignupScreenState extends State<SignupScreen>
   Widget _buildNameField() {
     return AuthTextField(
       controller: _nameController,
-      label: 'Full Name',
-      hint: 'Enter your full name',
+      label: AppLocalizations.of(context).fullName,
+      hint: AppLocalizations.of(context).enterFullNameHint,
       prefixIcon: Icons.person_outline,
       validator: Validators.validateDisplayName,
       textInputAction: TextInputAction.next,
@@ -215,8 +216,8 @@ class _SignupScreenState extends State<SignupScreen>
   Widget _buildEmailField() {
     return AuthTextField(
       controller: _emailController,
-      label: 'Email Address',
-      hint: 'Enter your email address',
+      label: AppLocalizations.of(context).email,
+      hint: AppLocalizations.of(context).enterEmailHint,
       prefixIcon: Icons.email_outlined,
       keyboardType: TextInputType.emailAddress,
       validator: Validators.validateEmail,
@@ -229,8 +230,8 @@ class _SignupScreenState extends State<SignupScreen>
       children: [
         AuthTextField(
           controller: _passwordController,
-          label: 'Password',
-          hint: 'Create a strong password',
+          label: AppLocalizations.of(context).password,
+          hint: AppLocalizations.of(context).createPasswordHint,
           prefixIcon: Icons.lock_outline,
           obscureText: true,
           showPasswordToggle: true,
@@ -292,11 +293,11 @@ class _SignupScreenState extends State<SignupScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildRequirement('At least 8 characters', password.length >= 8),
-        _buildRequirement('Contains lowercase letter', RegExp(r'[a-z]').hasMatch(password)),
-        _buildRequirement('Contains uppercase letter', RegExp(r'[A-Z]').hasMatch(password)),
-        _buildRequirement('Contains number', RegExp(r'\d').hasMatch(password)),
-        _buildRequirement('Contains special character', RegExp(r'[@$!%*?&]').hasMatch(password)),
+        _buildRequirement(AppLocalizations.of(context).atLeast8Characters, password.length >= 8),
+        _buildRequirement(AppLocalizations.of(context).containsLowercase, RegExp(r'[a-z]').hasMatch(password)),
+        _buildRequirement(AppLocalizations.of(context).containsUppercase, RegExp(r'[A-Z]').hasMatch(password)),
+        _buildRequirement(AppLocalizations.of(context).containsNumber, RegExp(r'\d').hasMatch(password)),
+        _buildRequirement(AppLocalizations.of(context).containsSpecialChar, RegExp(r'[@$!%*?&]').hasMatch(password)),
       ],
     );
   }
@@ -327,8 +328,8 @@ class _SignupScreenState extends State<SignupScreen>
   Widget _buildConfirmPasswordField() {
     return AuthTextField(
       controller: _confirmPasswordController,
-      label: 'Confirm Password',
-      hint: 'Re-enter your password',
+      label: AppLocalizations.of(context).confirmPassword,
+      hint: AppLocalizations.of(context).reenterPasswordHint,
       prefixIcon: Icons.lock_outline,
       obscureText: true,
       showPasswordToggle: true,
@@ -370,17 +371,17 @@ class _SignupScreenState extends State<SignupScreen>
                     color: Colors.grey[700],
                   ),
                   children: [
-                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(text: AppLocalizations.of(context).iAgreeToTerms),
                     TextSpan(
-                      text: 'Terms of Service',
+                      text: AppLocalizations.of(context).termsOfService,
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const TextSpan(text: ' and '),
+                    TextSpan(text: AppLocalizations.of(context).and),
                     TextSpan(
-                      text: 'Privacy Policy',
+                      text: AppLocalizations.of(context).privacyPolicy,
                       style: TextStyle(
                         color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.w500,
@@ -421,7 +422,7 @@ class _SignupScreenState extends State<SignupScreen>
                     ),
                   )
                 : Text(
-                    widget.isLinkingAccount ? 'Create Account' : 'Sign Up',
+                    widget.isLinkingAccount ? AppLocalizations.of(context).createAccount : AppLocalizations.of(context).signUp,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -451,9 +452,9 @@ class _SignupScreenState extends State<SignupScreen>
               color: Colors.grey[700],
             ),
             children: [
-              const TextSpan(text: 'Already have an account? '),
+              TextSpan(text: AppLocalizations.of(context).alreadyHaveAccount),
               TextSpan(
-                text: 'Sign In',
+                text: AppLocalizations.of(context).signIn,
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,

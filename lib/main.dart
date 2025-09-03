@@ -1,15 +1,22 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, unused_local_variable, constant_identifier_names, unused_element, unused_import
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // Providers
-import 'providers/auth_provider.dart';
-import 'providers/task_provider.dart';
-import 'providers/voice_provider.dart';
+import 'package:whisptask/providers/auth_provider.dart';
+import 'package:whisptask/providers/task_provider.dart';
+import 'package:whisptask/providers/theme_provider.dart';
+import 'package:whisptask/providers/voice_provider.dart';
+import 'package:whisptask/providers/language_provider.dart';
 
 // Screens
 import 'screens/splash_screen.dart';
@@ -20,40 +27,162 @@ import 'screens/voice_input_screen.dart';
 import 'screens/account_settings_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/change_password_screen.dart';
+import 'screens/premium_purchase_screen.dart';
 
 // Widgets
 import 'widgets/task_calendar.dart';
 
 // Services
 import 'services/notification_service.dart';
+import 'services/tts_service.dart';
+import 'services/widget_service.dart';
+import 'services/revenue_cat_service.dart';
+import 'services/ad_service.dart';
+import 'services/voice_service.dart';
 
 // Widgets
 import 'widgets/auth_wrapper.dart';
+
+// Localization
+import 'l10n/app_localizations.dart';
 
 // Initialize notification plugin globally
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = 
     FlutterLocalNotificationsPlugin();
 
-void main() async {
+Future<void> main() async {
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://57a64cf15be0fbc47501e30720a65089@o4509944727142400.ingest.us.sentry.io/4509944729174016';
+      options.tracesSampleRate = 1.0;
+      options.debug = true;
+      options.environment = 'development';
+      options.sendDefaultPii = false;
+      options.enablePrintBreadcrumbs = true;
+      // Force send in debug mode
+      options.dist = '1';
+      options.release = 'whisptask@1.0.0+1';
+      // Enhanced logging
+      options.beforeSend = (event, {hint}) {
+        print('=== SENTRY DEBUG ===');
+        print('Event ID: ${event.eventId}');
+        print('Event Type: ${event.type}');
+        print('Message: ${event.message?.formatted}');
+        print('DSN: ${options.dsn}');
+        print('Environment: ${event.environment}');
+        print('Release: ${event.release}');
+        print('==================');
+        return event;
+      };
+    },
+    appRunner: () async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Global error handling for crashes - integrate with Sentry
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    
+    // Send to Sentry
+    Sentry.captureException(
+      details.exception,
+      stackTrace: details.stack,
+    );
+    
+    // Log to Firebase Analytics for crash tracking
+    try {
+      FirebaseAnalytics.instance.logEvent(
+        name: 'flutter_error',
+        parameters: {
+          'error': details.exception.toString(),
+          'stack': details.stack.toString().substring(0, 500), // Limit length
+        },
+      );
+    } catch (e) {
+      print('Error logging failed: $e');
+    }
+  };
+
   try {
-    // Initialize Firebase
+    // Initialize Firebase first (required for other services)
     await Firebase.initializeApp();
     print('Firebase initialized successfully');
-    
-    // Initialize timezone data for notifications
-    tz.initializeTimeZones();
-    
-    // Initialize notifications
-    await NotificationService().initialize();
-    print('Notification service initialized');
+
+    // Initialize critical services in parallel
+    await Future.wait([
+      // Firebase App Check for security
+      FirebaseAppCheck.instance.activate(
+        androidProvider: AndroidProvider.debug,
+      ).then((_) => print('Firebase App Check initialized')),
+      
+      // Initialize timezone data for notifications
+      Future.sync(() {
+        tz.initializeTimeZones();
+        print('Timezone data initialized');
+      }),
+      
+      // Initialize notifications (critical for user experience)
+      NotificationService().initialize()
+        .then((_) => print('Notification service initialized')),
+    ]);
+
+    // Initialize Firebase Analytics (non-blocking)
+    FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+    print('Firebase Analytics initialized');
+
+    // Initialize non-critical services in background after app starts
+    _initializeNonCriticalServices();
     
   } catch (e) {
     print('Initialization error: $e');
+    // Log initialization errors
+    try {
+      FirebaseAnalytics.instance.logEvent(
+        name: 'initialization_error',
+        parameters: {'error': e.toString()},
+      );
+    } catch (_) {}
   }
-  
+
   runApp(const WhispTaskApp());
+    },
+  );
+}
+
+// Initialize non-critical services in background after app starts
+void _initializeNonCriticalServices() {
+  Future.delayed(const Duration(milliseconds: 500), () async {
+    try {
+      // Initialize services in parallel that aren't needed immediately
+      await Future.wait([
+        // TTS service (used for voice feedback)
+        TtsService().initialize()
+          .then((_) => print('TTS service initialized')),
+        
+        // Widget service (for home screen widgets)
+        WidgetService.initializeWidget()
+          .then((_) => print('Widget service initialized')),
+        
+        // RevenueCat service (for premium features)
+        RevenueCatService.initialize()
+          .then((_) => print('RevenueCat service initialized')),
+        
+        // Ad service (for displaying ads)
+        AdService.initialize()
+          .then((_) => print('Ad service initialized')),
+      ]);
+      
+      print('All non-critical services initialized');
+    } catch (e) {
+      print('Non-critical service initialization error: $e');
+      // Log but don't block app startup
+      try {
+        FirebaseAnalytics.instance.logEvent(
+          name: 'background_init_error',
+          parameters: {'error': e.toString()},
+        );
+      } catch (_) {}
+    }
+  });
 }
 
 class WhispTaskApp extends StatelessWidget {
@@ -63,12 +192,24 @@ class WhispTaskApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Auth Provider - Must be first as others depend on it
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(),
+          create: (_) {
+            final languageProvider = LanguageProvider();
+            languageProvider.initialize();
+            return languageProvider;
+          },
         ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final themeProvider = ThemeProvider();
+            themeProvider.initialize();
+            return themeProvider;
+          },
+        ),
+        ChangeNotifierProvider(create: (_) => VoiceProvider()),
         
-        // Task Provider with Auth dependency
+        // Task Provider with Auth dependency - Lazy loaded
         ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
           create: (_) => TaskProvider(),
           update: (_, auth, previous) {
@@ -81,19 +222,30 @@ class WhispTaskApp extends StatelessWidget {
               return taskProvider;
             }
           },
-        ),
-        
-        // Voice Provider - Independent
-        ChangeNotifierProvider(
-          create: (_) => VoiceProvider(),
+          lazy: true, // Load only when first accessed
         ),
       ],
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
+      child: Consumer3<AuthProvider, ThemeProvider, LanguageProvider>(
+        builder: (context, authProvider, themeProvider, languageProvider, _) {
           return MaterialApp(
             title: 'WhispTask',
             debugShowCheckedModeBanner: false,
-            theme: _buildAppTheme(),
+            theme: ThemeProvider.lightTheme,
+            darkTheme: ThemeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
+            
+            // Localization support with dynamic locale
+            locale: languageProvider.currentLocale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            
+            // Force rebuild when locale changes
+            key: ValueKey('${languageProvider.currentLocale.languageCode}_${languageProvider.isInitialized}'),
+            
+            // Add Firebase Analytics observer
+            navigatorObservers: [
+              FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
+            ],
             
             // Show splash screen while initializing
             home: authProvider.isInitialized 
@@ -112,6 +264,7 @@ class WhispTaskApp extends StatelessWidget {
               '/profile': (context) => const ProfileScreen(),
               '/account-settings': (context) => const AccountSettingsScreen(),
               '/change-password': (context) => const ChangePasswordScreen(),
+              '/premium-purchase': (context) => const PremiumPurchaseScreen(),
               '/calendar': (context) => const TaskCalendar(),
             },
             
@@ -127,154 +280,4 @@ class WhispTaskApp extends StatelessWidget {
     );
   }
 
-  ThemeData _buildAppTheme() {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF1976D2), // Primary blue
-        brightness: Brightness.light,
-      ),
-      
-      // App Bar Theme
-      appBarTheme: const AppBarTheme(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: Color(0xFF1976D2),
-        foregroundColor: Colors.white,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      
-      // Card Theme
-      cardTheme: const CardThemeData(
-        elevation: 2,
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-      ),
-      
-      // Elevated Button Theme
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-      ),
-      
-      // Input Decoration Theme
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF9F9F9),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      
-      // Floating Action Button Theme
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        elevation: 4,
-        backgroundColor: Color(0xFF1976D2),
-        foregroundColor: Colors.white,
-      ),
-      
-      // Bottom Navigation Bar Theme
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        elevation: 8,
-        selectedItemColor: Color(0xFF1976D2),
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-      ),
-      
-      // Snackbar Theme
-      snackBarTheme: const SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
-      ),
-      
-      // Progress Indicator Theme
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: Color(0xFF1976D2),
-      ),
-      
-      // Divider Theme
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFFE0E0E0),
-        thickness: 1,
-      ),
-      
-      // Typography
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1976D2),
-        ),
-        headlineMedium: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF333333),
-        ),
-        headlineSmall: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF333333),
-        ),
-        titleLarge: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF333333),
-        ),
-        titleMedium: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF333333),
-        ),
-        titleSmall: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF333333),
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: Color(0xFF333333),
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: Color(0xFF666666),
-        ),
-        bodySmall: TextStyle(
-          fontSize: 12,
-          color: Color(0xFF999999),
-        ),
-      ),
-    );
-  }
 }

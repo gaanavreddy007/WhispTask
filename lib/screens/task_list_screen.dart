@@ -1,16 +1,19 @@
-// ignore_for_file: avoid_print, prefer_final_fields, deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: avoid_print, prefer_final_fields, deprecated_member_use, use_build_context_synchronously, prefer_const_constructors, unused_import, unnecessary_import
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
-import '../widgets/notification_test_widget.dart';
 import '../widgets/task_card.dart';
 import '../widgets/filter_dialog.dart';
 import '../utils/notification_helper.dart';
 import 'add_task_screen.dart';
-import 'voice_input_screen.dart';
+import '../screens/account_settings_screen.dart';
+import '../screens/premium_purchase_screen.dart';
+import '../providers/auth_provider.dart';
+import '../services/ad_service.dart';
+import '../l10n/app_localizations.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
@@ -22,12 +25,155 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   String _selectedCategory = 'all';
-  bool _showTestPanel = false;
+  
+  // NEW VOICE-RELATED VARIABLES:
+  bool _isVoiceListening = false;
+  bool _isProcessingVoiceCommand = false;
+  String _voiceStatus = 'Tap to activate voice commands';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _initializeVoiceService();
+  }
+
+  void _initializeVoiceService() async {
+    try {
+      // Initialize TaskProvider voice commands first
+      final taskProvider = context.read<TaskProvider>();
+      await taskProvider.initializeVoiceCommands();
+      
+      // Listen to TaskProvider voice command state changes
+      taskProvider.addListener(_updateVoiceStatus);
+      
+      if (mounted) {
+        setState(() {
+          _voiceStatus = AppLocalizations.of(context).voiceCommandsReady;
+        });
+      }
+      
+      print('Voice service initialized successfully');
+    } catch (e) {
+      print('Voice service initialization failed: $e');
+      if (mounted) {
+        setState(() {
+          _voiceStatus = 'Voice service unavailable';
+        });
+      }
+    }
+  }
+  
+  void _updateVoiceStatus() {
+    if (!mounted) return;
+    
+    try {
+      final taskProvider = context.read<TaskProvider>();
+      setState(() {
+        _isProcessingVoiceCommand = taskProvider.isProcessingVoiceCommand;
+        _isVoiceListening = taskProvider.isVoiceCommandActive;
+        
+        if (_isProcessingVoiceCommand) {
+          _voiceStatus = '${AppLocalizations.of(context).processingVoiceCommand}: "${taskProvider.lastVoiceCommand}"';
+        } else if (_isVoiceListening) {
+          _voiceStatus = AppLocalizations.of(context).listeningForWakeWord;
+        } else {
+          _voiceStatus = AppLocalizations.of(context).voiceCommandsReady;
+        }
+      });
+    } catch (e) {
+      // Widget is disposed, ignore the update
+      print('Voice status update skipped - widget disposed');
+    }
+  }
+
+  // Voice Status Indicator Widget
+  Widget _buildVoiceStatusIndicator() {
+    if (!_isVoiceListening && !_isProcessingVoiceCommand) {
+      return const SizedBox.shrink();
+    }
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isProcessingVoiceCommand ? Colors.blue[50] : Colors.green[50],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: _isProcessingVoiceCommand ? Colors.blue : Colors.green,
+          width: 2,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isProcessingVoiceCommand)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(
+              Icons.mic,
+              color: Colors.green,
+              size: 16,
+            ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _voiceStatus,
+              style: TextStyle(
+                color: _isProcessingVoiceCommand ? Colors.blue[700] : Colors.green[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (_isVoiceListening || _isProcessingVoiceCommand)
+            GestureDetector(
+              onTap: () {
+                final taskProvider = context.read<TaskProvider>();
+                taskProvider.stopWakeWordListening();
+                setState(() {
+                  _isVoiceListening = false;
+                  _voiceStatus = AppLocalizations.of(context).voiceInputHint;
+                });
+              },
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Voice Toggle Method
+  void _toggleVoiceListening() async {
+    try {
+      final taskProvider = context.read<TaskProvider>();
+      
+      if (_isVoiceListening) {
+        await taskProvider.stopWakeWordListening();
+        setState(() {
+          _isVoiceListening = false;
+          _voiceStatus = AppLocalizations.of(context).voiceCommandsReady;
+        });
+      } else {
+        setState(() {
+          _isVoiceListening = true;
+          _voiceStatus = AppLocalizations.of(context).listeningForWakeWord;
+        });
+        await taskProvider.startWakeWordListening();
+      }
+    } catch (e) {
+      setState(() {
+        _isVoiceListening = false;
+        _voiceStatus = AppLocalizations.of(context).voiceError;
+      });
+    }
   }
 
   @override
@@ -46,7 +192,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
               },
             ),
             const SizedBox(width: 8),
-            const Text('WhispTask'),
+            Text(AppLocalizations.of(context).appTitle),
           ],
         ),
         backgroundColor: const Color(0xFF1976D2),
@@ -61,23 +207,27 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           indicatorColor: Colors.white,
           indicatorWeight: 3,
           isScrollable: true,
-          tabs: const [
-            Tab(text: 'All', icon: Icon(Icons.list, size: 20)),
-            Tab(text: 'Pending', icon: Icon(Icons.pending, size: 20)),
-            Tab(text: 'Completed', icon: Icon(Icons.check_circle, size: 20)),
-            Tab(text: 'Reminders', icon: Icon(Icons.notifications, size: 20)),
+          tabs: [
+            Tab(text: AppLocalizations.of(context).all, icon: const Icon(Icons.list, size: 20)),
+            Tab(text: AppLocalizations.of(context).pending, icon: const Icon(Icons.pending, size: 20)),
+            Tab(text: AppLocalizations.of(context).completed, icon: const Icon(Icons.check_circle, size: 20)),
+            Tab(text: AppLocalizations.of(context).notifications, icon: const Icon(Icons.notifications, size: 20)),
           ],
         ),
         
         actions: [
-          // Voice input button
-          IconButton(
-            icon: const Icon(Icons.mic),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const VoiceInputScreen()),
-            ),
-            tooltip: 'Voice Input',
+          // Voice command button
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  _isVoiceListening ? Icons.mic : Icons.mic_none,
+                  color: _isVoiceListening ? Colors.red : Colors.white,
+                ),
+                onPressed: _toggleVoiceListening,
+                tooltip: _isVoiceListening ? AppLocalizations.of(context).stopVoiceCommands : AppLocalizations.of(context).startVoiceCommands,
+              );
+            },
           ),
           
           // Filter button with indicator
@@ -116,23 +266,198 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             ],
           ),
           
-          // Overflow menu
+          // Main menu
           PopupMenuButton<String>(
             onSelected: _handleMenuAction,
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'profile', child: Text('Profile')),
-              const PopupMenuItem(value: 'calendar', child: Text('Calendar View')),
-              const PopupMenuItem(value: 'settings', child: Text('Settings')),
-              if (kDebugMode) const PopupMenuItem(value: 'test_notifications', child: Text('Test Notifications')),
-              const PopupMenuItem(value: 'logout', child: Text('Logout')),
+              PopupMenuItem(value: 'profile', child: Text(AppLocalizations.of(context).profile)),
+              PopupMenuItem(value: 'calendar', child: Text(AppLocalizations.of(context).calendarView)),
+              PopupMenuItem(value: 'settings', child: Text(AppLocalizations.of(context).settings)),
+              PopupMenuItem(value: 'logout', child: Text(AppLocalizations.of(context).logout)),
             ],
           ),
         ],
       ),
       body: Column(
         children: [
-          if (kDebugMode && _showTestPanel)
-            const NotificationTestWidget(),
+          // Voice Status Indicator (NEW)
+          _buildVoiceStatusIndicator(),
+          
+          // Daily Productivity Score Display
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              final score = taskProvider.dailyProductivityScore;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: score > 70 ? Colors.green.withOpacity(0.1) : 
+                         score > 40 ? Colors.orange.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: score > 70 ? Colors.green : 
+                           score > 40 ? Colors.orange : Colors.red,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.trending_up,
+                      color: score > 70 ? Colors.green : 
+                             score > 40 ? Colors.orange : Colors.red,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${AppLocalizations.of(context).todaysProductivity}: ${score.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: score > 70 ? Colors.green[700] : 
+                               score > 40 ? Colors.orange[700] : Colors.red[700],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: score > 70 ? Colors.green : 
+                               score > 40 ? Colors.orange : Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        score > 70 ? AppLocalizations.of(context).great : score > 40 ? AppLocalizations.of(context).good : AppLocalizations.of(context).keepGoing,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          
+          // Premium Features Section (only show for non-premium users)
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              if (authProvider.isPremium) {
+                return const SizedBox.shrink();
+              }
+              
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppLocalizations.of(context).premiumFeatures,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Custom voice packs\n• Offline mode\n• Smart tags\n• Custom themes\n• Advanced analytics\n• No ads',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PremiumPurchaseScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.upgrade, size: 18),
+                          label: Text(AppLocalizations.of(context).upgradeToProButton),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // Ad Banner (only show for non-premium users)
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              if (authProvider.isPremium) {
+                return const SizedBox.shrink();
+              }
+              
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.ads_click, color: Colors.grey[600], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Advertisement Space',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'Remove with Pro',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          
           
           // Active Filters Display
           Consumer<TaskProvider>(
@@ -243,13 +568,13 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                       children: [
                         const Icon(Icons.error, size: 64, color: Colors.red),
                         const SizedBox(height: 16),
-                        Text('Error: ${taskProvider.error}'),
+                        Text('${AppLocalizations.of(context).errorPrefix}: ${taskProvider.error}'),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
                             taskProvider.clearError();
                           },
-                          child: const Text('Retry'),
+                          child: Text(AppLocalizations.of(context).retry),
                         ),
                       ],
                     ),
@@ -455,7 +780,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                   setState(() {});
                 },
                 icon: const Icon(Icons.clear_all),
-                label: const Text('Clear Filters'),
+                label: Text(AppLocalizations.of(context).clearFilters),
               ),
             ],
           ],
@@ -608,17 +933,48 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
       case 'settings':
         Navigator.pushNamed(context, '/account-settings');
         break;
-      case 'debug':
-        setState(() {
-          _showTestPanel = !_showTestPanel;
-        });
+      case 'logout':
+        _handleLogout();
         break;
     }
+  }
+
+  void _handleLogout() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context).logout),
+          content: Text(AppLocalizations.of(context).logoutConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              child: Text(AppLocalizations.of(context).logout),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    // Remove listener to prevent memory leaks
+    try {
+      final taskProvider = context.read<TaskProvider>();
+      taskProvider.removeListener(_updateVoiceStatus);
+    } catch (e) {
+      // Context may already be disposed, ignore
+      print('TaskProvider cleanup skipped - context disposed');
+    }
     super.dispose();
   }
 }
@@ -716,68 +1072,68 @@ class TaskTile extends StatelessWidget {
                           Provider.of<TaskProvider>(context, listen: false)
                               .snoozeReminder(task.id!, 5);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Reminder snoozed for 5 minutes')),
+                            SnackBar(content: Text(AppLocalizations.of(context).reminderSnoozed5min)),
                           );
                           break;
                         case 'cancel_reminder':
                           Provider.of<TaskProvider>(context, listen: false)
                               .cancelReminder(task.id!);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Reminder cancelled')),
+                            SnackBar(content: Text(AppLocalizations.of(context).reminderCancelled)),
                           );
                           break;
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'edit',
                         child: Row(
                           children: [
                             Icon(Icons.edit, size: 18),
                             SizedBox(width: 8),
-                            Text('Edit'),
+                            Text(AppLocalizations.of(context).edit),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'duplicate',
                         child: Row(
                           children: [
                             Icon(Icons.copy, size: 18),
                             SizedBox(width: 8),
-                            Text('Duplicate'),
+                            Text(AppLocalizations.of(context).duplicate),
                           ],
                         ),
                       ),
                       if (task.hasActiveReminder && !task.isCompleted) ...[
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'snooze_5',
                           child: Row(
                             children: [
                               Icon(Icons.snooze, size: 18),
                               SizedBox(width: 8),
-                              Text('Snooze 5 min'),
+                              Text(AppLocalizations.of(context).snooze5min),
                             ],
                           ),
                         ),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'cancel_reminder',
                           child: Row(
                             children: [
                               Icon(Icons.notifications_off, size: 18),
                               SizedBox(width: 8),
-                              Text('Cancel Reminder'),
+                              Text(AppLocalizations.of(context).cancelReminderAction),
                             ],
                           ),
                         ),
                       ],
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
                             Icon(Icons.delete, size: 18, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
+                            Text(AppLocalizations.of(context).delete, style: TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),
@@ -1326,4 +1682,5 @@ class TaskDetailSheet extends StatelessWidget {
       ),
     );
   }
+
 }

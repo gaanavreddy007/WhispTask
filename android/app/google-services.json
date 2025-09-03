@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:402878727922:android:b561b4b39d5478299c726b",
+        "mobilesdk_app_id": "1:402878727922:android:1513dc68009e84549c726b",
         "android_client_info": {
-          "package_name": "com.example.whispnask"
+          "package_name": "com.example.whisptask"
         }
       },
       "oauth_client": [],

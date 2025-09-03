@@ -11,6 +11,9 @@ import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/task_list_screen.dart';
 
+// Localization
+import '../l10n/app_localizations.dart';
+
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -31,18 +34,20 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         // Show loading screen while initializing
         if (!authProvider.isInitialized) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading...'),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(localizations.loading),
                 ],
               ),
             ),
@@ -50,7 +55,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         // Show appropriate screen based on auth state
-        if (authProvider.isLoggedIn) {
+        if (authProvider.isLoggedIn && authProvider.user != null) {
           return const TaskListScreen();
         } else {
           return const LoginScreen();

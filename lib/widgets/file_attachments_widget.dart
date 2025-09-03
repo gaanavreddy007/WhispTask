@@ -5,8 +5,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/task.dart';
 import '../services/file_attachment_service.dart';
+import '../l10n/app_localizations.dart';
+import '../models/task.dart';
 
 class FileAttachmentsWidget extends StatefulWidget {
   final String taskId;
@@ -106,7 +107,7 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
           child: OutlinedButton.icon(
             onPressed: _isUploading ? null : _pickFile,
             icon: const Icon(Icons.folder_open, size: 18),
-            label: const Text('Add File', style: TextStyle(fontSize: 12)),
+            label: Text(AppLocalizations.of(context).addFileLabel, style: TextStyle(fontSize: 12)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               shape: RoundedRectangleBorder(
@@ -122,7 +123,7 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
           child: OutlinedButton.icon(
             onPressed: _isUploading ? null : _pickImage,
             icon: const Icon(Icons.photo_camera, size: 18),
-            label: const Text('Add Photo', style: TextStyle(fontSize: 12)),
+            label: Text(AppLocalizations.of(context).addPhotoLabel, style: TextStyle(fontSize: 12)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               shape: RoundedRectangleBorder(

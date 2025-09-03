@@ -30,6 +30,53 @@ class DefaultTaskView {
   static const List<String> all = [list, grid, calendar, kanban];
 }
 
+// Privacy Settings Model
+class PrivacySettings {
+  final bool shareAnalytics;
+  final bool shareCrashReports;
+  final bool marketingEmails;
+  final bool biometricAuth;
+
+  const PrivacySettings({
+    this.shareAnalytics = true,
+    this.shareCrashReports = true,
+    this.marketingEmails = false,
+    this.biometricAuth = false,
+  });
+
+  factory PrivacySettings.fromMap(Map<String, dynamic> map) {
+    return PrivacySettings(
+      shareAnalytics: map['shareAnalytics'] ?? true,
+      shareCrashReports: map['shareCrashReports'] ?? true,
+      marketingEmails: map['marketingEmails'] ?? false,
+      biometricAuth: map['biometricAuth'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'shareAnalytics': shareAnalytics,
+      'shareCrashReports': shareCrashReports,
+      'marketingEmails': marketingEmails,
+      'biometricAuth': biometricAuth,
+    };
+  }
+
+  PrivacySettings copyWith({
+    bool? shareAnalytics,
+    bool? shareCrashReports,
+    bool? marketingEmails,
+    bool? biometricAuth,
+  }) {
+    return PrivacySettings(
+      shareAnalytics: shareAnalytics ?? this.shareAnalytics,
+      shareCrashReports: shareCrashReports ?? this.shareCrashReports,
+      marketingEmails: marketingEmails ?? this.marketingEmails,
+      biometricAuth: biometricAuth ?? this.biometricAuth,
+    );
+  }
+}
+
 // User Preferences Model
 class UserPreferences {
   final String theme;
@@ -44,6 +91,23 @@ class UserPreferences {
   final bool compactView;
   final List<String> favoriteCategories;
   final Map<String, dynamic> customSettings;
+  
+  // Additional properties referenced in services
+  final bool notificationsEnabled;
+  final bool taskReminders;
+  final bool dailyDigest;
+  final bool completionCelebrations;
+  final bool voiceNotifications;
+  final String language;
+  final String timezone;
+  final double fontSize;
+  final bool voiceInputEnabled;
+  final bool autoTranscribe;
+  final String preferredVoice;
+  final double speechRate;
+  final bool enableAnalytics;
+  final bool shareUsageData;
+  final bool biometricAuth;
 
   const UserPreferences({
     this.theme = ThemeMode.system,
@@ -58,6 +122,22 @@ class UserPreferences {
     this.compactView = false,
     this.favoriteCategories = const [],
     this.customSettings = const {},
+    // Additional properties
+    this.notificationsEnabled = true,
+    this.taskReminders = true,
+    this.dailyDigest = false,
+    this.completionCelebrations = true,
+    this.voiceNotifications = true,
+    this.language = 'en',
+    this.timezone = 'UTC',
+    this.fontSize = 14.0,
+    this.voiceInputEnabled = true,
+    this.autoTranscribe = false,
+    this.preferredVoice = 'default',
+    this.speechRate = 1.0,
+    this.enableAnalytics = true,
+    this.shareUsageData = false,
+    this.biometricAuth = false,
   });
 
   factory UserPreferences.fromMap(Map<String, dynamic> map) {
@@ -74,6 +154,22 @@ class UserPreferences {
       compactView: map['compactView'] ?? false,
       favoriteCategories: List<String>.from(map['favoriteCategories'] ?? []),
       customSettings: Map<String, dynamic>.from(map['customSettings'] ?? {}),
+      // Additional properties
+      notificationsEnabled: map['notificationsEnabled'] ?? true,
+      taskReminders: map['taskReminders'] ?? true,
+      dailyDigest: map['dailyDigest'] ?? false,
+      completionCelebrations: map['completionCelebrations'] ?? true,
+      voiceNotifications: map['voiceNotifications'] ?? true,
+      language: map['language'] ?? 'en',
+      timezone: map['timezone'] ?? 'UTC',
+      fontSize: (map['fontSize'] ?? 14.0).toDouble(),
+      voiceInputEnabled: map['voiceInputEnabled'] ?? true,
+      autoTranscribe: map['autoTranscribe'] ?? false,
+      preferredVoice: map['preferredVoice'] ?? 'default',
+      speechRate: (map['speechRate'] ?? 1.0).toDouble(),
+      enableAnalytics: map['enableAnalytics'] ?? true,
+      shareUsageData: map['shareUsageData'] ?? false,
+      biometricAuth: map['biometricAuth'] ?? false,
     );
   }
 
@@ -91,6 +187,22 @@ class UserPreferences {
       'compactView': compactView,
       'favoriteCategories': favoriteCategories,
       'customSettings': customSettings,
+      // Additional properties
+      'notificationsEnabled': notificationsEnabled,
+      'taskReminders': taskReminders,
+      'dailyDigest': dailyDigest,
+      'completionCelebrations': completionCelebrations,
+      'voiceNotifications': voiceNotifications,
+      'language': language,
+      'timezone': timezone,
+      'fontSize': fontSize,
+      'voiceInputEnabled': voiceInputEnabled,
+      'autoTranscribe': autoTranscribe,
+      'preferredVoice': preferredVoice,
+      'speechRate': speechRate,
+      'enableAnalytics': enableAnalytics,
+      'shareUsageData': shareUsageData,
+      'biometricAuth': biometricAuth,
     };
   }
 
@@ -107,6 +219,21 @@ class UserPreferences {
     bool? compactView,
     List<String>? favoriteCategories,
     Map<String, dynamic>? customSettings,
+    bool? notificationsEnabled,
+    bool? taskReminders,
+    bool? dailyDigest,
+    bool? completionCelebrations,
+    bool? voiceNotifications,
+    String? language,
+    String? timezone,
+    double? fontSize,
+    bool? voiceInputEnabled,
+    bool? autoTranscribe,
+    String? preferredVoice,
+    double? speechRate,
+    bool? enableAnalytics,
+    bool? shareUsageData,
+    bool? biometricAuth,
   }) {
     return UserPreferences(
       theme: theme ?? this.theme,
@@ -121,7 +248,27 @@ class UserPreferences {
       compactView: compactView ?? this.compactView,
       favoriteCategories: favoriteCategories ?? this.favoriteCategories,
       customSettings: customSettings ?? this.customSettings,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      taskReminders: taskReminders ?? this.taskReminders,
+      dailyDigest: dailyDigest ?? this.dailyDigest,
+      completionCelebrations: completionCelebrations ?? this.completionCelebrations,
+      voiceNotifications: voiceNotifications ?? this.voiceNotifications,
+      language: language ?? this.language,
+      timezone: timezone ?? this.timezone,
+      fontSize: fontSize ?? this.fontSize,
+      voiceInputEnabled: voiceInputEnabled ?? this.voiceInputEnabled,
+      autoTranscribe: autoTranscribe ?? this.autoTranscribe,
+      preferredVoice: preferredVoice ?? this.preferredVoice,
+      speechRate: speechRate ?? this.speechRate,
+      enableAnalytics: enableAnalytics ?? this.enableAnalytics,
+      shareUsageData: shareUsageData ?? this.shareUsageData,
+      biometricAuth: biometricAuth ?? this.biometricAuth,
     );
+  }
+  
+  // Add static factory method for default preferences
+  static UserPreferences defaultPreferences() {
+    return const UserPreferences();
   }
 }
 
@@ -230,6 +377,11 @@ class UserAnalytics {
       customMetrics: customMetrics ?? this.customMetrics,
     );
   }
+  
+  // Add static factory method for default analytics
+  static UserAnalytics defaultAnalytics() {
+    return const UserAnalytics();
+  }
 }
 
 class UserModel {
@@ -249,6 +401,7 @@ class UserModel {
   final String language;
   final UserPreferences preferences;
   final UserAnalytics analytics;
+  final PrivacySettings? privacySettings;
   final Map<String, dynamic> metadata;
 
   UserModel({
@@ -267,6 +420,7 @@ class UserModel {
     this.language = 'en',
     this.preferences = const UserPreferences(),
     this.analytics = const UserAnalytics(),
+    this.privacySettings,
     this.metadata = const {},
   }) : updatedAt = updatedAt ?? createdAt;
 
@@ -294,6 +448,9 @@ class UserModel {
       analytics: data['analytics'] != null
           ? UserAnalytics.fromMap(Map<String, dynamic>.from(data['analytics']))
           : const UserAnalytics(),
+      privacySettings: data['privacySettings'] != null
+          ? PrivacySettings.fromMap(Map<String, dynamic>.from(data['privacySettings']))
+          : null,
       metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
     );
   }
@@ -316,6 +473,7 @@ class UserModel {
       'language': language,
       'preferences': preferences.toMap(),
       'analytics': analytics.toMap(),
+      'privacySettings': privacySettings?.toMap(),
       'metadata': metadata,
     };
   }
@@ -337,6 +495,7 @@ class UserModel {
     String? language,
     UserPreferences? preferences,
     UserAnalytics? analytics,
+    PrivacySettings? privacySettings,
     Map<String, dynamic>? metadata,
   }) {
     return UserModel(
@@ -355,6 +514,7 @@ class UserModel {
       language: language ?? this.language,
       preferences: preferences ?? this.preferences,
       analytics: analytics ?? this.analytics,
+      privacySettings: privacySettings ?? this.privacySettings,
       metadata: metadata ?? this.metadata,
     );
   }

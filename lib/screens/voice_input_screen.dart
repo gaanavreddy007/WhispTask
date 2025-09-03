@@ -1,8 +1,11 @@
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, duplicate_ignore, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/voice_provider.dart';
 import '../providers/task_provider.dart';
 import '../models/task.dart';
+import '../l10n/app_localizations.dart';
 
 class VoiceInputScreen extends StatefulWidget {
   const VoiceInputScreen({super.key});
@@ -15,6 +18,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  final TextEditingController _textController = TextEditingController();
 
   @override
   void initState() {
@@ -51,21 +55,27 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     }
   }
 
+  // Manual test method for debugging parsing logic
+  void _testCommand(String command) {
+    final taskProvider = context.read<TaskProvider>();
+    taskProvider.processVoiceTaskCommandEnhanced(command);
+  }
+
   Future<void> _saveTask() async {
     final voiceProvider = context.read<VoiceProvider>();
     final taskProvider = context.read<TaskProvider>();
     
     if (voiceProvider.previewTask == null || !voiceProvider.isCurrentTaskValid()) {
-      _showSnackBar('Please provide a valid task description', isError: true);
+      _showSnackBar(AppLocalizations.of(context).pleaseProvideValidTask, isError: true);
       return;
     }
 
     try {
       await taskProvider.addTask(voiceProvider.previewTask!);
-      _showSnackBar('Task created successfully!', isError: false);
+      _showSnackBar(AppLocalizations.of(context).taskCreatedSuccessfully, isError: false);
       voiceProvider.clearSession();
     } catch (e) {
-      _showSnackBar('Failed to save task: $e', isError: true);
+      _showSnackBar('${AppLocalizations.of(context).failedToSaveTask}: $e', isError: true);
     }
   }
 
@@ -83,7 +93,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Voice Input'),
+        title: Text(AppLocalizations.of(context).voiceInput),
         backgroundColor: const Color(0xFF1976D2),
         foregroundColor: Colors.white,
         actions: [
@@ -99,41 +109,77 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Voice input button
+                // Text input for testing commands (bypass microphone)
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(AppLocalizations.of(context).testCommandsTitle, 
+                           style: TextStyle(fontWeight: FontWeight.bold)),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: _textController,
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context).testCommandsHint,
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_textController.text.isNotEmpty) {
+                            _testCommand(_textController.text);
+                            _textController.clear();
+                          }
+                        },
+                        child: Text(AppLocalizations.of(context).testCommand),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Voice button
                 Center(
-                  child: AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: voiceProvider.isListening ? _pulseAnimation.value : 1.0,
-                        child: GestureDetector(
-                          onTap: voiceProvider.isInitialized ? _toggleListening : null,
+                  child: GestureDetector(
+                    onTap: _toggleListening,
+                    child: AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: voiceProvider.isListening ? _pulseAnimation.value : 1.0,
                           child: Container(
-                            width: 120,
-                            height: 120,
+                            width: 100,
+                            height: 100,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: voiceProvider.isListening 
-                                  ? Colors.red.shade400 
-                                  : const Color(0xFF1976D2),
+                                ? Colors.red.shade400 
+                                : const Color(0xFF1976D2),
                               boxShadow: [
                                 BoxShadow(
-                                  // ignore: deprecated_member_use
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
+                                  color: (voiceProvider.isListening 
+                                    ? Colors.red 
+                                    : const Color(0xFF1976D2)).withOpacity(0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
                                 ),
                               ],
                             ),
                             child: Icon(
-                              voiceProvider.isListening ? Icons.mic : Icons.mic_none,
-                              size: 48,
+                              voiceProvider.isListening ? Icons.stop : Icons.mic,
+                              size: 40,
                               color: Colors.white,
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
                 
@@ -142,10 +188,10 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                 // Status text
                 Text(
                   voiceProvider.isListening 
-                      ? 'Listening... Speak now!'
+                      ? AppLocalizations.of(context).listeningSpeak
                       : voiceProvider.isInitialized 
-                          ? 'Tap to speak' 
-                          : 'Initializing...',
+                          ? AppLocalizations.of(context).tapToSpeak 
+                          : AppLocalizations.of(context).initializing,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: voiceProvider.isListening ? Colors.red : Colors.grey[600],
                   ),
@@ -193,7 +239,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'You said:',
+                          AppLocalizations.of(context).youSaid,
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: Colors.blue.shade700,
                             fontWeight: FontWeight.bold,
@@ -225,7 +271,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Task Preview:',
+                          AppLocalizations.of(context).taskPreview,
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: Colors.green.shade700,
                             fontWeight: FontWeight.bold,
@@ -246,7 +292,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                         child: ElevatedButton.icon(
                           onPressed: voiceProvider.clearSession,
                           icon: const Icon(Icons.clear),
-                          label: const Text('Clear'),
+                          label: Text(AppLocalizations.of(context).clear),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey,
                             foregroundColor: Colors.white,
@@ -258,7 +304,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                         child: ElevatedButton.icon(
                           onPressed: voiceProvider.isCurrentTaskValid() ? _saveTask : null,
                           icon: const Icon(Icons.save),
-                          label: const Text('Save Task'),
+                          label: Text(AppLocalizations.of(context).saveTask),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1976D2),
                             foregroundColor: Colors.white,
@@ -282,17 +328,17 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Voice Commands Examples:',
+                        AppLocalizations.of(context).voiceCommandsExamples,
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text('• "Remind me to buy groceries"'),
-                      const Text('• "Call mom at 6 PM"'),
-                      const Text('• "Important: Submit project tomorrow"'),
-                      const Text('• "Exercise at the gym daily"'),
-                      const Text('• "Pay bills high priority"'),
+                      Text(AppLocalizations.of(context).voiceExample1),
+                      Text(AppLocalizations.of(context).voiceExample2),
+                      Text(AppLocalizations.of(context).voiceExample3),
+                      Text(AppLocalizations.of(context).voiceExample4),
+                      Text(AppLocalizations.of(context).voiceExample5),
                     ],
                   ),
                 ),
@@ -328,10 +374,10 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
           spacing: 8,
           runSpacing: 4,
           children: [
-            _buildPreviewChip('Category', task.category, Colors.blue),
-            _buildPreviewChip('Priority', task.priority, _getPriorityColor(task.priority)),
+            _buildPreviewChip(AppLocalizations.of(context).category, task.category, Colors.blue),
+            _buildPreviewChip(AppLocalizations.of(context).priority, task.priority, _getPriorityColor(task.priority)),
             if (task.isRecurring && task.recurringPattern != null)
-              _buildPreviewChip('Recurring', task.recurringPattern!, Colors.purple),
+              _buildPreviewChip(AppLocalizations.of(context).recurring, task.recurringPattern!, Colors.purple),
           ],
         ),
         if (task.dueDate != null) ...[
@@ -341,7 +387,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
               Icon(Icons.schedule, color: Colors.purple.shade600, size: 16),
               const SizedBox(width: 4),
               Text(
-                'Due: ${_formatDateTime(task.dueDate!)}',
+                '${AppLocalizations.of(context).due}: ${_formatDateTime(task.dueDate!)}',
                 style: TextStyle(
                   color: Colors.purple.shade600,
                   fontSize: 12,
@@ -393,9 +439,9 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     final difference = dateTime.difference(now).inDays;
     
     if (difference == 0) {
-      return 'Today ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      return '${AppLocalizations.of(context).today} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     } else if (difference == 1) {
-      return 'Tomorrow ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      return '${AppLocalizations.of(context).tomorrow} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     } else {
       return '${dateTime.day}/${dateTime.month} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
@@ -405,32 +451,32 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Voice Input Help'),
-        content: const SingleChildScrollView(
+        title: Text(AppLocalizations.of(context).voiceInputHelp),
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('How to use voice input:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('1. Tap the microphone button to start listening'),
-              Text('2. Speak your task clearly'),
-              Text('3. Review the parsed task'),
-              Text('4. Tap "Save Task" to add it to your list'),
-              SizedBox(height: 16),
-              Text('Voice Features:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('• Time: "at 6 PM", "tomorrow"'),
-              Text('• Priority: "urgent", "important", "low priority"'),
-              Text('• Recurring: "daily", "weekly", "monthly"'),
-              Text('• Categories: Auto-detected from keywords'),
+              Text(AppLocalizations.of(context).howToUseVoiceInput, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(AppLocalizations.of(context).voiceStep1),
+              Text(AppLocalizations.of(context).voiceStep2),
+              Text(AppLocalizations.of(context).voiceStep3),
+              Text(AppLocalizations.of(context).voiceStep4),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context).voiceFeatures, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(AppLocalizations.of(context).voiceFeatureTime),
+              Text(AppLocalizations.of(context).voiceFeaturePriority),
+              Text(AppLocalizations.of(context).voiceFeatureRecurring),
+              Text(AppLocalizations.of(context).voiceFeatureCategories),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it'),
+            child: Text(AppLocalizations.of(context).gotIt),
           ),
         ],
       ),

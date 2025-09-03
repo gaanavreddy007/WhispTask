@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../models/task.dart';
+import '../l10n/app_localizations.dart';
 
 class FilterDialog extends StatefulWidget {
   const FilterDialog({super.key});
@@ -226,7 +227,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
-                    child: const Text('Apply Filters'),
+                    child: Text(AppLocalizations.of(context).applyFiltersLabel),
                   ),
                 ],
               ),
@@ -240,6 +241,10 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
   // Categories tab
   Widget _buildCategoriesTab(TaskProvider taskProvider) {
     final availableCategories = taskProvider.availableCategories;
+    // Add default categories if none exist
+    final categories = availableCategories.isEmpty 
+        ? TaskCategory.all 
+        : availableCategories;
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -263,9 +268,9 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
-              itemCount: availableCategories.length,
+              itemCount: categories.length,
               itemBuilder: (context, index) {
-                final category = availableCategories[index];
+                final category = categories[index];
                 final isSelected = _selectedCategories.contains(category);
                 final categoryColor = _getCategoryColor(category);
                 final categoryIcon = _getCategoryIcon(category);
@@ -474,7 +479,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
               child: TextButton.icon(
                 onPressed: _clearDateFilters,
                 icon: const Icon(Icons.clear, size: 16),
-                label: const Text('Clear Date Filters'),
+                label: Text(AppLocalizations.of(context).clearDateFiltersLabel),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.grey[600],
                 ),

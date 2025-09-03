@@ -1,3 +1,5 @@
+// ignore_for_file: await_only_futures
+
 import 'package:flutter/foundation.dart';
 import '../services/voice_service.dart';
 import '../services/voice_parser.dart';
@@ -63,9 +65,9 @@ class VoiceProvider extends ChangeNotifier {
   }
 
   // Stop voice recognition
-  Future<void> stopListening() async {
+  void stopListening() {
     try {
-      await _voiceService.stopListening();
+      _voiceService.stopListening();
       _isListening = false;
       notifyListeners();
     } catch (e) {
@@ -75,9 +77,9 @@ class VoiceProvider extends ChangeNotifier {
   }
 
   // Cancel voice recognition
-  Future<void> cancelListening() async {
+  void cancelListening() {
     try {
-      await _voiceService.cancelListening();
+      _voiceService.cancelListening();
       _isListening = false;
       _recognizedText = '';
       _previewTask = null;
