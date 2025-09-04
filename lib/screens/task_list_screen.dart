@@ -97,10 +97,10 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: _isProcessingVoiceCommand ? Colors.blue[50] : Colors.green[50],
+        color: _isProcessingVoiceCommand ? Theme.of(context).colorScheme.primaryContainer : Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _isProcessingVoiceCommand ? Colors.blue : Colors.green,
+          color: _isProcessingVoiceCommand ? Theme.of(context).colorScheme.primary : Colors.green,
           width: 2,
         ),
       ),
@@ -124,7 +124,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             child: Text(
               _voiceStatus,
               style: TextStyle(
-                color: _isProcessingVoiceCommand ? Colors.blue[700] : Colors.green[700],
+                color: _isProcessingVoiceCommand ? Theme.of(context).colorScheme.primary : Colors.green.shade700,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -195,16 +195,16 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             Text(AppLocalizations.of(context).appTitle),
           ],
         ),
-        backgroundColor: const Color(0xFF1976D2),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 2,
         centerTitle: false,
         
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: Theme.of(context).colorScheme.onPrimary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
+          indicatorColor: Theme.of(context).colorScheme.onPrimary,
           indicatorWeight: 3,
           isScrollable: true,
           tabs: [
@@ -222,7 +222,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
               return IconButton(
                 icon: Icon(
                   _isVoiceListening ? Icons.mic : Icons.mic_none,
-                  color: _isVoiceListening ? Colors.red : Colors.white,
+                  color: _isVoiceListening ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onPrimary,
                 ),
                 onPressed: _toggleVoiceListening,
                 tooltip: _isVoiceListening ? AppLocalizations.of(context).stopVoiceCommands : AppLocalizations.of(context).startVoiceCommands,
@@ -255,8 +255,8 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -292,11 +292,11 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: score > 70 ? Colors.green.withOpacity(0.1) : 
-                         score > 40 ? Colors.orange.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                         score > 40 ? Colors.orange.withOpacity(0.1) : Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: score > 70 ? Colors.green : 
-                           score > 40 ? Colors.orange : Colors.red,
+                           score > 40 ? Colors.orange : Theme.of(context).colorScheme.error,
                     width: 1,
                   ),
                 ),
@@ -305,15 +305,15 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                     Icon(
                       Icons.trending_up,
                       color: score > 70 ? Colors.green : 
-                             score > 40 ? Colors.orange : Colors.red,
+                             score > 40 ? Colors.orange : Theme.of(context).colorScheme.error,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${AppLocalizations.of(context).todaysProductivity}: ${score.toStringAsFixed(1)}%',
                       style: TextStyle(
-                        color: score > 70 ? Colors.green[700] : 
-                               score > 40 ? Colors.orange[700] : Colors.red[700],
+                        color: score > 70 ? Colors.green.shade700 : 
+                               score > 40 ? Colors.orange.shade700 : Theme.of(context).colorScheme.error,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -323,7 +323,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: score > 70 ? Colors.green : 
-                               score > 40 ? Colors.orange : Colors.red,
+                               score > 40 ? Colors.orange : Theme.of(context).colorScheme.error,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -364,7 +364,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: Colors.grey[800],
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -374,7 +374,7 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                         '• Custom voice packs\n• Offline mode\n• Smart tags\n• Custom themes\n• Advanced analytics\n• No ads',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           height: 1.4,
                         ),
                       ),
@@ -417,20 +417,20 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
                 ),
                 child: Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.ads_click, color: Colors.grey[600], size: 20),
+                      Icon(Icons.ads_click, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 20),
                       const SizedBox(width: 8),
                       Text(
                         'Advertisement Space',
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),

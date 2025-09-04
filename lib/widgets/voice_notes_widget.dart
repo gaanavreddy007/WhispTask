@@ -71,13 +71,13 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
               onPressed: _isRecording ? _stopRecording : _startRecording,
               icon: Icon(
                 _isRecording ? Icons.stop : Icons.mic,
-                color: _isRecording ? Colors.red : Colors.blue,
+                color: _isRecording ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
               ),
               iconSize: 32,
             ),
             if (_isRecording) ...[
               SizedBox(width: 8),
-              Text(AppLocalizations.of(context).recording, style: TextStyle(color: Colors.red)),
+              Text(AppLocalizations.of(context).recording, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
             if (_isTranscribing) ...[
               SizedBox(width: 8),
@@ -98,7 +98,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -154,7 +154,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
                 ),
                 IconButton(
                   onPressed: () => _deleteVoiceNote(note),
-                  icon: Icon(Icons.delete, color: Colors.red),
+                  icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
                 ),
               ],
             ),
@@ -163,7 +163,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Column(
@@ -179,7 +179,7 @@ class _EnhancedVoiceNotesWidgetState extends State<EnhancedVoiceNotesWidget> {
             SizedBox(height: 4),
             Text(
               '${AppLocalizations.of(context).created}: ${note.recordedAt.day}/${note.recordedAt.month}/${note.recordedAt.year}',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ],
         ),
@@ -316,21 +316,21 @@ class CompactVoiceNotesWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.purple[50],
+          color: Theme.of(context).colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.purple[200]!),
+          border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.mic, size: 14, color: Colors.purple[600]),
+            Icon(Icons.mic, size: 14, color: Theme.of(context).colorScheme.secondary),
             const SizedBox(width: 4),
             Text(
               '${voiceNotes.length}',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.purple[700],
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ],
@@ -369,11 +369,11 @@ class _QuickVoiceRecordButtonState extends State<QuickVoiceRecordButton> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: _isRecording ? Colors.red[600] : Colors.purple[600],
+          color: _isRecording ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.secondary,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: (_isRecording ? Colors.red : Colors.purple).withOpacity(0.3),
+              color: (_isRecording ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.secondary).withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

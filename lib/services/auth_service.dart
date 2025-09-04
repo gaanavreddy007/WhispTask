@@ -8,6 +8,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import '../models/user_model.dart';
 import 'user_preferences_service.dart';
 import 'data_sync_service.dart';
+import 'sentry_service.dart';
 
 class AuthService with ChangeNotifier {
   final FirebaseAuth _firebaseAuth;
@@ -89,14 +90,16 @@ class AuthService with ChangeNotifier {
         }
       } catch (e) {
         print('Error fetching user data from Firestore: $e');
-        await Sentry.captureException(
+        await SentryService.captureException(
           e,
           stackTrace: StackTrace.current,
-          withScope: (scope) {
-            scope.setTag('service', 'auth');
-            scope.setTag('operation', 'fetch_user_data');
-            scope.level = SentryLevel.warning;
+          hint: 'Error fetching user data from Firestore',
+          extra: {
+            'user_id': firebaseUser.uid,
+            'service': 'auth',
+            'operation': 'fetch_user_data',
           },
+          level: 'warning',
         );
         // Fallback to basic Firebase user data
         return _userFromFirebase(firebaseUser);

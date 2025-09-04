@@ -32,10 +32,10 @@ dependencies:
   permission_handler: ^11.3.1
   flutter_tts: ^4.0.2
   
-  # Wake Word Detection (NEW for Day 8)
-  picovoice_flutter: ^3.0.2
-  rhino_flutter: ^3.0.1
-  porcupine_flutter: ^3.0.1
+  # Wake Word Detection (Temporarily disabled due to CMake path issues)
+  # picovoice_flutter: ^3.0.2
+  # rhino_flutter: ^3.0.1
+  # porcupine_flutter: ^3.0.1
   
   # State Management
   provider: ^6.1.2
@@ -67,7 +67,7 @@ dependencies:
   
   # Premium Features (Day 11) - RevenueCat Integration
   purchases_flutter: ^9.4.0
-  google_mobile_ads: ^5.1.0
+  google_mobile_ads: ^5.3.1
 
 dev_dependencies:
   sentry_dart_plugin: ^3.1.1

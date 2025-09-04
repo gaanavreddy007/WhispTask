@@ -6,6 +6,7 @@ import '../providers/voice_provider.dart';
 import '../providers/task_provider.dart';
 import '../models/task.dart';
 import '../l10n/app_localizations.dart';
+import '../services/sentry_service.dart';
 
 class VoiceInputScreen extends StatefulWidget {
   const VoiceInputScreen({super.key});
@@ -23,18 +24,30 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 1),
-      vsync: this,
-    );
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
-
+    
+    // Log screen navigation
+    SentryService.logScreenNavigation('VoiceInputScreen');
+    
+    try {
+      _pulseController = AnimationController(
+        duration: const Duration(seconds: 1),
+        vsync: this,
+      );
+      _pulseAnimation = Tween<double>(
+        begin: 1.0,
+        end: 1.2,
+      ).animate(CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ));
+    } catch (e, stackTrace) {
+      SentryService.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: 'Error initializing VoiceInputScreen animations',
+        extra: {'screen': 'VoiceInputScreen'},
+      );
+    }
   }
 
   @override
@@ -44,14 +57,25 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   }
 
   void _toggleListening() {
-    final voiceProvider = context.read<VoiceProvider>();
-    
-    if (voiceProvider.isListening) {
-      voiceProvider.stopListening();
-      _pulseController.stop();
-    } else {
-      voiceProvider.startListening();
-      _pulseController.repeat(reverse: true);
+    try {
+      final voiceProvider = context.read<VoiceProvider>();
+      
+      if (voiceProvider.isListening) {
+        SentryService.logUserAction('voice_stop_listening');
+        voiceProvider.stopListening();
+        _pulseController.stop();
+      } else {
+        SentryService.logUserAction('voice_start_listening');
+        voiceProvider.startListening();
+        _pulseController.repeat(reverse: true);
+      }
+    } catch (e, stackTrace) {
+      SentryService.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: 'Error toggling voice listening',
+        extra: {'screen': 'VoiceInputScreen'},
+      );
     }
   }
 
@@ -62,28 +86,47 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   }
 
   Future<void> _saveTask() async {
-    final voiceProvider = context.read<VoiceProvider>();
-    final taskProvider = context.read<TaskProvider>();
-    
-    if (voiceProvider.previewTask == null || !voiceProvider.isCurrentTaskValid()) {
-      _showSnackBar(AppLocalizations.of(context).pleaseProvideValidTask, isError: true);
-      return;
-    }
+    return SentryService.wrapWithErrorTracking(
+      () async {
+        final voiceProvider = context.read<VoiceProvider>();
+        final taskProvider = context.read<TaskProvider>();
+        
+        SentryService.logUserAction('voice_save_task_attempt', data: {
+          'has_preview_task': (voiceProvider.previewTask != null).toString(),
+          'is_valid': voiceProvider.isCurrentTaskValid().toString(),
+        });
+        
+        if (voiceProvider.previewTask == null || !voiceProvider.isCurrentTaskValid()) {
+          SentryService.addBreadcrumb(
+            message: 'Invalid task validation failed',
+            category: 'validation',
+            level: 'warning',
+          );
+          _showSnackBar(AppLocalizations.of(context).pleaseProvideValidTask, isError: true);
+          return;
+        }
 
-    try {
-      await taskProvider.addTask(voiceProvider.previewTask!);
-      _showSnackBar(AppLocalizations.of(context).taskCreatedSuccessfully, isError: false);
-      voiceProvider.clearSession();
-    } catch (e) {
-      _showSnackBar('${AppLocalizations.of(context).failedToSaveTask}: $e', isError: true);
-    }
+        await taskProvider.addTask(voiceProvider.previewTask!);
+        
+        SentryService.logUserAction('voice_task_saved_success', data: {
+          'task_title': voiceProvider.previewTask!.title,
+          'task_priority': voiceProvider.previewTask!.priority.toString(),
+        });
+        
+        _showSnackBar(AppLocalizations.of(context).taskCreatedSuccessfully, isError: false);
+        voiceProvider.clearSession();
+      },
+      operation: 'save_voice_task',
+      description: 'Save task from voice input',
+      extra: {'screen': 'VoiceInputScreen'},
+    );
   }
 
   void _showSnackBar(String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : Colors.green,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -94,8 +137,8 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).voiceInput),
-        backgroundColor: const Color(0xFF1976D2),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
@@ -113,7 +156,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -159,13 +202,13 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: voiceProvider.isListening 
-                                ? Colors.red.shade400 
-                                : const Color(0xFF1976D2),
+                                ? Theme.of(context).colorScheme.error 
+                                : Theme.of(context).colorScheme.primary,
                               boxShadow: [
                                 BoxShadow(
                                   color: (voiceProvider.isListening 
-                                    ? Colors.red 
-                                    : const Color(0xFF1976D2)).withOpacity(0.3),
+                                    ? Theme.of(context).colorScheme.error 
+                                    : Theme.of(context).colorScheme.primary).withOpacity(0.3),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -174,7 +217,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                             child: Icon(
                               voiceProvider.isListening ? Icons.stop : Icons.mic,
                               size: 40,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         );
@@ -193,7 +236,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                           ? AppLocalizations.of(context).tapToSpeak 
                           : AppLocalizations.of(context).initializing,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: voiceProvider.isListening ? Colors.red : Colors.grey[600],
+                    color: voiceProvider.isListening ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -207,18 +250,18 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                     padding: const EdgeInsets.all(16),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: Theme.of(context).colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade300),
+                      border: Border.all(color: Theme.of(context).colorScheme.error),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade600),
+                        Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             voiceProvider.errorMessage,
-                            style: TextStyle(color: Colors.red.shade600),
+                            style: TextStyle(color: Theme.of(context).colorScheme.error),
                           ),
                         ),
                       ],
@@ -231,9 +274,9 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
+                      color: Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade200),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +284,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                         Text(
                           AppLocalizations.of(context).youSaid,
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.blue.shade700,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -263,9 +306,9 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.shade200),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,8 +337,8 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                           icon: const Icon(Icons.clear),
                           label: Text(AppLocalizations.of(context).clear),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
-                            foregroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).colorScheme.secondary,
+                            foregroundColor: Theme.of(context).colorScheme.onSecondary,
                           ),
                         ),
                       ),
@@ -306,8 +349,8 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                           icon: const Icon(Icons.save),
                           label: Text(AppLocalizations.of(context).saveTask),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1976D2),
-                            foregroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       ),
@@ -321,7 +364,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -356,7 +399,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
       children: [
         Row(
           children: [
-            Icon(Icons.task_alt, color: Colors.green.shade600, size: 20),
+            Icon(Icons.task_alt, color: Colors.green, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -374,22 +417,22 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
           spacing: 8,
           runSpacing: 4,
           children: [
-            _buildPreviewChip(AppLocalizations.of(context).category, task.category, Colors.blue),
+            _buildPreviewChip(AppLocalizations.of(context).category, task.category, Theme.of(context).colorScheme.primary),
             _buildPreviewChip(AppLocalizations.of(context).priority, task.priority, _getPriorityColor(task.priority)),
             if (task.isRecurring && task.recurringPattern != null)
-              _buildPreviewChip(AppLocalizations.of(context).recurring, task.recurringPattern!, Colors.purple),
+              _buildPreviewChip(AppLocalizations.of(context).recurring, task.recurringPattern!, Theme.of(context).colorScheme.secondary),
           ],
         ),
         if (task.dueDate != null) ...[
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.schedule, color: Colors.purple.shade600, size: 16),
+              Icon(Icons.schedule, color: Theme.of(context).colorScheme.secondary, size: 16),
               const SizedBox(width: 4),
               Text(
                 '${AppLocalizations.of(context).due}: ${_formatDateTime(task.dueDate!)}',
                 style: TextStyle(
-                  color: Colors.purple.shade600,
+                  color: Theme.of(context).colorScheme.secondary,
                   fontSize: 12,
                 ),
               ),
@@ -413,7 +456,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
       child: Text(
         '$label: $value',
         style: TextStyle(
-          color: Colors.blue.shade700,  // or replace 'blue' with any MaterialColor you need
+          color: Theme.of(context).colorScheme.primary,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),

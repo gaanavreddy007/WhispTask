@@ -16,6 +16,7 @@ import '../services/tts_service.dart';
 import '../services/voice_error_handler.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/user_preferences_service.dart';
+import '../services/sentry_service.dart';
 
 // Helper class for storing task matches with scores
 class TaskMatch {
@@ -422,73 +423,92 @@ class TaskProvider extends ChangeNotifier {
 
   /// Add a new task - ENHANCED with new model fields and premium limits
   Future<bool> addTask(Task task) async {
-    if (_currentUserId == null) {
-      _setError('User not authenticated');
-      return false;
-    }
-
-    // Check premium limits
-    if (!canAddTask()) {
-      _setError('Daily task limit reached (20 tasks). Upgrade to Pro for unlimited tasks!');
-      return false;
-    }
-
-    _setLoading(true);
-    try {
-      // Set the userId in the task
-      final taskWithUserId = task.copyWith(userId: _currentUserId);
-      final bool success = await _taskService.addTask(taskWithUserId, _currentUserId!);
-      
-      if (success) {
-        // Track analytics event
-        FirebaseAnalytics.instance.logEvent(name: 'task_created');
-        
-        // Auto-save productivity score when tasks change (with error handling)
-        try {
-          final score = calculateDailyProductivityScore();
-          await UserPreferencesService().saveDailyProductivityScore(score);
-        } catch (e) {
-          // Silently handle productivity score save errors to not disrupt task creation
-          print('Note: Productivity score not saved (${e.toString().split(':').last.trim()})');
-        }
-        
-        notifyListeners();
-        
-        // Schedule notification if reminder is set using NotificationHelper
-        if (task.hasReminder && task.reminderTime != null && task.notificationId != null) {
-          await NotificationService().scheduleNotification(
-            id: task.notificationId!,
-            title: NotificationHelper.getReminderTitle(task),
-            body: NotificationHelper.getReminderBody(task),
-            scheduledTime: task.reminderTime!,
-            payload: task.id,
+    final result = await SentryService.wrapWithErrorTracking(
+      () async {
+        if (_currentUserId == null) {
+          SentryService.captureMessage(
+            'Attempted to add task without authenticated user',
+            level: 'warning',
           );
+          _setError('User not authenticated');
+          return false;
         }
+
+        // Check premium limits
+        if (!canAddTask()) {
+          SentryService.logUserAction('task_limit_reached', data: {
+            'is_premium': (_authProvider?.isPremium == true).toString(),
+            'current_task_count': _tasks.length.toString(),
+          });
+          _setError('Daily task limit reached (20 tasks). Upgrade to Pro for unlimited tasks!');
+          return false;
+        }
+
+        SentryService.logUserAction('add_task_attempt', data: {
+          'task_title': task.title,
+          'task_priority': task.priority.toString(),
+          'has_due_date': (task.dueDate != null).toString(),
+        });
+
+        _setLoading(true);
         
-        await _loadTaskStats();
-        await loadAnalytics();
-        _clearError();
-      } else {
-        _setError('Failed to add task');
-      }
-      
-      return success;
-    } catch (e) {
-      await Sentry.captureException(
-        e,
-        stackTrace: StackTrace.current,
-        withScope: (scope) {
-          scope.setTag('provider', 'task');
-          scope.setTag('operation', 'add_task');
-          scope.setExtra('task_title', task.title);
-          scope.level = SentryLevel.error;
-        },
-      );
-      _setError('Failed to add task: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
+        try {
+          // Set the userId in the task
+          final taskWithUserId = task.copyWith(userId: _currentUserId);
+          final bool success = await _taskService.addTask(taskWithUserId, _currentUserId!);
+          
+          if (success) {
+            SentryService.logUserAction('task_added_success', data: {
+              'task_title': task.title,
+              'task_id': taskWithUserId.id,
+            });
+            
+            // Track analytics event
+            FirebaseAnalytics.instance.logEvent(name: 'task_created');
+            
+            // Auto-save productivity score when tasks change (with error handling)
+            try {
+              final score = calculateDailyProductivityScore();
+              await UserPreferencesService().saveDailyProductivityScore(score);
+            } catch (e) {
+              // Silently handle productivity score save errors to not disrupt task creation
+              print('Note: Productivity score not saved (${e.toString().split(':').last.trim()})');
+            }
+            
+            notifyListeners();
+            
+            // Schedule notification if reminder is set using NotificationHelper
+            if (task.hasReminder && task.reminderTime != null && task.notificationId != null) {
+              await NotificationService().scheduleNotification(
+                id: task.notificationId!,
+                title: NotificationHelper.getReminderTitle(task),
+                body: NotificationHelper.getReminderBody(task),
+                scheduledTime: task.reminderTime!,
+                payload: task.id,
+              );
+            }
+            
+            await _loadTaskStats();
+            await loadAnalytics();
+            _clearError();
+            return true;
+          } else {
+            _setError('Failed to add task');
+            return false;
+          }
+        } finally {
+          _setLoading(false);
+        }
+      },
+      operation: 'add_task',
+      description: 'Add new task to user collection',
+      extra: {
+        'task_title': task.title,
+        'user_id': _currentUserId ?? 'unknown',
+      },
+    );
+    
+    return result ?? false;
   }
 
   /// Update an existing task - ENHANCED

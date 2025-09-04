@@ -123,8 +123,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           Consumer<TaskProvider>(
             builder: (context, taskProvider, child) {
@@ -162,18 +162,18 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[_taskColor == 'blue' ? 100 : 200],
+                        color: Theme.of(context).colorScheme.errorContainer,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade300),
+                        border: Border.all(color: Theme.of(context).colorScheme.error),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error, color: Colors.red.shade700),
+                          Icon(Icons.error, color: Theme.of(context).colorScheme.error),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               taskProvider.error!,
-                              style: TextStyle(color: Colors.red.shade700),
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
                             ),
                           ),
                           IconButton(

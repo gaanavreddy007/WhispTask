@@ -4,9 +4,9 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../models/user_model.dart';
+import '../models/user_model.dart' show UserPreferences;
+import '../services/user_preferences_service.dart';
 import '../models/task_model.dart';
-import 'user_preferences_service.dart';
 
 class DataSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,6 +15,32 @@ class DataSyncService {
 
   // Get current user ID
   String? get _currentUserId => _auth.currentUser?.uid;
+
+  // Helper function to convert Firestore data to JSON-serializable format
+  Map<String, dynamic> _sanitizeFirestoreData(Map<String, dynamic> data) {
+    Map<String, dynamic> sanitized = {};
+    
+    data.forEach((key, value) {
+      if (value is Timestamp) {
+        sanitized[key] = value.toDate().toIso8601String();
+      } else if (value is Map<String, dynamic>) {
+        sanitized[key] = _sanitizeFirestoreData(value);
+      } else if (value is List) {
+        sanitized[key] = value.map((item) {
+          if (item is Map<String, dynamic>) {
+            return _sanitizeFirestoreData(item);
+          } else if (item is Timestamp) {
+            return item.toDate().toIso8601String();
+          }
+          return item;
+        }).toList();
+      } else {
+        sanitized[key] = value;
+      }
+    });
+    
+    return sanitized;
+  }
 
   // Sync user analytics data
   Future<void> updateUserAnalytics({
@@ -134,6 +160,30 @@ class DataSyncService {
       // Get user preferences
       UserPreferences preferences = await _preferencesService.getCurrentPreferences();
 
+      // Sanitize user profile data
+      Map<String, dynamic>? sanitizedUserProfile;
+      if (userDoc.exists && userDoc.data() != null) {
+        sanitizedUserProfile = _sanitizeFirestoreData(userDoc.data() as Map<String, dynamic>);
+      }
+
+      // Sanitize tasks data
+      List<Map<String, dynamic>> sanitizedTasks = tasksSnapshot.docs.map((doc) {
+        Map<String, dynamic> taskData = {
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        };
+        return _sanitizeFirestoreData(taskData);
+      }).toList();
+
+      // Sanitize analytics data
+      Map<String, dynamic>? sanitizedAnalytics;
+      if (userDoc.exists && userDoc.data() != null) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        if (userData['analytics'] != null) {
+          sanitizedAnalytics = _sanitizeFirestoreData(userData['analytics'] as Map<String, dynamic>);
+        }
+      }
+
       // Compile export data
       Map<String, dynamic> exportData = {
         'exportInfo': {
@@ -141,15 +191,10 @@ class DataSyncService {
           'appVersion': '1.0.0',
           'userId': _currentUserId,
         },
-        'userProfile': userDoc.exists ? userDoc.data() : null,
+        'userProfile': sanitizedUserProfile,
         'preferences': preferences.toMap(),
-        'tasks': tasksSnapshot.docs.map((doc) => <String, dynamic>{
-          'id': doc.id,
-          ...doc.data() as Map<String, dynamic>,
-        }).toList(),
-        'analytics': userDoc.exists && userDoc.data() != null 
-            ? (userDoc.data() as Map<String, dynamic>)['analytics'] 
-            : null,
+        'tasks': sanitizedTasks,
+        'analytics': sanitizedAnalytics,
       };
 
       print('User data exported successfully');
@@ -715,21 +760,40 @@ class DataSyncService {
         .get();
     final preferences = await _preferencesService.getCurrentPreferences();
 
+    // Sanitize user profile data
+    Map<String, dynamic>? sanitizedUserProfile;
+    if (userDoc.exists && userDoc.data() != null) {
+      sanitizedUserProfile = _sanitizeFirestoreData(userDoc.data() as Map<String, dynamic>);
+    }
+
+    // Sanitize tasks data
+    List<Map<String, dynamic>> sanitizedTasks = tasksSnapshot.docs.map((doc) {
+      Map<String, dynamic> taskData = {
+        'id': doc.id,
+        ...doc.data() as Map<String, dynamic>,
+      };
+      return _sanitizeFirestoreData(taskData);
+    }).toList();
+
+    // Sanitize analytics data
+    Map<String, dynamic>? sanitizedAnalytics;
+    if (userDoc.exists && userDoc.data() != null) {
+      final userData = userDoc.data() as Map<String, dynamic>;
+      if (userData['analytics'] != null) {
+        sanitizedAnalytics = _sanitizeFirestoreData(userData['analytics'] as Map<String, dynamic>);
+      }
+    }
+
     return {
       'exportInfo': {
         'exportDate': DateTime.now().toIso8601String(),
         'appVersion': '1.0.0',
         'userId': _currentUserId,
       },
-      'userProfile': userDoc.exists ? userDoc.data() : null,
+      'userProfile': sanitizedUserProfile,
       'preferences': preferences.toMap(),
-      'tasks': tasksSnapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList(),
-      'analytics': userDoc.exists && userDoc.data() != null 
-          ? (userDoc.data() as Map<String, dynamic>)['analytics'] 
-          : null,
+      'tasks': sanitizedTasks,
+      'analytics': sanitizedAnalytics,
     };
   }
 

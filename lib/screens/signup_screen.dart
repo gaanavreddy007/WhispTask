@@ -1,4 +1,6 @@
 // lib/screens/signup_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -81,7 +83,7 @@ class _SignupScreenState extends State<SignupScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context).acceptTermsError),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -117,12 +119,12 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onBackground),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -184,7 +186,7 @@ class _SignupScreenState extends State<SignupScreen>
           widget.isLinkingAccount ? AppLocalizations.of(context).createAccount : AppLocalizations.of(context).joinWhispTask,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: Theme.of(context).colorScheme.onBackground,
           ),
         ),
         const SizedBox(height: 8),
@@ -193,7 +195,7 @@ class _SignupScreenState extends State<SignupScreen>
               ? AppLocalizations.of(context).convertGuestAccount
               : AppLocalizations.of(context).startOrganizingTasks,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             height: 1.4,
           ),
         ),
@@ -265,7 +267,7 @@ class _SignupScreenState extends State<SignupScreen>
             Expanded(
               child: LinearProgressIndicator(
                 value: strength / 5,
-                backgroundColor: Colors.grey[300],
+                backgroundColor: Theme.of(context).colorScheme.outline,
                 valueColor: AlwaysStoppedAnimation<Color>(strengthColor),
                 minHeight: 4,
               ),
@@ -310,14 +312,14 @@ class _SignupScreenState extends State<SignupScreen>
           Icon(
             isMet ? Icons.check_circle : Icons.circle_outlined,
             size: 16,
-            color: isMet ? Colors.green : Colors.grey[400],
+            color: isMet ? Colors.green : Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isMet ? Colors.green : Colors.grey[600],
+              color: isMet ? Colors.green : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
         ],
@@ -368,7 +370,7 @@ class _SignupScreenState extends State<SignupScreen>
                 text: TextSpan(
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[700],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                   children: [
                     TextSpan(text: AppLocalizations.of(context).iAgreeToTerms),
@@ -413,20 +415,20 @@ class _SignupScreenState extends State<SignupScreen>
               elevation: 2,
             ),
             child: authProvider.isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                     ),
                   )
                 : Text(
                     widget.isLinkingAccount ? AppLocalizations.of(context).createAccount : AppLocalizations.of(context).signUp,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
           ),
@@ -471,15 +473,15 @@ class _SignupScreenState extends State<SignupScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
+        color: Theme.of(context).colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
+        border: Border.all(color: Theme.of(context).colorScheme.error),
       ),
       child: Row(
         children: [
           Icon(
             Icons.error_outline,
-            color: Colors.red.shade600,
+            color: Theme.of(context).colorScheme.error,
             size: 20,
           ),
           const SizedBox(width: 8),
@@ -487,7 +489,7 @@ class _SignupScreenState extends State<SignupScreen>
             child: Text(
               Provider.of<AuthProvider>(context).errorMessage,
               style: TextStyle(
-                color: Colors.red.shade700,
+                color: Theme.of(context).colorScheme.error,
                 fontSize: 14,
               ),
             ),

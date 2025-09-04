@@ -26,9 +26,31 @@ android {
         manifestPlaceholders["revenueCatAppId"] = "app6d8de76b03"
     }
 
+    signingConfigs {
+        create("release") {
+            // For production, you should use proper keystore
+            // This is a placeholder - replace with your actual keystore
+            storeFile = file("upload-keystore.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            // Use release signing config when available, fallback to debug for development
+            signingConfig = if (file("upload-keystore.jks").exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -37,6 +59,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
         // Enable core library desugaring
         isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
+    // Add compiler arguments to show deprecation details
+    tasks.withType<JavaCompile> {
+        options.compilerArgs.add("-Xlint:deprecation")
     }
 
 }
@@ -49,8 +80,8 @@ dependencies {
     // Core library desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     
-    // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:34.1.0"))
+    // Import the Firebase BoM (Latest stable version)
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics")

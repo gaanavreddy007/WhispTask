@@ -43,12 +43,12 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Text(AppLocalizations.of(context).accountSettings),
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black87,
+        foregroundColor: Theme.of(context).colorScheme.onBackground,
         actions: [
           // Sync Status Indicator
           Consumer<AuthProvider>(
@@ -72,9 +72,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF1976D2),
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: const Color(0xFF1976D2),
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          indicatorColor: Theme.of(context).colorScheme.primary,
           tabs: [
             Tab(text: AppLocalizations.of(context).security),
             Tab(text: AppLocalizations.of(context).privacy),

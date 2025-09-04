@@ -92,7 +92,7 @@ class UserAvatar extends StatelessWidget {
           width: radius * 0.6,
           height: radius * 0.6,
           decoration: BoxDecoration(
-            color: const Color(0xFF1976D2),
+            color: Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
             border: Border.all(
               color: Colors.white,
@@ -100,7 +100,7 @@ class UserAvatar extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -177,7 +177,7 @@ class UserAvatar extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: Theme.of(context).colorScheme.outline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -198,7 +198,7 @@ class UserAvatar extends StatelessWidget {
                   context,
                   AppLocalizations.of(context).camera,
                   Icons.camera_alt,
-                  Colors.blue,
+                  Theme.of(context).colorScheme.primary,
                   () => _pickFromCamera(context),
                 ),
                 _buildEditOption(
@@ -212,7 +212,7 @@ class UserAvatar extends StatelessWidget {
                   context,
                   AppLocalizations.of(context).remove,
                   Icons.delete,
-                  Colors.red,
+                  Theme.of(context).colorScheme.error,
                   () => _removePhoto(context),
                 ),
               ],
@@ -275,7 +275,7 @@ class UserAvatar extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).photoTaken),
-            backgroundColor: Colors.blue,
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -323,7 +323,7 @@ class UserAvatar extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context).photoRemoved),
-        backgroundColor: Colors.orange,
+        backgroundColor: Colors.red,
       ),
     );
   }
@@ -372,11 +372,11 @@ class UserAvatarList extends StatelessWidget {
               onTap: onMorePressed,
               child: CircleAvatar(
                 radius: radius,
-                backgroundColor: Colors.grey[300],
+                backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                 child: Text(
                   '+$remainingCount',
                   style: TextStyle(
-                    color: Colors.grey[700],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: radius * 0.5,
                     fontWeight: FontWeight.w600,
                   ),

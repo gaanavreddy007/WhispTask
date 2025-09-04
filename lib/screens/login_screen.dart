@@ -8,6 +8,7 @@ import '../widgets/auth_text_field.dart';
 import '../utils/validators.dart';
 import '../screens/signup_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../services/sentry_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,36 +35,48 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
     
-    // Setup animations
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
+    // Log screen navigation
+    SentryService.logScreenNavigation('LoginScreen');
     
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    
-    _slideAnimation = Tween<double>(
-      begin: 50.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutQuart,
-    ));
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
-    // Start animations
-    _fadeController.forward();
-    _animationController.forward();
+    try {
+      // Setup animations
+      _animationController = AnimationController(
+        duration: const Duration(milliseconds: 800),
+        vsync: this,
+      );
+      
+      _fadeController = AnimationController(
+        duration: const Duration(milliseconds: 1000),
+        vsync: this,
+      );
+      
+      _slideAnimation = Tween<double>(
+        begin: 50.0,
+        end: 0.0,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutQuart,
+      ));
+      
+      _fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeInOut,
+      ));
+      
+      // Start animations
+      _fadeController.forward();
+      _animationController.forward();
+    } catch (e, stackTrace) {
+      SentryService.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: 'Error initializing LoginScreen animations',
+        extra: {'screen': 'LoginScreen'},
+      );
+    }
   }
 
   @override
@@ -130,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen>
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF1976D2).withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Image.asset(
@@ -146,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen>
         Text(
           AppLocalizations.of(context).welcomeBack,
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-            color: const Color(0xFF1976D2),
+            color: Theme.of(context).colorScheme.primary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -156,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen>
         Text(
           AppLocalizations.of(context).signInToContinue,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
           textAlign: TextAlign.center,
         ),
@@ -403,64 +416,116 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleLogin() async {
-    // Clear any existing errors
-    context.read<AuthProvider>().clearError();
-    
-    // Validate form
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    return SentryService.wrapWithErrorTracking(
+      () async {
+        SentryService.logUserAction('login_attempt', data: {
+          'email': _emailController.text.trim(),
+          'remember_me': _rememberMe,
+        });
+        
+        // Clear any existing errors
+        context.read<AuthProvider>().clearError();
+        
+        // Validate form
+        if (!_formKey.currentState!.validate()) {
+          SentryService.addBreadcrumb(
+            message: 'Login form validation failed',
+            category: 'validation',
+            level: 'warning',
+          );
+          return;
+        }
 
-    // Hide keyboard
-    FocusScope.of(context).unfocus();
+        // Hide keyboard
+        FocusScope.of(context).unfocus();
 
-    final authProvider = context.read<AuthProvider>();
-    
-    final bool success = await authProvider.signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-
-    if (success) {
-      // Navigate to home screen
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } else {
-      // Error is already handled by AuthProvider
-      // Show snackbar for additional feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
+        final authProvider = context.read<AuthProvider>();
+        
+        final bool success = await authProvider.signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
-      }
-    }
+
+        if (success) {
+          SentryService.logUserAction('login_success', data: {
+            'email': _emailController.text.trim(),
+          });
+          
+          // Navigate to home screen
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          SentryService.captureMessage(
+            'Login failed: ${authProvider.errorMessage}',
+            level: 'warning',
+            extra: {
+              'email': _emailController.text.trim(),
+              'error': authProvider.errorMessage,
+            },
+          );
+          
+          // Error is already handled by AuthProvider
+          // Show snackbar for additional feedback
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(authProvider.errorMessage),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      },
+      operation: 'login_user',
+      description: 'User login attempt',
+      extra: {
+        'screen': 'LoginScreen',
+        'email': _emailController.text.trim(),
+      },
+    );
   }
 
   Future<void> _handleGuestLogin() async {
-    final authProvider = context.read<AuthProvider>();
-    
-    final bool success = await authProvider.signInAnonymously();
+    return SentryService.wrapWithErrorTracking(
+      () async {
+        SentryService.logUserAction('guest_login_attempt');
+        
+        final authProvider = context.read<AuthProvider>();
+        
+        final bool success = await authProvider.signInAnonymously();
 
-    if (success) {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+        if (success) {
+          SentryService.logUserAction('guest_login_success');
+          
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        } else {
+          SentryService.captureMessage(
+            'Guest login failed: ${authProvider.errorMessage}',
+            level: 'warning',
+            extra: {
+              'error': authProvider.errorMessage,
+            },
+          );
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(authProvider.errorMessage),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      },
+      operation: 'guest_login',
+      description: 'Guest login attempt',
+      extra: {'screen': 'LoginScreen'},
+    );
   }
 }
 
