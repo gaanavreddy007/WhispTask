@@ -1,0 +1,46 @@
+// Vosk Flutter comprehensive fix
+// This file fixes both namespace and AndroidManifest.xml issues for vosk_flutter plugin
+
+import java.util.regex.Pattern
+
+subprojects { project ->
+    afterEvaluate {
+        if (project.name == "vosk_flutter") {
+            // Fix AndroidManifest.xml by removing package attribute
+            def manifestFile = new File(project.projectDir, "src/main/AndroidManifest.xml")
+            if (manifestFile.exists()) {
+                def manifestContent = manifestFile.text
+                def originalContent = manifestContent
+                
+                // Remove package attribute from manifest tag
+                manifestContent = manifestContent.replaceAll(/package="[^"]*"/, '')
+                
+                // Clean up any double spaces that might result
+                manifestContent = manifestContent.replaceAll(/\s+/, ' ')
+                manifestContent = manifestContent.replaceAll(/\s+>/, '>')
+                
+                if (manifestContent != originalContent) {
+                    manifestFile.text = manifestContent
+                    println "Fixed AndroidManifest.xml for vosk_flutter plugin"
+                }
+            }
+            
+            project.android {
+                namespace = "org.vosk.libvosk"
+                
+                // Ensure compatibility with newer AGP versions
+                compileSdkVersion 34
+                
+                defaultConfig {
+                    minSdkVersion 21
+                    targetSdkVersion 34
+                }
+                
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_11
+                    targetCompatibility JavaVersion.VERSION_11
+                }
+            }
+        }
+    }
+}

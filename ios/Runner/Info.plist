@@ -85,6 +85,15 @@
 				<string>whisptask</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Replace with your REVERSED_CLIENT_ID from GoogleService-Info.plist -->
+				<string>com.googleusercontent.apps.402878727922-3jbb4ie5se24542ee3j45cc30qqotqnt</string>
+			</array>
+		</dict>
 	</array>
 	
 	<!-- NEW - Notification categories -->

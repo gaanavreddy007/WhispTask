@@ -7,6 +7,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../models/task.dart';
 import '../services/notification_service.dart';
+import '../services/sentry_service.dart';
 import '../utils/notification_helper.dart';
 
 class TaskService {
@@ -26,25 +27,87 @@ class TaskService {
 
   // ENHANCED: Create new task with comprehensive validation and error handling
   Future<String> createTask(Task task, String userId) async {
-    try {
-      // Enhanced validation using NotificationHelper
-      if (task.title.trim().isEmpty) {
-        throw Exception('Task title cannot be empty');
-      }
-      
-      if (task.title.length > 100) {
-        throw Exception('Task title too long (max 100 characters)');
-      }
-      
-      if (task.description != null && task.description!.length > 500) {
-        throw Exception('Task description too long (max 500 characters)');
-      }
+    final result = await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logTaskOperation('create_task_start', data: {
+          'user_id': userId,
+          'task_title': task.title,
+          'task_priority': task.priority.toString(),
+          'has_reminder': task.hasReminder.toString(),
+          'is_recurring': task.isRecurring.toString(),
+        });
 
-      // Validate reminder time if set
-      if (task.hasReminder && task.reminderTime != null) {
+        // Enhanced validation using NotificationHelper
+        if (task.title.trim().isEmpty) {
+          SentryService.logTaskOperation('create_task_validation_failed', data: {'reason': 'empty_title'});
+          throw Exception('Task title cannot be empty');
+        }
+        
+        if (task.title.length > 100) {
+          SentryService.logTaskOperation('create_task_validation_failed', data: {'reason': 'title_too_long'});
+          throw Exception('Task title too long (max 100 characters)');
+        }
+        
+        if (task.description != null && task.description!.length > 500) {
+          SentryService.logTaskOperation('create_task_validation_failed', data: {'reason': 'description_too_long'});
+          throw Exception('Task description too long (max 500 characters)');
+        }
+
+        // CRITICAL: Validate and normalize priority
+        final validPriorities = ['high', 'medium', 'low'];
+        if (!validPriorities.contains(task.priority.toLowerCase())) {
+          SentryService.logTaskOperation('create_task_validation_failed', data: {
+            'reason': 'invalid_priority',
+            'provided_priority': task.priority,
+            'valid_priorities': validPriorities.join(', ')
+          });
+          // Auto-fix invalid priority to medium
+          task.priority = 'medium';
+        } else {
+          // Normalize priority to lowercase
+          task.priority = task.priority.toLowerCase();
+        }
+
+        // CRITICAL: Validate category
+        final validCategories = ['general', 'work', 'personal', 'shopping', 'health', 'study', 'finance'];
+        if (!validCategories.contains(task.category.toLowerCase())) {
+          SentryService.logTaskOperation('create_task_validation_failed', data: {
+            'reason': 'invalid_category',
+            'provided_category': task.category,
+            'valid_categories': validCategories.join(', ')
+          });
+          // Auto-fix invalid category to general
+          task.category = 'general';
+        } else {
+          // Normalize category to lowercase
+          task.category = task.category.toLowerCase();
+        }
+
+      // CRITICAL: Validate reminder settings
+      if (task.hasReminder) {
+        // Ensure reminder time is set if hasReminder is true
+        if (task.reminderTime == null) {
+          SentryService.logTaskOperation('reminder_validation_failed', data: {'reason': 'missing_reminder_time'});
+          // Auto-fix: set reminder time to due date or 1 hour from now
+          task.reminderTime = task.dueDate ?? DateTime.now().add(Duration(hours: 1));
+        }
+        
+        // Validate reminder time
         final validation = NotificationHelper.validateReminderTime(task.reminderTime!);
         if (validation != null) {
+          SentryService.logTaskOperation('reminder_validation_failed', data: {'reason': validation});
           throw Exception(validation);
+        }
+
+        // Validate reminder type
+        final validReminderTypes = ['once', 'daily', 'weekly', 'monthly'];
+        if (!validReminderTypes.contains(task.reminderType.toLowerCase())) {
+          SentryService.logTaskOperation('reminder_validation_failed', data: {
+            'reason': 'invalid_reminder_type',
+            'provided_type': task.reminderType
+          });
+          // Auto-fix invalid reminder type
+          task.reminderType = 'once';
         }
 
         // Validate repeat days for weekly reminders
@@ -53,30 +116,65 @@ class TaskService {
           task.repeatDays
         );
         if (daysValidation != null) {
+          SentryService.logTaskOperation('reminder_validation_failed', data: {'reason': daysValidation});
           throw Exception(daysValidation);
         }
+
+        // Ensure notification ID is set
+        task.notificationId ??= _getNotificationId(task.id ?? DateTime.now().millisecondsSinceEpoch.toString());
+
+        // Ensure isReminderActive is properly set
+        task.isReminderActive = true;
+      } else {
+        // If hasReminder is false, clear all reminder fields
+        task.reminderTime = null;
+        task.isReminderActive = false;
+        task.notificationId = null;
       }
 
-      // FIXED: Validate recurring task parameters
+      // ENHANCED: Validate and normalize recurring task parameters
+      Task validatedTask = task;
       if (task.isRecurring) {
-        if (task.recurringPattern == null || task.recurringInterval == null) {
-          throw Exception('Recurring tasks must have pattern and interval');
+        SentryService.logTaskOperation('validate_recurring_task', data: {
+          'pattern': task.recurringPattern,
+          'interval': task.recurringInterval?.toString(),
+        });
+        
+        if (task.recurringPattern == null || task.recurringPattern!.isEmpty) {
+          SentryService.logTaskOperation('recurring_validation_failed', data: {'reason': 'missing_pattern'});
+          throw Exception('Recurring tasks must have a pattern (daily, weekly, monthly, or yearly)');
         }
         
-        if (task.recurringInterval! <= 0) {
-          throw Exception('Recurring interval must be positive');
+        if (task.recurringInterval == null || task.recurringInterval! <= 0) {
+          SentryService.logTaskOperation('recurring_validation_failed', data: {'reason': 'invalid_interval'});
+          throw Exception('Recurring interval must be a positive number (e.g., every 1 day, every 2 weeks)');
         }
         
         final validPatterns = ['daily', 'weekly', 'monthly', 'yearly'];
-        if (!validPatterns.contains(task.recurringPattern)) {
-          throw Exception('Invalid recurring pattern');
+        if (!validPatterns.contains(task.recurringPattern!.toLowerCase())) {
+          SentryService.logTaskOperation('recurring_validation_failed', data: {
+            'reason': 'invalid_pattern',
+            'provided_pattern': task.recurringPattern,
+            'valid_patterns': validPatterns.join(', ')
+          });
+          throw Exception('Invalid recurring pattern: ${task.recurringPattern}. Must be one of: ${validPatterns.join(', ')}');
         }
+        
+        // Normalize the pattern to lowercase for consistency
+        validatedTask = task.copyWith(
+          recurringPattern: task.recurringPattern!.toLowerCase(),
+        );
+        
+        SentryService.logTaskOperation('recurring_validation_success', data: {
+          'pattern': validatedTask.recurringPattern,
+          'interval': validatedTask.recurringInterval?.toString(),
+        });
       }
       
       // Ensure task has userId and proper timestamps
-      final taskWithUser = task.copyWith(
+      final taskWithUser = validatedTask.copyWith(
         userId: userId,
-        createdAt: task.createdAt,
+        createdAt: validatedTask.createdAt,
       );
       
       // Create task in Firestore
@@ -88,16 +186,37 @@ class TaskService {
         await _notificationService.scheduleTaskReminder(taskWithId);
       }
       
-      // Update user task count
-      await _updateUserTaskCount(userId);
+        // Update user task count
+        await _updateUserTaskCount(userId);
+        
+        SentryService.logTaskOperation('create_task_complete', taskId: docRef.id, data: {
+          'user_id': userId,
+          'task_title': task.title,
+        });
+        
+        return docRef.id;
+      },
+      operationName: 'create_task',
+      description: 'Create new task with validation and notifications',
+      category: 'task',
+      extra: {
+        'user_id': userId,
+        'task_title': task.title,
+        'has_reminder': task.hasReminder.toString(),
+      },
+    ).catchError((e) {
+      SentryService.logTaskOperation('create_task_failed', data: {
+        'user_id': userId,
+        'error': e.toString(),
+      });
       
-      return docRef.id;
-    } catch (e) {
       if (e is FirebaseException) {
         throw Exception('Database error: ${e.message}');
       }
-      rethrow;
-    }
+      throw e;
+    });
+    
+    return result ?? '';
   }
 
   // ENHANCED: Get tasks with advanced filtering and better error handling
@@ -438,6 +557,11 @@ class TaskService {
   // ENHANCED: Delete task with comprehensive cleanup
   Future<bool> deleteTask(String taskId, String userId) async {
     try {
+      // Validate inputs
+      if (taskId.isEmpty || userId.isEmpty) {
+        throw Exception('Invalid task ID or user ID');
+      }
+
       // Verify task belongs to user
       final doc = await _getTasksCollection(userId).doc(taskId).get();
       if (!doc.exists) {
@@ -472,48 +596,111 @@ class TaskService {
   // FIXED: Toggle task completion with better state management
   Future<bool> toggleTaskCompletion(String taskId, String userId) async {
     try {
-      final doc = await _getTasksCollection(userId).doc(taskId).get();
-      if (!doc.exists) {
-        throw Exception('Task not found');
-      }
-      
-      final task = Task.fromMap(doc.data() as Map<String, dynamic>, doc.id);
-      if (task.userId != userId) {
-        throw Exception('Unauthorized: Task does not belong to user');
-      }
+      final result = await SentryService.wrapWithComprehensiveTracking(
+        () async {
+          SentryService.logTaskOperation('toggle_completion_start', taskId: taskId, data: {
+            'user_id': userId,
+          });
 
-      final wasCompleted = task.isCompleted;
-      final nowCompleted = !task.isCompleted;
-      
-      final updatedTask = task.copyWith(
-        isCompleted: nowCompleted,
-        completedAt: nowCompleted ? DateTime.now() : null,
+          final doc = await _getTasksCollection(userId).doc(taskId).get();
+          if (!doc.exists) {
+            SentryService.logTaskOperation('toggle_completion_task_not_found', taskId: taskId);
+            throw Exception('Task not found');
+          }
+          
+          final task = Task.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          if (task.userId != userId) {
+            SentryService.logTaskOperation('toggle_completion_unauthorized', taskId: taskId, data: {
+              'task_user_id': task.userId,
+              'requesting_user_id': userId,
+            });
+            throw Exception('Unauthorized: Task does not belong to user');
+          }
+
+          final wasCompleted = task.isCompleted;
+          final nowCompleted = !task.isCompleted;
+          
+          SentryService.logTaskOperation('toggle_completion_state_change', taskId: taskId, data: {
+            'was_completed': wasCompleted.toString(),
+            'now_completed': nowCompleted.toString(),
+            'is_recurring': task.isRecurring.toString(),
+          });
+          
+          final updatedTask = task.copyWith(
+            isCompleted: nowCompleted,
+            completedAt: nowCompleted ? DateTime.now() : null,
+          );
+          
+          await _getTasksCollection(userId).doc(taskId).update(updatedTask.toMap());
+          
+          // Process recurring task if just completed (with error handling)
+          if (nowCompleted && updatedTask.isRecurring) {
+            try {
+              await _processCompletedRecurringTask(updatedTask, userId);
+              SentryService.logTaskOperation('recurring_task_processed_success', taskId: taskId);
+            } catch (recurringError) {
+              // Log but don't fail the main operation
+              SentryService.logTaskOperation('recurring_task_processing_failed', taskId: taskId, data: {
+                'error': recurringError.toString(),
+              });
+              print('Warning: Failed to process recurring task: $recurringError');
+            }
+          }
+          
+          // Handle reminder when task is completed (with error handling)
+          if (nowCompleted && task.hasReminder && task.isReminderActive) {
+            try {
+              await _getTasksCollection(userId).doc(taskId).update({
+                'isReminderActive': false
+              });
+              
+              if (task.notificationId != null) {
+                final notificationId = task.notificationId ?? _getNotificationId(taskId);
+                await _notificationService.cancelNotification(notificationId);
+              }
+              SentryService.logTaskOperation('reminder_deactivated_success', taskId: taskId);
+            } catch (reminderError) {
+              // Log but don't fail the main operation
+              SentryService.logTaskOperation('reminder_deactivation_failed', taskId: taskId, data: {
+                'error': reminderError.toString(),
+              });
+              print('Warning: Failed to deactivate reminder: $reminderError');
+            }
+          }
+          
+          // Update user task count (with error handling)
+          try {
+            await _updateUserTaskCount(userId);
+          } catch (countError) {
+            // Log but don't fail the main operation
+            SentryService.logTaskOperation('task_count_update_failed', taskId: taskId, data: {
+              'error': countError.toString(),
+            });
+            print('Warning: Failed to update task count: $countError');
+          }
+          
+          SentryService.logTaskOperation('toggle_completion_success', taskId: taskId, data: {
+            'final_state': nowCompleted.toString(),
+          });
+          
+          return true;
+        },
+        operationName: 'toggle_task_completion',
+        description: 'Toggle task completion status with comprehensive error handling',
+        category: 'task',
+        extra: {
+          'task_id': taskId,
+          'user_id': userId,
+        },
       );
       
-      await _getTasksCollection(userId).doc(taskId).update(updatedTask.toMap());
-      
-      // Process recurring task if just completed
-      if (nowCompleted && updatedTask.isRecurring) {
-        await _processCompletedRecurringTask(updatedTask, userId);
-      }
-      
-      // Handle reminder when task is completed
-      if (nowCompleted && task.hasReminder && task.isReminderActive) {
-        await _getTasksCollection(userId).doc(taskId).update({
-          'isReminderActive': false
-        });
-        
-        if (task.notificationId != null) {
-          final notificationId = task.notificationId ?? _getNotificationId(taskId);
-          await _notificationService.cancelNotification(notificationId);
-        }
-      }
-      
-      // Update user task count
-      await _updateUserTaskCount(userId);
-      
-      return true;
+      return result ?? false;
     } catch (e) {
+      SentryService.logTaskOperation('toggle_completion_failed', taskId: taskId, data: {
+        'error': e.toString(),
+        'error_type': e.runtimeType.toString(),
+      });
+      
       if (e is FirebaseException) {
         throw Exception('Database error: ${e.message}');
       }

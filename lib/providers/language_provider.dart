@@ -1,7 +1,8 @@
-// ignore_for_file: unused_local_variable
+// ignore_for_file: unused_local_variable, provide_deprecation_message
 
 import 'package:flutter/material.dart';
 import '../services/language_service.dart';
+import '../services/sentry_service.dart';
 import '../l10n/app_localizations.dart';
 
 class LanguageProvider extends ChangeNotifier {
@@ -13,20 +14,50 @@ class LanguageProvider extends ChangeNotifier {
   String get currentLanguage => _currentLanguage;
   bool get isInitialized => _isInitialized;
 
-  /// Initialize the language provider
+  /// Initialize the language provider with optimized startup
   Future<void> initialize() async {
-    try {
-      _currentLanguage = await LanguageService.getCurrentLanguage();
-      _currentLocale = await LanguageService.getCurrentLocale();
-      _isInitialized = true;
-      notifyListeners();
-    } catch (e) {
-      // Fallback to default
-      _currentLanguage = 'en';
-      _currentLocale = const Locale('en');
-      _isInitialized = true;
-      notifyListeners();
-    }
+    await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logProviderStateChange('LanguageProvider', 'initialization_start');
+        
+        // Set initialized immediately with defaults for faster startup
+        _isInitialized = true;
+        SentryService.logProviderStateChange('LanguageProvider', 'set_initialized_with_defaults');
+        notifyListeners();
+        
+        try {
+          // Load saved language asynchronously
+          _currentLanguage = await LanguageService.getCurrentLanguage();
+          _currentLocale = await LanguageService.getCurrentLocale();
+          
+          SentryService.logProviderStateChange('LanguageProvider', 'language_loaded', data: {
+            'language': _currentLanguage,
+            'locale': _currentLocale.toString(),
+          });
+          
+          notifyListeners();
+        } catch (e, stackTrace) {
+          SentryService.captureException(
+            e,
+            stackTrace: stackTrace,
+            hint: 'Error loading saved language preferences',
+            extra: {'provider': 'LanguageProvider'},
+          );
+          
+          // Keep defaults if loading fails
+          _currentLanguage = 'en';
+          _currentLocale = const Locale('en');
+          
+          SentryService.logProviderStateChange('LanguageProvider', 'fallback_to_defaults', data: {
+            'error': e.toString(),
+          });
+          notifyListeners();
+        }
+      },
+      operationName: 'language_provider_initialize',
+      description: 'Initialize LanguageProvider with saved preferences',
+      category: 'provider',
+    );
   }
 
   /// Change the app language
@@ -56,16 +87,12 @@ class LanguageProvider extends ChangeNotifier {
     }
   }
 
-  /// Get localized text helper
+  /// Get localized text helper (deprecated - use AppLocalizations.of(context) directly)
+  @deprecated
   String getText(BuildContext context, String key) {
-    try {
-      final localizations = AppLocalizations.of(context);
-      // Use reflection or a map to get the localized text
-      // For now, return the key as fallback
-      return key;
-    } catch (e) {
-      return key;
-    }
+    // This method is deprecated and should not be used
+    // Use AppLocalizations.of(context).methodName directly instead
+    return key;
   }
 
   /// Get available languages

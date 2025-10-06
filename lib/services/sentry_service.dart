@@ -1,9 +1,11 @@
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 /// Centralized Sentry service for error tracking and performance monitoring
 class SentryService {
   static const String _tag = 'SentryService';
+  static ISentrySpan? _currentTransaction;
 
   /// Capture an exception with additional context
   static Future<void> captureException(
@@ -312,6 +314,262 @@ class SentryService {
         ...?data,
       },
     );
+  }
+
+  /// Start a performance transaction
+  static ISentrySpan startPerformanceTransaction(String name, String operation) {
+    _currentTransaction = Sentry.startTransaction(name, operation);
+    addBreadcrumb(
+      message: 'Started transaction: $name',
+      category: 'performance',
+      level: 'info',
+      data: {'operation': operation},
+    );
+    return _currentTransaction!;
+  }
+
+  /// Finish the current transaction
+  static void finishTransaction({String? status}) {
+    if (_currentTransaction != null) {
+      _currentTransaction!.setData('status', status ?? 'ok');
+      _currentTransaction!.finish();
+      addBreadcrumb(
+        message: 'Finished transaction',
+        category: 'performance',
+        level: 'info',
+        data: {'status': status ?? 'ok'},
+      );
+      _currentTransaction = null;
+    }
+  }
+
+  /// Log widget lifecycle events
+  static void logWidgetLifecycle(String widgetName, String event, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: '$widgetName: $event',
+      category: 'widget_lifecycle',
+      level: 'info',
+      data: {
+        'widget': widgetName,
+        'event': event,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log provider state changes
+  static void logProviderStateChange(String providerName, String change, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: '$providerName: $change',
+      category: 'provider_state',
+      level: 'info',
+      data: {
+        'provider': providerName,
+        'change': change,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log database operations
+  static void logDatabaseOperation(String operation, String table, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: '$operation on $table',
+      category: 'database',
+      level: 'info',
+      data: {
+        'operation': operation,
+        'table': table,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log permission requests
+  static void logPermissionRequest(String permission, String result, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Permission $permission: $result',
+      category: 'permission',
+      level: result == 'granted' ? 'info' : 'warning',
+      data: {
+        'permission': permission,
+        'result': result,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log voice operations
+  static void logVoiceOperation(String operation, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Voice: $operation',
+      category: 'voice',
+      level: 'info',
+      data: {
+        'operation': operation,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log task operations
+  static void logTaskOperation(String operation, {String? taskId, Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Task: $operation',
+      category: 'task',
+      level: 'info',
+      data: {
+        'operation': operation,
+        if (taskId != null) 'task_id': taskId,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log authentication events
+  static void logAuthEvent(String event, {String? userId, Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Auth: $event',
+      category: 'auth',
+      level: 'info',
+      data: {
+        'event': event,
+        if (userId != null) 'user_id': userId,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log premium/purchase events
+  static void logPurchaseEvent(String event, {String? productId, Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Purchase: $event',
+      category: 'purchase',
+      level: 'info',
+      data: {
+        'event': event,
+        if (productId != null) 'product_id': productId,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log notification events
+  static void logNotificationEvent(String event, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'Notification: $event',
+      category: 'notification',
+      level: 'info',
+      data: {
+        'event': event,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log file operations
+  static void logFileOperation(String operation, String fileName, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'File: $operation $fileName',
+      category: 'file',
+      level: 'info',
+      data: {
+        'operation': operation,
+        'file_name': fileName,
+        ...?data,
+      },
+    );
+  }
+
+  /// Log theme/UI changes
+  static void logUIEvent(String event, {Map<String, dynamic>? data}) {
+    addBreadcrumb(
+      message: 'UI: $event',
+      category: 'ui',
+      level: 'info',
+      data: {
+        'event': event,
+        ...?data,
+      },
+    );
+  }
+
+  /// Comprehensive error wrapper for any operation
+  static Future<T?> wrapWithComprehensiveTracking<T>(
+    Future<T> Function() operation, {
+    required String operationName,
+    String? description,
+    Map<String, dynamic>? extra,
+    String category = 'operation',
+  }) async {
+    final transaction = startPerformanceTransaction(operationName, category);
+    
+    try {
+      transaction.setData('description', description ?? '');
+      transaction.setData('category', category);
+      
+      addBreadcrumb(
+        message: 'Starting: $operationName',
+        category: category,
+        level: 'info',
+        data: {
+          'description': description,
+          'transaction_id': transaction.context.traceId.toString(),
+          ...?extra,
+        },
+      );
+
+      final result = await operation();
+      
+      transaction.setData('result_type', result.runtimeType.toString());
+      
+      addBreadcrumb(
+        message: 'Completed: $operationName',
+        category: category,
+        level: 'info',
+        data: {
+          'transaction_id': transaction.context.traceId.toString(),
+        },
+      );
+
+      finishTransaction(status: 'ok');
+      return result;
+    } catch (e, stackTrace) {
+      await captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: 'Error in $operationName',
+        extra: {
+          'operation': operationName,
+          'description': description,
+          'category': category,
+          ...?extra,
+        },
+        transaction: operationName,
+      );
+
+      finishTransaction(status: 'error');
+      rethrow;
+    }
+  }
+
+  /// Safe operation wrapper that doesn't rethrow
+  static Future<T?> safeOperation<T>(
+    Future<T> Function() operation, {
+    required String operationName,
+    T? fallback,
+    Map<String, dynamic>? extra,
+  }) async {
+    try {
+      return await wrapWithComprehensiveTracking(
+        operation,
+        operationName: operationName,
+        extra: extra,
+      );
+    } catch (e) {
+      // Error already logged by wrapWithComprehensiveTracking
+      return fallback;
+    }
   }
 }
 

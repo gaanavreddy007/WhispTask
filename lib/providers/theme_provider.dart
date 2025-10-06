@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/sentry_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
@@ -17,57 +18,108 @@ class ThemeProvider extends ChangeNotifier {
   bool get isSystemMode => _themeMode == ThemeMode.system;
 
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      SentryService.logProviderStateChange('ThemeProvider', 'initialize_skipped_already_initialized');
+      return;
+    }
     
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString(_themeKey);
-      
-      switch (savedTheme) {
-        case 'dark':
-          _themeMode = ThemeMode.dark;
-          break;
-        case 'light':
-          _themeMode = ThemeMode.light;
-          break;
-        default:
-          _themeMode = ThemeMode.system;
-      }
-      
-      _isInitialized = true;
-      notifyListeners();
-    } catch (e) {
+    await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logProviderStateChange('ThemeProvider', 'initialization_start');
+        
+        final prefs = await SharedPreferences.getInstance();
+        final savedTheme = prefs.getString(_themeKey);
+        
+        SentryService.logProviderStateChange('ThemeProvider', 'preferences_loaded', data: {
+          'saved_theme': savedTheme ?? 'null',
+        });
+        
+        switch (savedTheme) {
+          case 'dark':
+            _themeMode = ThemeMode.dark;
+            break;
+          case 'light':
+            _themeMode = ThemeMode.light;
+            break;
+          default:
+            _themeMode = ThemeMode.system;
+        }
+        
+        SentryService.logProviderStateChange('ThemeProvider', 'theme_mode_set', data: {
+          'theme_mode': _themeMode.toString(),
+        });
+        
+        _isInitialized = true;
+        notifyListeners();
+        
+        SentryService.logProviderStateChange('ThemeProvider', 'initialization_complete');
+      },
+      operationName: 'theme_provider_initialize',
+      description: 'Initialize ThemeProvider with saved preferences',
+      category: 'provider',
+    ).catchError((e) {
+      SentryService.logProviderStateChange('ThemeProvider', 'initialization_failed', data: {
+        'error': e.toString(),
+      });
       print('Failed to load theme preference: $e');
       _themeMode = ThemeMode.system;
       _isInitialized = true;
       notifyListeners();
-    }
+    });
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    if (_themeMode == mode) return;
-    
-    _themeMode = mode;
-    notifyListeners();
-    
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      String themeString;
-      switch (mode) {
-        case ThemeMode.dark:
-          themeString = 'dark';
-          break;
-        case ThemeMode.light:
-          themeString = 'light';
-          break;
-        case ThemeMode.system:
-          themeString = 'system';
-          break;
-      }
-      await prefs.setString(_themeKey, themeString);
-    } catch (e) {
-      print('Failed to save theme preference: $e');
+    if (_themeMode == mode) {
+      SentryService.logProviderStateChange('ThemeProvider', 'set_theme_mode_skipped_same_mode', data: {
+        'current_mode': _themeMode.toString(),
+      });
+      return;
     }
+    
+    await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        final previousMode = _themeMode;
+        
+        SentryService.logProviderStateChange('ThemeProvider', 'theme_mode_change_start', data: {
+          'previous_mode': previousMode.toString(),
+          'new_mode': mode.toString(),
+        });
+        
+        _themeMode = mode;
+        notifyListeners();
+        
+        final prefs = await SharedPreferences.getInstance();
+        String themeString;
+        switch (mode) {
+          case ThemeMode.dark:
+            themeString = 'dark';
+            break;
+          case ThemeMode.light:
+            themeString = 'light';
+            break;
+          case ThemeMode.system:
+            themeString = 'system';
+            break;
+        }
+        
+        await prefs.setString(_themeKey, themeString);
+        
+        SentryService.logProviderStateChange('ThemeProvider', 'theme_mode_change_complete', data: {
+          'previous_mode': previousMode.toString(),
+          'new_mode': mode.toString(),
+          'theme_string': themeString,
+        });
+      },
+      operationName: 'theme_provider_set_mode',
+      description: 'Change theme mode and persist preference',
+      category: 'provider',
+    ).catchError((e) {
+      SentryService.logProviderStateChange('ThemeProvider', 'theme_mode_change_failed', data: {
+        'error': e.toString(),
+        'attempted_mode': mode.toString(),
+      });
+      print('Failed to save theme preference: $e');
+    });
   }
 
   void toggleTheme() {
@@ -116,6 +168,15 @@ class ThemeProvider extends ChangeNotifier {
         elevation: 2,
         centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.light,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+        toolbarTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -208,6 +269,79 @@ class ThemeProvider extends ChangeNotifier {
         }),
         checkColor: MaterialStateProperty.all(Colors.white),
       ),
+      textTheme: const TextTheme(
+        // Headings - Large titles
+        displayLarge: TextStyle(color: Colors.black87, fontSize: 32, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: Colors.black87, fontSize: 28, fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: Colors.black87, fontSize: 24, fontWeight: FontWeight.bold),
+        
+        // Headings - Medium titles  
+        headlineLarge: TextStyle(color: Colors.black87, fontSize: 22, fontWeight: FontWeight.w600),
+        headlineMedium: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600),
+        
+        // Titles - Screen titles and section headers
+        titleLarge: TextStyle(color: Colors.black87, fontSize: 20, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.w500),
+        
+        // Body text
+        bodyLarge: TextStyle(color: Colors.black87, fontSize: 16),
+        bodyMedium: TextStyle(color: Colors.black54, fontSize: 14),
+        bodySmall: TextStyle(color: Colors.black45, fontSize: 12),
+        
+        // Labels
+        labelLarge: TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(color: Colors.black45, fontSize: 11, fontWeight: FontWeight.w500),
+      ),
+      // Fix date picker theme to prevent BoxDecoration assertion error
+      datePickerTheme: DatePickerThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        headerBackgroundColor: primaryColor,
+        headerForegroundColor: Colors.white,
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        dayStyle: const TextStyle(fontSize: 14),
+        weekdayStyle: TextStyle(
+          fontSize: 12,
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.w500,
+        ),
+        yearStyle: const TextStyle(fontSize: 16),
+        dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return primaryColor;
+          }
+          if (states.contains(MaterialState.hovered)) {
+            return primaryColor.withOpacity(0.1);
+          }
+          return Colors.transparent;
+        }),
+        dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.white;
+          }
+          if (states.contains(MaterialState.disabled)) {
+            return Colors.grey.shade400;
+          }
+          return Colors.black87;
+        }),
+        todayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return primaryColor;
+          }
+          return primaryColor.withOpacity(0.2);
+        }),
+        todayForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.white;
+          }
+          return primaryColor;
+        }),
+      ),
     );
   }
 
@@ -243,6 +377,15 @@ class ThemeProvider extends ChangeNotifier {
         elevation: 2,
         centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.light,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+        toolbarTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -336,11 +479,77 @@ class ThemeProvider extends ChangeNotifier {
         checkColor: MaterialStateProperty.all(Colors.white),
       ),
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Colors.white70),
-        titleLarge: TextStyle(color: Colors.white),
-        titleMedium: TextStyle(color: Colors.white),
-        titleSmall: TextStyle(color: Colors.white70),
+        // Headings - Large titles
+        displayLarge: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+        
+        // Headings - Medium titles  
+        headlineLarge: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600),
+        headlineMedium: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+        
+        // Titles - Screen titles and section headers
+        titleLarge: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+        
+        // Body text
+        bodyLarge: TextStyle(color: Colors.white, fontSize: 16),
+        bodyMedium: TextStyle(color: Colors.white70, fontSize: 14),
+        bodySmall: TextStyle(color: Colors.white60, fontSize: 12),
+        
+        // Labels
+        labelLarge: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w500),
+      ),
+      // Fix date picker theme for dark mode to prevent BoxDecoration assertion error
+      datePickerTheme: DatePickerThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        headerBackgroundColor: primaryColor,
+        headerForegroundColor: Colors.white,
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        dayStyle: const TextStyle(fontSize: 14),
+        weekdayStyle: TextStyle(
+          fontSize: 12,
+          color: Colors.grey.shade400,
+          fontWeight: FontWeight.w500,
+        ),
+        yearStyle: const TextStyle(fontSize: 16),
+        dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return primaryColor;
+          }
+          if (states.contains(MaterialState.hovered)) {
+            return primaryColor.withOpacity(0.2);
+          }
+          return Colors.transparent;
+        }),
+        dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.black;
+          }
+          if (states.contains(MaterialState.disabled)) {
+            return Colors.grey.shade600;
+          }
+          return Colors.white;
+        }),
+        todayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return primaryColor;
+          }
+          return primaryColor.withOpacity(0.3);
+        }),
+        todayForegroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.black;
+          }
+          return primaryColor;
+        }),
       ),
     );
   }

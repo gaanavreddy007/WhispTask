@@ -82,13 +82,19 @@ class TtsService {
     );
   }
 
-  // Speak text with optional parameters
+  // Speak text with optional parameters - DISABLED FOR USER PREFERENCE
   Future<void> speak(String text, {
     double? volume,
     double? rate,
     double? pitch,
     String? language,
   }) async {
+    // Voice announcements disabled - only log the message
+    debugPrint('TTS: Would speak - "$text" (announcements disabled)');
+    return;
+    
+    // Original code commented out to disable voice announcements
+    /*
     if (!_isInitialized || _flutterTts == null) {
       debugPrint('TTS not initialized, cannot speak: $text');
       return;
@@ -117,6 +123,7 @@ class TtsService {
       debugPrint('TTS speak error: $e');
       _isSpeaking = false;
     }
+    */
   }
 
   // Stop current speech
@@ -248,10 +255,6 @@ class TtsService {
     }
   }
 
-  // Test TTS functionality
-  Future<void> testTts() async {
-    await speak("Text to speech is working correctly!", rate: 1.0);
-  }
 
   // Dispose resources
   Future<void> dispose() async {

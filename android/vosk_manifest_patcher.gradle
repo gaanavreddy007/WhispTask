@@ -1,0 +1,42 @@
+// Comprehensive Vosk Flutter Plugin Manifest Patcher
+// Fixes the package attribute issue in AndroidManifest.xml
+
+gradle.projectsEvaluated {
+    project.subprojects.each { subproject ->
+        if (subproject.name == "vosk_flutter") {
+            // Set the namespace properly
+            subproject.android {
+                namespace = "org.vosk.vosk_flutter"
+            }
+            
+            // Hook into all manifest processing tasks
+            subproject.tasks.matching { task ->
+                task.name.startsWith("process") && task.name.endsWith("Manifest")
+            }.configureEach { task ->
+                task.doFirst {
+                    def manifestFile = subproject.file("src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def originalContent = manifestFile.text
+                        def modifiedContent = originalContent
+                        
+                        // Remove the package attribute that causes the error
+                        modifiedContent = modifiedContent.replaceAll(/package\s*=\s*"[^"]*"\s*/, '')
+                        
+                        // Clean up any extra spaces in the manifest tag
+                        modifiedContent = modifiedContent.replaceAll(/<manifest\s+/, '<manifest ')
+                        
+                        if (originalContent != modifiedContent) {
+                            manifestFile.text = modifiedContent
+                            println "✓ VoskFix: Patched AndroidManifest.xml - removed package attribute"
+                        }
+                    }
+                }
+                
+                // Restore original after processing if needed
+                task.doLast {
+                    // The build system will handle the rest
+                }
+            }
+        }
+    }
+}

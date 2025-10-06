@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use, unused_import, use_build_context_synchronously
 
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../l10n/app_localizations.dart';
 
@@ -45,41 +48,78 @@ class UserAvatar extends StatelessWidget {
     final theme = Theme.of(context);
     final avatarRadius = radius;
     
-    // If user has a photo URL, show network image
-    if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: avatarRadius,
-        backgroundColor: backgroundColor ?? theme.colorScheme.surface,
-        backgroundImage: NetworkImage(user.photoUrl!),
-        onBackgroundImageError: (error, stackTrace) {
-          // Fallback to initials if image fails to load
-          debugPrint('Failed to load user avatar: $error');
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: theme.colorScheme.outline.withOpacity(0.2),
-              width: 1,
+    // Check for local storage profile picture first
+    return FutureBuilder<Uint8List?>(
+      future: _getLocalProfilePicture(),
+      builder: (context, snapshot) {
+        // If we have a local profile picture, use it
+        if (snapshot.hasData && snapshot.data != null) {
+          return CircleAvatar(
+            radius: avatarRadius,
+            backgroundImage: MemoryImage(snapshot.data!),
+            backgroundColor: backgroundColor ?? theme.colorScheme.primary.withOpacity(0.1),
+          );
+        }
+        
+        // If user has a photo URL, show network image
+        if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
+          return CircleAvatar(
+            radius: avatarRadius,
+            backgroundColor: backgroundColor ?? theme.colorScheme.surface,
+            backgroundImage: NetworkImage(user.photoUrl!),
+            onBackgroundImageError: (error, stackTrace) {
+              debugPrint('Failed to load user avatar: $error');
+            },
+          );
+        }
+        
+        // Fallback to initials
+        return CircleAvatar(
+          radius: avatarRadius,
+          backgroundColor: backgroundColor ?? _getInitialsBackgroundColor(user.displayName),
+          child: Text(
+            user.initials,
+            style: textStyle ?? TextStyle(
+              color: Colors.white,
+              fontSize: avatarRadius * 0.6,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-      );
-    }
-    
-    // Fallback to initials avatar
-    return CircleAvatar(
-      radius: avatarRadius,
-      backgroundColor: backgroundColor ?? _getInitialsBackgroundColor(user.displayName),
-      child: Text(
-        user.initials,
-        style: textStyle ?? TextStyle(
-          color: Colors.white,
-          fontSize: _getFontSize(avatarRadius),
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  // Helper method to get profile picture from local storage
+  Future<Uint8List?> _getLocalProfilePicture() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileKey = 'profile_picture_${user.uid}';
+      final base64Image = prefs.getString(profileKey);
+      
+      if (base64Image != null) {
+        return base64Decode(base64Image);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Color _getInitialsBackgroundColor(String name) {
+    const colors = [
+      Color(0xFF1976D2), // Blue
+      Color(0xFF388E3C), // Green  
+      Color(0xFFFF9800), // Orange
+      Color(0xFF7B1FA2), // Purple
+      Color(0xFFD32F2F), // Red
+      Color(0xFF00796B), // Teal
+      Color(0xFF303F9F), // Indigo
+      Color(0xFFC2185B), // Pink
+    ];
+    
+    final hash = name.hashCode;
+    return colors[hash.abs() % colors.length];
   }
 
   Widget _buildEditButton(BuildContext context) {
@@ -133,33 +173,6 @@ class UserAvatar extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getInitialsBackgroundColor(String name) {
-    // Generate a color based on the first character of the name
-    final colors = [
-      const Color(0xFF1976D2), // Blue
-      const Color(0xFF388E3C), // Green
-      const Color(0xFFF57C00), // Orange
-      const Color(0xFF7B1FA2), // Purple
-      const Color(0xFFD32F2F), // Red
-      const Color(0xFF0097A7), // Cyan
-      const Color(0xFF5D4037), // Brown
-      const Color(0xFF455A64), // Blue Grey
-      const Color(0xFFE64A19), // Deep Orange
-      const Color(0xFF303F9F), // Indigo
-    ];
-    
-    final index = name.isNotEmpty ? name.codeUnitAt(0) % colors.length : 0;
-    return colors[index];
-  }
-
-  double _getFontSize(double radius) {
-    if (radius <= 20) return 12;
-    if (radius <= 30) return 16;
-    if (radius <= 40) return 20;
-    if (radius <= 50) return 24;
-    return 28;
   }
 
   void _showEditOptions(BuildContext context) {

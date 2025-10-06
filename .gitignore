@@ -205,3 +205,15 @@ $RECYCLE.BIN/
 
 # Network files
 .nfs*
+
+# Vosk Model Files (Large AI Models - should be downloaded separately)
+assets/vosk-model*/
+**/vosk-model*/
+*.carpa
+*.fst
+*.mdl
+vosk-model-*
+
+# Large executable files
+*.exe
+sentry-wizard.exe

@@ -1,8 +1,9 @@
 // ignore_for_file: prefer_const_constructors, use_build_context_synchronously, deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/web_payment_service.dart';
 import '../providers/auth_provider.dart';
 import '../l10n/app_localizations.dart';
 
@@ -13,18 +14,98 @@ class PremiumPurchaseScreen extends StatefulWidget {
   State<PremiumPurchaseScreen> createState() => _PremiumPurchaseScreenState();
 }
 
-class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
+class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
+    with TickerProviderStateMixin {
   bool _isLoading = false;
   bool _isPremium = false;
+  
+  late AnimationController _animationController;
+  late AnimationController _floatingController;
+  late AnimationController _shimmerController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _floatingAnimation;
+  late Animation<double> _shimmerAnimation;
 
   @override
   void initState() {
     super.initState();
     _checkPremiumStatus();
+    _setupAnimations();
+  }
+
+  void _setupAnimations() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    _floatingController = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    );
+
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _slideAnimation = Tween<double>(
+      begin: 100.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+    
+    _floatingAnimation = Tween<double>(
+      begin: -10.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOut,
+    ));
+
+    _shimmerAnimation = Tween<double>(
+      begin: -2.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(
+      parent: _shimmerController,
+      curve: Curves.linear,
+    ));
+    
+    _animationController.forward();
+    _floatingController.repeat(reverse: true);
+    _shimmerController.repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _floatingController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkPremiumStatus() async {
-    final isPremium = await RevenueCatService.isPremiumUser();
+    final isPremium = await WebPaymentService.isPremiumUser();
     if (mounted) {
       setState(() {
         _isPremium = isPremium;
@@ -37,34 +118,43 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
       _isLoading = true;
     });
 
+    HapticFeedback.mediumImpact();
+
     try {
-      final success = await RevenueCatService.purchaseMonthlyPremium();
+      final success = await WebPaymentService.purchaseMonthlyPremium(context);
       if (success) {
         // Update auth provider premium status
         final authProvider = context.read<AuthProvider>();
         await authProvider.checkPremiumStatus();
         
+        HapticFeedback.lightImpact();
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).monthlyPremiumActivated),
-            backgroundColor: Colors.green,
+          _buildEnhancedSnackBar(
+            AppLocalizations.of(context).monthlyPremiumActivated,
+            Colors.green,
+            Icons.check_circle,
           ),
         );
         
         Navigator.pop(context, true);
       } else {
+        HapticFeedback.heavyImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).purchaseFailed),
-            backgroundColor: Colors.red,
+          _buildEnhancedSnackBar(
+            AppLocalizations.of(context).purchaseFailed,
+            Colors.red,
+            Icons.error,
           ),
         );
       }
     } catch (e) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context).error}: $e'),
-          backgroundColor: Colors.red,
+        _buildEnhancedSnackBar(
+          '${AppLocalizations.of(context).error}: $e',
+          Colors.red,
+          Icons.error,
         ),
       );
     } finally {
@@ -81,34 +171,43 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
       _isLoading = true;
     });
 
+    HapticFeedback.mediumImpact();
+
     try {
-      final success = await RevenueCatService.purchaseYearlyPremium();
+      final success = await WebPaymentService.purchaseYearlyPremium(context);
       if (success) {
         // Update auth provider premium status
         final authProvider = context.read<AuthProvider>();
         await authProvider.checkPremiumStatus();
         
+        HapticFeedback.lightImpact();
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).yearlyPremiumActivated),
-            backgroundColor: Colors.green,
+          _buildEnhancedSnackBar(
+            AppLocalizations.of(context).yearlyPremiumActivated,
+            Colors.green,
+            Icons.check_circle,
           ),
         );
         
         Navigator.pop(context, true);
       } else {
+        HapticFeedback.heavyImpact();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).purchaseFailed),
-            backgroundColor: Colors.red,
+          _buildEnhancedSnackBar(
+            AppLocalizations.of(context).purchaseFailed,
+            Colors.red,
+            Icons.error,
           ),
         );
       }
     } catch (e) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context).error}: $e'),
-          backgroundColor: Colors.red,
+        _buildEnhancedSnackBar(
+          '${AppLocalizations.of(context).error}: $e',
+          Colors.red,
+          Icons.error,
         ),
       );
     } finally {
@@ -125,21 +224,26 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
       _isLoading = true;
     });
 
+    HapticFeedback.lightImpact();
+
     try {
-      await RevenueCatService.restorePurchases();
+      await WebPaymentService.restorePurchases();
       await _checkPremiumStatus();
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).purchasesRestored),
-          backgroundColor: Colors.blue,
+        _buildEnhancedSnackBar(
+          AppLocalizations.of(context).purchasesRestored,
+          Colors.blue,
+          Icons.restore,
         ),
       );
     } catch (e) {
+      HapticFeedback.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context).failedToRestore}: $e'),
-          backgroundColor: Colors.red,
+        _buildEnhancedSnackBar(
+          '${AppLocalizations.of(context).failedToRestore}: $e',
+          Colors.red,
+          Icons.error,
         ),
       );
     } finally {
@@ -151,6 +255,35 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
     }
   }
 
+  SnackBar _buildEnhancedSnackBar(String message, Color color, IconData icon) {
+    return SnackBar(
+      content: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(message)),
+        ],
+      ),
+      backgroundColor: color,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      margin: const EdgeInsets.all(16),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isPremium) {
@@ -158,182 +291,288 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).upgradeToPremium),
-        backgroundColor: Colors.amber,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.amber, Colors.amber.shade300],
-                ),
-              ),
-              padding: EdgeInsets.all(24),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: const [
+              Color(0xFFFFB300),
+              Color(0xFFF57C00),
+              Color(0xFFFF6F00),
+              Color(0xFFE65100),
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.star,
-                    size: 64,
-                    color: Colors.white,
+                  _buildEnhancedAppBar(),
+                  _buildHeroSection(),
+                  _buildFeaturesSection(),
+                  _buildPricingSection(),
+                  _buildFooterSection(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedAppBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            AppLocalizations.of(context).upgradeToPremium,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatingAnimation, _shimmerAnimation]),
+      builder: (context, child) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              // Floating premium icon
+              Transform.translate(
+                offset: Offset(0, _floatingAnimation.value),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white,
+                        Colors.white.withOpacity(0.9),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 30,
+                        offset: const Offset(0, 15),
+                      ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.8),
+                        blurRadius: 20,
+                        spreadRadius: -10,
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(context).whispTaskPremium,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                  child: ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: const [
+                        Color(0xFFFFD700),
+                        Color(0xFFFFA000),
+                      ],
+                    ).createShader(bounds),
+                    child: const Icon(
+                      Icons.workspace_premium,
+                      size: 64,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    AppLocalizations.of(context).unlockFullPotential,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-
-            // Features Section
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Premium Features',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+              
+              const SizedBox(height: 32),
+              
+              // Title with shimmer effect
+              AnimatedBuilder(
+                animation: _scaleAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => LinearGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.white.withOpacity(0.8),
+                          Colors.white,
+                        ],
+                        stops: [
+                          0.0,
+                          _shimmerAnimation.value.clamp(0.0, 1.0),
+                          1.0,
+                        ],
+                      ).createShader(bounds),
+                      child: Text(
+                        AppLocalizations.of(context).whispTaskPremium,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black26,
+                              offset: Offset(0, 4),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 16),
-                  
-                  _buildFeatureItem(
-                    Icons.record_voice_over,
-                    AppLocalizations.of(context).customVoicePacks,
-                    AppLocalizations.of(context).customVoicePacksDesc,
-                  ),
-                  _buildFeatureItem(
-                    Icons.cloud_off,
-                    AppLocalizations.of(context).offlineMode,
-                    AppLocalizations.of(context).offlineModeDesc,
-                  ),
-                  _buildFeatureItem(
-                    Icons.label,
-                    AppLocalizations.of(context).smartTags,
-                    AppLocalizations.of(context).smartTagsDesc,
-                  ),
-                  _buildFeatureItem(
-                    Icons.palette,
-                    AppLocalizations.of(context).customThemes,
-                    AppLocalizations.of(context).customThemesDesc,
-                  ),
-                  _buildFeatureItem(
-                    Icons.analytics,
-                    AppLocalizations.of(context).advancedAnalytics,
-                    AppLocalizations.of(context).advancedAnalyticsDesc,
-                  ),
-                  _buildFeatureItem(
-                    Icons.notifications_none,
-                    AppLocalizations.of(context).noAds,
-                    AppLocalizations.of(context).noAdsDesc,
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
-
-            // Pricing Section
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  Text(
-                    AppLocalizations.of(context).chooseYourPlan,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+              
+              const SizedBox(height: 16),
+              
+              AnimatedBuilder(
+                animation: _slideAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _slideAnimation.value),
+                    child: Text(
+                      AppLocalizations.of(context).unlockFullPotential,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white.withOpacity(0.9),
+                        height: 1.4,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 16),
-                  
-                  // Monthly Plan
-                  _buildPricingCard(
-                    title: AppLocalizations.of(context).monthly,
-                    price: '\$4.99',
-                    period: AppLocalizations.of(context).month,
-                    features: [
-                      AppLocalizations.of(context).allPremiumFeatures,
-                      AppLocalizations.of(context).cancelAnytime,
-                      AppLocalizations.of(context).instantActivation,
-                    ],
-                    onTap: _purchaseMonthly,
-                    isPopular: false,
-                  ),
-                  
-                  SizedBox(height: 16),
-                  
-                  // Yearly Plan
-                  _buildPricingCard(
-                    title: AppLocalizations.of(context).yearly,
-                    price: '\$39.99',
-                    period: AppLocalizations.of(context).year,
-                    originalPrice: '\$59.88',
-                    features: [
-                      AppLocalizations.of(context).allPremiumFeatures,
-                      AppLocalizations.of(context).saveVsMonthly,
-                      AppLocalizations.of(context).prioritySupport,
-                      AppLocalizations.of(context).earlyAccess,
-                    ],
-                    onTap: _purchaseYearly,
-                    isPopular: true,
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-            // Restore Purchases Button
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: TextButton(
-                onPressed: _isLoading ? null : _restorePurchases,
-                child: Text(
-                  AppLocalizations.of(context).restorePurchases,
+  Widget _buildFeaturesSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
+            spreadRadius: -5,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: const [
+                        Color(0xFFFFB300),
+                        Color(0xFFF57C00),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'Premium Features',
                   style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 16,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey[800],
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ),
+              ],
             ),
-
-            // Terms and Privacy
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Text(
-                AppLocalizations.of(context).termsAndPrivacy,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
+            
+            const SizedBox(height: 24),
+            
+            _buildEnhancedFeatureItem(
+              Icons.record_voice_over,
+              AppLocalizations.of(context).customVoicePacks,
+              AppLocalizations.of(context).customVoicePacksDesc,
+              const Color(0xFF1E88E5),
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.cloud_off,
+              AppLocalizations.of(context).offlineMode,
+              AppLocalizations.of(context).offlineModeDesc,
+              const Color(0xFF43A047),
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.label,
+              AppLocalizations.of(context).smartTags,
+              AppLocalizations.of(context).smartTagsDesc,
+              const Color(0xFFE53935),
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.palette,
+              AppLocalizations.of(context).customThemes,
+              AppLocalizations.of(context).customThemesDesc,
+              const Color(0xFF8E24AA),
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.analytics,
+              AppLocalizations.of(context).advancedAnalytics,
+              AppLocalizations.of(context).advancedAnalyticsDesc,
+              const Color(0xFFFF9800),
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.notifications_off,
+              AppLocalizations.of(context).noAds,
+              AppLocalizations.of(context).noAdsDesc,
+              const Color(0xFF00ACC1),
             ),
           ],
         ),
@@ -341,77 +580,50 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
     );
   }
 
-  Widget _buildPremiumActiveScreen() {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).premiumActive),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.check_circle,
-                size: 80,
-                color: Colors.green,
-              ),
-              SizedBox(height: 24),
-              Text(
-                AppLocalizations.of(context).premiumActive,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                AppLocalizations.of(context).premiumActiveDesc,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                child: Text(AppLocalizations.of(context).continue_),
-              ),
-            ],
-          ),
+  Widget _buildEnhancedFeatureItem(
+    IconData icon,
+    String title,
+    String description,
+    Color color,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.1),
+          width: 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildFeatureItem(IconData icon, String title, String description) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              gradient: LinearGradient(
+                colors: [
+                  color,
+                  color.withOpacity(0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Icon(
               icon,
-              color: Colors.amber[700],
+              color: Colors.white,
               size: 24,
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,17 +631,19 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: Colors.grey[800],
+                    letterSpacing: 0.3,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Colors.grey[600],
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -440,7 +654,80 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
     );
   }
 
-  Widget _buildPricingCard({
+  Widget _buildPricingSection() {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              AppLocalizations.of(context).chooseYourPlan,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Monthly Plan
+          _buildEnhancedPricingCard(
+            title: AppLocalizations.of(context).monthly,
+            price: '\$4.99',
+            period: '/${AppLocalizations.of(context).month}',
+            features: [
+              AppLocalizations.of(context).allPremiumFeatures,
+              AppLocalizations.of(context).cancelAnytime,
+              AppLocalizations.of(context).instantActivation,
+            ],
+            onTap: _purchaseMonthly,
+            isPopular: false,
+            gradientColors: [
+              const Color(0xFF42A5F5),
+              const Color(0xFF1E88E5),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Yearly Plan (Most Popular)
+          _buildEnhancedPricingCard(
+            title: AppLocalizations.of(context).yearly,
+            price: '\$39.99',
+            period: '/${AppLocalizations.of(context).year}',
+            originalPrice: '\$59.88',
+            features: [
+              AppLocalizations.of(context).allPremiumFeatures,
+              AppLocalizations.of(context).saveVsMonthly,
+              AppLocalizations.of(context).prioritySupport,
+              AppLocalizations.of(context).earlyAccess,
+            ],
+            onTap: _purchaseYearly,
+            isPopular: true,
+            gradientColors: [
+              const Color(0xFFFFD700),
+              const Color(0xFFFFB300),
+              const Color(0xFFF57C00),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedPricingCard({
     required String title,
     required String price,
     required String period,
@@ -448,143 +735,604 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen> {
     required List<String> features,
     required VoidCallback onTap,
     required bool isPopular,
+    required List<Color> gradientColors,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: isPopular ? Colors.amber : Colors.grey[300]!,
-          width: isPopular ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        children: [
-          if (isPopular)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(12),
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  AppLocalizations.of(context).popular,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: isPopular ? 1.05 : 1.0,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                colors: gradientColors,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: gradientColors.first.withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                  spreadRadius: isPopular ? 2 : 0,
+                ),
+                if (isPopular)
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.8),
+                    blurRadius: 30,
+                    spreadRadius: -10,
+                  ),
+              ],
             ),
-          Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      price,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber[700],
-                      ),
-                    ),
-                    Text(
-                      period,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (originalPrice != null) ...[
-                      SizedBox(width: 8),
-                      Text(
-                        originalPrice,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                          decoration: TextDecoration.lineThrough,
+                if (isPopular)
+                  Positioned(
+                    top: -2,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: const [
+                            Color(0xFFE91E63),
+                            Color(0xFFAD1457),
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE91E63).withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ],
-                ),
-                SizedBox(height: 16),
-                ...features.map((feature) => Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Row(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            AppLocalizations.of(context).popular,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                
+                Container(
+                  margin: EdgeInsets.only(top: isPopular ? 16 : 0),
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.check,
-                        color: Colors.green,
-                        size: 16,
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: gradientColors),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              isPopular ? Icons.workspace_premium : Icons.card_membership,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
+                          const SizedBox(width: 12),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.grey[800],
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (bounds) => LinearGradient(
+                              colors: gradientColors,
+                            ).createShader(bounds),
+                            child: Text(
+                              price,
+                              style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: -1,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6, left: 4),
+                            child: Text(
+                              period,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          if (originalPrice != null) ...[
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red[200]!),
+                              ),
+                              child: Text(
+                                originalPrice,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.red[600],
+                                  decoration: TextDecoration.lineThrough,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      ...features.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final feature = entry.value;
+                        return TweenAnimationBuilder<double>(
+                          duration: Duration(milliseconds: 300 + (index * 100)),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(50 * (1 - value), 0),
+                              child: Opacity(
+                                opacity: value,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(colors: gradientColors),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          feature,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.grey[700],
+                                            fontWeight: FontWeight.w500,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                      
+                      const SizedBox(height: 24),
+                      
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: gradientColors),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: gradientColors.first.withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : () {
+                            HapticFeedback.mediumImpact();
+                            onTap();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Processing...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  'Choose $title',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
-                  ),
-                )),
-                SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : onTap,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPopular ? Colors.amber : Colors.grey[600],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            'Choose $title',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                   ),
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFooterSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Restore Purchases Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: TextButton.icon(
+              onPressed: _isLoading ? null : () {
+                HapticFeedback.lightImpact();
+                _restorePurchases();
+              },
+              icon: Icon(
+                Icons.restore,
+                color: Colors.white.withOpacity(0.9),
+                size: 20,
+              ),
+              label: Text(
+                AppLocalizations.of(context).restorePurchases,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Terms and Privacy
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              AppLocalizations.of(context).termsAndPrivacy,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.8),
+                height: 1.4,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumActiveScreen() {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [
+              Color(0xFF4CAF50),
+              Color(0xFF388E3C),
+              Color(0xFF2E7D32),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Enhanced App Bar
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      AppLocalizations.of(context).premiumActive,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Main Content
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Animated Success Icon
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 1000),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white.withOpacity(0.9),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 30,
+                                      offset: const Offset(0, 15),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.8),
+                                      blurRadius: 20,
+                                      spreadRadius: -10,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle,
+                                  size: 80,
+                                  color: Color(0xFF4CAF50),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Title
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 800),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(0, 50 * (1 - value)),
+                              child: Opacity(
+                                opacity: value,
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) => LinearGradient(
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white.withOpacity(0.8),
+                                    ],
+                                  ).createShader(bounds),
+                                  child: Text(
+                                    AppLocalizations.of(context).premiumActive,
+                                    style: const TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black26,
+                                          offset: Offset(0, 2),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Description
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 1000),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Transform.translate(
+                              offset: Offset(0, 30 * (1 - value)),
+                              child: Opacity(
+                                opacity: value,
+                                child: Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context).premiumActiveDesc,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white.withOpacity(0.9),
+                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Continue Button
+                        TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 1200),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, value, child) {
+                            return Transform.scale(
+                              scale: value,
+                              child: Container(
+                                width: double.infinity,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white.withOpacity(0.9),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    Navigator.pop(context);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context).continue_,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF4CAF50),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

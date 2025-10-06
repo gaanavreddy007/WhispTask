@@ -8,8 +8,11 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/user_preferences_service.dart';
 import '../services/data_sync_service.dart';
-import '../services/revenue_cat_service.dart';
+import '../services/web_payment_service.dart';
+import '../services/sentry_service.dart';
 import '../models/sync_status.dart';
+import '../utils/leak_prevention_system.dart';
+import '../utils/null_safety_system.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -61,6 +64,9 @@ class AuthProvider extends ChangeNotifier {
   // Initialize auth state listener
   Future<void> initializeAuth() async {
     try {
+      // Set a timeout to prevent hanging on Firebase connection issues
+      final completer = Completer<void>();
+      
       // Listen to auth state changes
       _authService.user.listen((UserModel? user) {
         _user = user;
@@ -76,7 +82,26 @@ class AuthProvider extends ChangeNotifier {
         }
         
         notifyListeners();
+        
+        // Complete the initialization on first user event
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
       });
+      
+      // Add timeout fallback
+      Timer(const Duration(seconds: 5), () {
+        if (!completer.isCompleted) {
+          print('Auth initialization timeout - proceeding with fallback');
+          _isInitialized = true;
+          notifyListeners();
+          completer.complete();
+        }
+      });
+      
+      // Wait for either the first user event or timeout
+      await completer.future;
+      
     } catch (e) {
       await Sentry.captureException(
         e,
@@ -105,7 +130,7 @@ class AuthProvider extends ChangeNotifier {
   
   // Check if provider is still mounted
   bool get mounted => !_isDisposed;
-  bool _isDisposed = false;
+  final bool _isDisposed = false;
 
   // Set loading state
   void _setLoading(bool loading) {
@@ -134,7 +159,7 @@ class AuthProvider extends ChangeNotifier {
   // Premium status management
   Future<void> checkPremiumStatus() async {
     try {
-      _isPremium = await RevenueCatService.isPremiumUser();
+      _isPremium = await WebPaymentService.isPremiumUser();
       notifyListeners();
     } catch (e) {
       print('Failed to check premium status: $e');
@@ -147,10 +172,9 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       clearError();
       
-      bool success = await RevenueCatService.purchaseMonthlyPremium();
-      if (success) {
-        await checkPremiumStatus();
-      }
+      // Note: WebPaymentService requires BuildContext, this will be handled in the UI layer
+      // For now, return false as payment needs to be handled in UI
+      bool success = false;
       
       _setLoading(false);
       return success;
@@ -166,10 +190,9 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       clearError();
       
-      bool success = await RevenueCatService.purchaseYearlyPremium();
-      if (success) {
-        await checkPremiumStatus();
-      }
+      // Note: WebPaymentService requires BuildContext, this will be handled in the UI layer
+      bool success = false;
+      // Payment will be handled in UI layer, so we just return false for now
       
       _setLoading(false);
       return success;
@@ -185,7 +208,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       clearError();
       
-      await RevenueCatService.restorePurchases();
+      await WebPaymentService.restorePurchases();
       await checkPremiumStatus();
       
       _setLoading(false);
@@ -265,38 +288,57 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    try {
-      _setLoading(true);
-      clearError();
+    final result = await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logAuthEvent('sign_in_attempt', data: {
+          'email': email.isNotEmpty ? 'provided' : 'empty',
+          'password': password.isNotEmpty ? 'provided' : 'empty',
+        });
 
-      // Validate inputs
-      if (!_validateEmail(email)) {
-        throw Exception('Please enter a valid email address');
-      }
-      if (password.trim().isEmpty) {
-        throw Exception('Please enter your password');
-      }
+        _setLoading(true);
+        clearError();
 
-      UserModel? user = await _authService.signInWithEmailPassword(email, password);
-      _user = user;
+        // Validate inputs
+        if (email.isEmpty) {
+          SentryService.logAuthEvent('sign_in_validation_failed', data: {'reason': 'empty_email'});
+          throw Exception('Please enter your email');
+        }
+        if (password.isEmpty) {
+          SentryService.logAuthEvent('sign_in_validation_failed', data: {'reason': 'empty_password'});
+          throw Exception('Please enter your password');
+        }
 
+        SentryService.logAuthEvent('sign_in_validation_passed');
+        UserModel? user = await _authService.signInWithEmailPassword(email, password);
+        _user = user;
+
+        _setLoading(false);
+        notifyListeners();
+
+        if (user != null) {
+          SentryService.logAuthEvent('sign_in_success', userId: user.uid, data: {
+            'user_email': user.email,
+            'is_anonymous': user.isAnonymous.toString(),
+          });
+          await syncPreferencesAcrossDevices();
+          return true;
+        }
+        
+        SentryService.logAuthEvent('sign_in_failed', data: {'reason': 'null_user_returned'});
+        return false;
+      },
+      operationName: 'auth_sign_in',
+      description: 'Sign in with email and password',
+      category: 'auth',
+      extra: {'method': 'email_password'},
+    ).catchError((e) {
+      SentryService.logAuthEvent('sign_in_error', data: {'error': e.toString()});
       _setLoading(false);
-      return user != null;
-    } catch (e) {
-      await Sentry.captureException(
-        e,
-        stackTrace: StackTrace.current,
-        withScope: (scope) {
-          scope.setTag('provider', 'auth');
-          scope.setTag('operation', 'sign_in_with_email_password');
-          scope.setExtra('email', email);
-          scope.level = SentryLevel.error;
-        },
-      );
-      _setError('Failed to sign in: $e');
-      _setLoading(false);
+      _setError(e.toString());
       return false;
-    }
+    });
+    
+    return result ?? false;
   }
 
   // Convert anonymous account to permanent account
@@ -582,6 +624,9 @@ class AuthProvider extends ChangeNotifier {
         shareUsageData: shareUsageData,
         biometricAuth: biometricAuth,
       );
+
+      // Reload user data to reflect updated privacy settings
+      await refreshUser();
 
       _setSyncing(false);
       return true;
@@ -945,6 +990,64 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Sign in with Google
+  Future<bool> signInWithGoogle() async {
+    try {
+      _setLoading(true);
+      clearError();
+
+      UserModel? user = await _authService.signInWithGoogle();
+      _user = user;
+
+      _setLoading(false);
+      return user != null;
+    } catch (e) {
+      await Sentry.captureException(
+        e,
+        stackTrace: StackTrace.current,
+        withScope: (scope) {
+          scope.setTag('provider', 'auth');
+          scope.setTag('operation', 'sign_in_with_google');
+          scope.level = SentryLevel.error;
+        },
+      );
+      _setError('Failed to sign in with Google: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // Link anonymous account with Google
+  Future<bool> linkAnonymousWithGoogle() async {
+    try {
+      _setLoading(true);
+      clearError();
+
+      if (!isAnonymous) {
+        throw Exception('Current user is not anonymous');
+      }
+
+      UserModel? user = await _authService.linkAnonymousWithGoogle();
+      _user = user;
+
+      _setLoading(false);
+      return user != null;
+    } catch (e) {
+      await Sentry.captureException(
+        e,
+        stackTrace: StackTrace.current,
+        withScope: (scope) {
+          scope.setTag('provider', 'auth');
+          scope.setTag('operation', 'link_anonymous_with_google');
+          scope.level = SentryLevel.error;
+        },
+      );
+      _setError('Failed to link account with Google: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   // Change password
   Future<bool> changePassword({
     required String currentPassword,
@@ -1148,8 +1251,25 @@ class AuthProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _isDisposed = true;
-    _preferencesSubscription?.cancel();
+    try {
+      // Cancel any active subscriptions with leak prevention
+      if (_preferencesSubscription != null) {
+        LeakPreventionSystem.cancelSubscription('auth_preferences_subscription');
+        _preferencesSubscription?.cancel();
+        _preferencesSubscription = null;
+      }
+      
+      // Emergency cleanup for any remaining resources
+      LeakPreventionSystem.unregisterResource('auth_provider', 'provider');
+      
+      SentryService.logUIEvent('auth_provider_disposed');
+    } catch (e, stackTrace) {
+      SentryService.captureException(
+        e,
+        stackTrace: stackTrace,
+        hint: 'Error during AuthProvider disposal',
+      );
+    }
     _preferencesService.dispose();
     _dataSyncService.dispose();
     super.dispose();

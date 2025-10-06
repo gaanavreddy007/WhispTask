@@ -1,5 +1,5 @@
 // lib/widgets/auth_text_field.dart
-// ignore_for_file: use_super_parameters
+// ignore_for_file: use_super_parameters, deprecated_member_use
 
 import 'package:flutter/material.dart';
 
@@ -64,7 +64,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
           widget.label,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
-            color: _hasFocus ? Theme.of(context).primaryColor : null,
+            color: _hasFocus ? const Color(0xFF667eea) : const Color(0xFF64748B),
+            fontSize: 14,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -99,51 +101,61 @@ class _AuthTextFieldState extends State<AuthTextField> {
                   ? Icon(
                       widget.prefixIcon,
                       color: _hasFocus 
-                          ? Theme.of(context).primaryColor 
-                          : Colors.grey[600],
+                          ? const Color(0xFF667eea) 
+                          : const Color(0xFF64748B),
                     )
                   : null,
               suffixIcon: _buildSuffixIcon(),
               filled: true,
               fillColor: widget.fillColor ?? 
                   (widget.enabled 
-                      ? Colors.grey[50] 
+                      ? Colors.white.withOpacity(0.9) 
                       : Colors.grey[200]),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.grey[300]!,
-                  width: 1,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Colors.grey[300]!,
-                  width: 1,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: Theme.of(context).primaryColor,
-                  width: 2,
-                ),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 1,
-                ),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: Colors.red,
-                  width: 2,
-                ),
-              ),
+              border: widget.fillColor == Colors.transparent 
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.grey[300]!,
+                        width: 1,
+                      ),
+                    ),
+              enabledBorder: widget.fillColor == Colors.transparent 
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF667eea).withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+              focusedBorder: widget.fillColor == Colors.transparent 
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF667eea),
+                        width: 2,
+                      ),
+                    ),
+              errorBorder: widget.fillColor == Colors.transparent 
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.red,
+                        width: 1,
+                      ),
+                    ),
+              focusedErrorBorder: widget.fillColor == Colors.transparent 
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Colors.red,
+                        width: 2,
+                      ),
+                    ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(

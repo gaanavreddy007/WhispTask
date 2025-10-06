@@ -12,6 +12,9 @@ class VoiceParser {
     // Extract task title (main content)
     String title = _extractTitle(cleanInput);
     
+    // Extract description if mentioned
+    String? description = _extractDescription(cleanInput);
+    
     // Extract due date if mentioned
     DateTime? dueDate = _extractDueDate(cleanInput);
     
@@ -21,17 +24,27 @@ class VoiceParser {
     // Extract priority (using your string-based priority)
     String priority = _extractPriority(cleanInput);
     
-    // Extract recurring pattern
+    // Extract recurring pattern and interval
     String? recurringPattern = _extractRecurringPattern(cleanInput);
+    int? recurringInterval = _extractRecurringInterval(cleanInput);
     bool isRecurring = recurringPattern != null;
     
     // Extract color
     String? color = _extractColor(cleanInput);
     
-    debugPrint('Parsed voice task: $title | Category: $category | Priority: $priority');
+    // Extract reminder information
+    bool hasReminder = _extractHasReminder(cleanInput);
+    DateTime? reminderTime = _extractReminderTime(cleanInput, dueDate);
+    String reminderType = _extractReminderType(cleanInput);
+    int reminderMinutesBefore = _extractReminderMinutesBefore(cleanInput);
+    String notificationTone = _extractNotificationTone(cleanInput);
+    List<String> repeatDays = _extractRepeatDays(cleanInput);
+    
+    debugPrint('Parsed voice task: $title | Category: $category | Priority: $priority | Recurring: $isRecurring ($recurringPattern every $recurringInterval) | Reminder: $hasReminder');
     
     return Task(
       title: title,
+      description: description,
       createdAt: DateTime.now(),
       dueDate: dueDate,
       category: category,
@@ -39,6 +52,21 @@ class VoiceParser {
       color: color,
       isRecurring: isRecurring,
       recurringPattern: recurringPattern,
+      recurringInterval: isRecurring ? (recurringInterval ?? 1) : null,
+      status: 'pending',
+      // Reminder fields
+      hasReminder: hasReminder,
+      reminderTime: reminderTime,
+      reminderType: reminderType,
+      reminderMinutesBefore: reminderMinutesBefore,
+      notificationTone: notificationTone,
+      repeatDays: repeatDays,
+      isReminderActive: hasReminder,
+      // Initialize empty collections for voice notes and attachments
+      voiceNotes: [],
+      attachments: [],
+      hasVoiceNotes: false,
+      hasAttachments: false,
     );
   }
 
@@ -325,7 +353,7 @@ class VoiceParser {
     }
   }
 
-  // ULTRA-AGGRESSIVE: Enhanced command parsing that interprets ANY speech
+  // Simplified command parsing
   static Map<String, dynamic> parseVoiceCommand(String command) {
     String cleanCommand = command.toLowerCase().trim();
     print('VoiceParser: Parsing command: "$cleanCommand"');
@@ -333,267 +361,71 @@ class VoiceParser {
     // Remove wake word if present
     cleanCommand = cleanCommand.replaceAll(RegExp(r'^(hey whisp,?\s*|whisp,?\s*)'), '');
     
-    // First check explicit task update commands
-    if (isTaskUpdateCommand(cleanCommand)) {
-      print('VoiceParser: Detected as task update command');
+    // Simple action detection
+    if (_isUpdateCommand(cleanCommand)) {
       return {
         'type': 'task_update',
-        'action': extractAction(cleanCommand),
-        'taskIdentifier': extractTaskIdentifierFromCommand(cleanCommand),
+        'action': _getSimpleAction(cleanCommand),
+        'taskIdentifier': _getSimpleTaskIdentifier(cleanCommand),
         'originalCommand': command
       };
     }
     
-    // Check explicit task creation commands
-    if (isCreateTaskCommand(cleanCommand)) {
-      print('VoiceParser: Detected as task creation command');
-      return {
-        'type': 'create_task',
-        'title': extractTaskTitle(cleanCommand),
-        'originalCommand': command
-      };
-    }
-    
-    // FALLBACK: Try to interpret ANY speech as either task creation or update
-    print('VoiceParser: Using fallback interpretation');
-    return _interpretAnySpeedAsCommand(cleanCommand, command);
-  }
-  
-  // NEW: Interpret any speech as a potential command with smart task detection
-  static Map<String, dynamic> _interpretAnySpeedAsCommand(String cleanCommand, String originalCommand) {
-    // First validate the command
-    final validation = validateVoiceCommand(originalCommand);
-    if (!validation.isValid) {
-      return {
-        'type': 'error',
-        'errorType': validation.errorType,
-        'suggestion': validation.suggestion,
-        'originalCommand': originalCommand
-      };
-    }
-    
-    // Check if this could be updating an existing task (contains time/date words)
-    // This should catch "homework tomorrow", "home tomorrow", "buy groceries tomorrow", etc.
-    if (_containsTimeWords(cleanCommand)) {
-      // Extract potential task name
-      final taskName = _extractTaskFromTimeCommand(cleanCommand);
-      
-      print('VoiceParser: Time-based command detected. Task name: "$taskName"');
-      
-      // If we have a meaningful task name OR contains task keywords, treat as update
-      if ((taskName.isNotEmpty && taskName != 'task' && taskName.length > 2) || 
-          _containsTaskKeywords(cleanCommand)) {
-        print('VoiceParser: Routing to task update with setDueDate action');
-        return {
-          'type': 'task_update',
-          'action': 'setDueDate',
-          'taskIdentifier': taskName.isNotEmpty ? taskName : _extractTaskFromTimeCommand(cleanCommand),
-          'dueDate': _extractTimeFromCommand(cleanCommand),
-          'originalCommand': originalCommand
-        };
-      }
-    }
-    
-    // If it contains action words, treat as task update
-    if (_containsActionWords(cleanCommand)) {
-      return {
-        'type': 'task_update',
-        'action': _guessActionFromSpeech(cleanCommand),
-        'taskIdentifier': _guessTaskFromSpeech(cleanCommand),
-        'originalCommand': originalCommand
-      };
-    }
-    
-    // Otherwise, treat as task creation
+    // Default to task creation
     return {
       'type': 'create_task',
-      'title': _cleanSpeechAsTaskTitle(cleanCommand),
-      'originalCommand': originalCommand
+      'title': _getSimpleTitle(cleanCommand),
+      'originalCommand': command
     };
   }
   
-  // Check if speech contains action words
-  static bool _containsActionWords(String speech) {
-    final actionWords = [
-      'complete', 'finish', 'done', 'mark', 'set',
-      'start', 'begin', 'resume', 'pause', 'stop',
-      'cancel', 'delete', 'remove', 'priority',
-      'first', 'second', 'third', 'last', 'next'
-    ];
-    
-    return actionWords.any((word) => speech.contains(word));
+  // Simple update command detection
+  static bool _isUpdateCommand(String command) {
+    final updateWords = ['done', 'complete', 'finish', 'delete', 'remove', 'mark'];
+    return updateWords.any((word) => command.contains(word));
   }
   
-  // Check if speech contains time/date words
-  static bool _containsTimeWords(String speech) {
-    final timeWords = [
-      'tomorrow', 'today', 'tonight', 'yesterday',
-      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-      'morning', 'afternoon', 'evening', 'night',
-      'next week', 'this week', 'next month', 'this month',
-      'due', 'deadline', 'by'
-    ];
-    
-    return timeWords.any((word) => speech.contains(word));
-  }
-  
-  // Check if speech contains common task keywords
-  static bool _containsTaskKeywords(String speech) {
-    final taskKeywords = [
-      'homework', 'assignment', 'project', 'work', 'study',
-      'groceries', 'shopping', 'buy', 'purchase',
-      'meeting', 'appointment', 'call', 'email',
-      'exercise', 'workout', 'gym', 'run',
-      'clean', 'laundry', 'dishes', 'cook',
-      'read', 'book', 'article', 'paper',
-      'home', 'house', 'office', 'school'
-    ];
-    
-    return taskKeywords.any((word) => speech.contains(word));
-  }
-  
-  // Extract task name from time-based command
-  static String _extractTaskFromTimeCommand(String speech) {
-    // Remove time words to isolate task name
-    final timeWords = [
-      'tomorrow', 'today', 'tonight', 'yesterday',
-      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-      'morning', 'afternoon', 'evening', 'night',
-      'next week', 'this week', 'next month', 'this month',
-      'due', 'deadline', 'by'
-    ];
-    
-    String taskName = speech;
-    for (String word in timeWords) {
-      taskName = taskName.replaceAll(word, ' ');
-    }
-    
-    // Remove articles, action words, and clean up
-    taskName = taskName.replaceAll(RegExp(r'\b(the|my|a|an|this|that|task|is|buy|update|create|add|make|do)\b'), ' ');
-    taskName = taskName.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
-    return taskName.isNotEmpty ? taskName : 'task';
-  }
-  
-  // Extract time/date from command
-  static String _extractTimeFromCommand(String speech) {
-    final timePatterns = {
-      'tomorrow': 'tomorrow',
-      'today': 'today', 
-      'tonight': 'tonight',
-      'monday': 'monday',
-      'tuesday': 'tuesday',
-      'wednesday': 'wednesday',
-      'thursday': 'thursday',
-      'friday': 'friday',
-      'saturday': 'saturday',
-      'sunday': 'sunday',
-      'next week': 'next week',
-      'this week': 'this week'
-    };
-    
-    for (String pattern in timePatterns.keys) {
-      if (speech.contains(pattern)) {
-        return timePatterns[pattern]!;
-      }
-    }
-    
-    return 'tomorrow'; // Default fallback
-  }
-  
-  // Guess action from any speech
-  static String _guessActionFromSpeech(String speech) {
-    if (speech.contains('complete') || speech.contains('finish') || speech.contains('done')) {
+  // Simple action extraction
+  static String _getSimpleAction(String command) {
+    if (command.contains('done') || command.contains('complete') || command.contains('finish')) {
       return 'complete';
     }
-    if (speech.contains('start') || speech.contains('begin')) {
-      return 'start';
-    }
-    if (speech.contains('pause') || speech.contains('stop')) {
-      return 'pause';
-    }
-    if (speech.contains('cancel') || speech.contains('delete') || speech.contains('remove')) {
+    if (command.contains('delete') || command.contains('remove')) {
       return 'delete';
     }
-    if (speech.contains('priority')) {
-      return 'changePriority';
-    }
-    // Default to complete for any unclear action
     return 'complete';
   }
   
-  // Guess task identifier from speech
-  static String _guessTaskFromSpeech(String speech) {
-    // Remove action words to isolate task identifier
-    final actionWords = ['complete', 'finish', 'done', 'mark', 'set', 'start', 'begin', 'pause', 'stop', 'cancel', 'delete', 'remove'];
-    String taskPart = speech;
+  // Simple task identifier extraction
+  static String _getSimpleTaskIdentifier(String command) {
+    // Remove action words
+    String identifier = command
+        .replaceAll(RegExp(r'\b(mark|as|done|complete|finish|delete|remove)\b'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     
-    for (String word in actionWords) {
-      taskPart = taskPart.replaceAll(word, ' ');
-    }
-    
-    // Remove common articles
-    taskPart = taskPart.replaceAll(RegExp(r'\b(the|my|a|an|this|that|task)\b'), ' ');
-    taskPart = taskPart.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
-    // Handle numbered references
-    if (taskPart.contains('first') || taskPart.contains('1')) return '#1';
-    if (taskPart.contains('second') || taskPart.contains('2')) return '#2';
-    if (taskPart.contains('third') || taskPart.contains('3')) return '#3';
-    
-    return taskPart.isNotEmpty ? taskPart : '#1';
+    return identifier.isEmpty ? 'task' : identifier;
   }
   
-  // Clean any speech as task title
-  static String _cleanSpeechAsTaskTitle(String speech) {
-    // Apply speech corrections first
-    String title = _correctSpeechMisinterpretations(speech);
+  // Simple title extraction
+  static String _getSimpleTitle(String command) {
+    // Remove common prefixes
+    String title = command
+        .replaceAll(RegExp(r'^(add|create|new)\s+'), '')
+        .trim();
     
-    // Remove common prefixes that might be misheard
-    final prefixes = ['hey', 'ok', 'um', 'uh', 'so', 'well', 'now'];
-    
-    for (String prefix in prefixes) {
-      if (title.startsWith('$prefix ')) {
-        title = title.substring(prefix.length + 1);
-      }
-    }
-    
-    // Remove time words that shouldn't be in title (improved logic)
-    final timeWords = ['tomorrow', 'today', 'tonight', 'later', 'soon'];
-    for (String timeWord in timeWords) {
-      // Remove time word at start: "tomorrow homework" -> "homework"
-      if (title.startsWith('$timeWord ')) {
-        title = title.substring(timeWord.length + 1).trim();
-      }
-      // Remove time word at end: "homework tomorrow" -> "homework"
-      else if (title.endsWith(' $timeWord')) {
-        title = title.substring(0, title.length - timeWord.length - 1).trim();
-      }
-      // If only time word, use default
-      else if (title.trim() == timeWord) {
-        title = 'Voice Task';
-      }
-    }
+    if (title.isEmpty) title = 'Voice Task';
     
     // Capitalize first letter
-    if (title.isNotEmpty) {
-      title = title[0].toUpperCase() + title.substring(1);
-    }
-    
-    return title.trim().isEmpty ? 'Voice Task' : title.trim();
+    return title[0].toUpperCase() + title.substring(1);
   }
+  
+  
 
-  // Enhanced task update command detection
+  // Simplified task update command detection
   static bool isTaskUpdateCommandEnhanced(String command) {
-    final patterns = [
-      r'mark\s+.*\s+as\s+(done|complete|finished)',
-      r'complete\s+.*',
-      r'finish\s+.*',
-      r'mark\s+task\s+.*\s+(complete|done)',
-      r'(done|complete|finish)\s+.*',
-    ];
-    
-    return patterns.any((pattern) => RegExp(pattern).hasMatch(command));
+    final updateWords = ['done', 'complete', 'finish', 'delete', 'remove', 'mark'];
+    return updateWords.any((word) => command.toLowerCase().contains(word));
   }
 
   // Extract action from command
@@ -675,81 +507,74 @@ class VoiceParser {
     return command; // Fallback to the whole command if no specific pattern matches
   }
 
-  // More selective task creation detection
+  // Simplified task creation detection
   static bool isCreateTaskCommand(String command) {
     final lowerCommand = command.toLowerCase().trim();
     
-    // Skip very short or likely incomplete commands
-    if (lowerCommand.length < 3 || lowerCommand.split(' ').length < 2) {
-      return false;
-    }
+    // Skip very short commands
+    if (lowerCommand.length < 3) return false;
     
-    // Skip commands that are likely speech fragments or incomplete
-    final fragmentPatterns = [
-      RegExp(r'^(by|to|for|with|in|on|at)\s+\w+$', caseSensitive: false), // "by today", "to work"
-      RegExp(r'^\w{1,2}$'), // Single letters or very short words
-      RegExp(r'^(um|uh|er|ah|well|so|now|then)(\s+\w+)?$', caseSensitive: false), // Filler words
-    ];
-    
-    for (final pattern in fragmentPatterns) {
-      if (pattern.hasMatch(lowerCommand)) {
-        return false;
-      }
-    }
-    
-    // Explicit task creation indicators
-    final creationKeywords = [
-      'add', 'create', 'new', 'remind me', 'remember to', 'need to', 'have to',
-      'buy', 'call', 'email', 'visit', 'go to', 'pick up', 'drop off'
-    ];
-    
-    final hasCreationKeyword = creationKeywords.any((keyword) => 
-        lowerCommand.startsWith(keyword) || lowerCommand.contains(' $keyword '));
-    
-    // If it has creation keywords or is a substantial command (3+ words), treat as creation
-    return hasCreationKeyword || lowerCommand.split(' ').length >= 3;
+    // If it's not an update command, treat as creation
+    return !_isUpdateCommand(lowerCommand);
   }
 
-  // ULTRA-AGGRESSIVE: Extract task title from ANY speech
+  // Simplified task title extraction
   static String extractTaskTitle(String command) {
-    String title = _correctSpeechMisinterpretations(command.toLowerCase().trim());
+    print('VoiceParser: Extracting title from: "$command"');
+    String title = command.trim();
     
-    // Remove task creation prefixes if present
+    // Remove wake words
+    final wakeWords = ['hey whisp', 'hey whisper', 'hey wisp', 'whisp', 'whisper'];
+    String lowerTitle = title.toLowerCase();
+    
+    for (String wake in wakeWords) {
+      if (lowerTitle.startsWith('$wake ')) {
+        title = title.substring(wake.length).trim();
+        break;
+      }
+    }
+    
+    // Remove creation prefixes and reminder phrases
     final prefixes = [
-      'add task', 'create task', 'new task', 'remind me to',
-      'hey whisp', 'whisp', 'whisper', 'hey', 'ok', 'um', 'uh'
+      'add ', 'create ', 'new ', 'remind me to ', 'reminder to ', 
+      'remember to ', 'don\'t forget to ', 'make sure to ', 'need to ',
+      'have to ', 'should ', 'must '
     ];
+    lowerTitle = title.toLowerCase();
     
     for (String prefix in prefixes) {
-      if (title.startsWith(prefix)) {
+      if (lowerTitle.startsWith(prefix)) {
         title = title.substring(prefix.length).trim();
+        lowerTitle = title.toLowerCase(); // Update for next iteration
+        break;
       }
     }
     
-    // Remove time words that shouldn't be in title (improved logic)
-    final timeWords = ['tomorrow', 'today', 'tonight', 'later', 'soon'];
-    for (String timeWord in timeWords) {
-      // Remove time word at start: "tomorrow homework" -> "homework"
-      if (title.startsWith('$timeWord ')) {
-        title = title.substring(timeWord.length + 1).trim();
-      }
-      // Remove time word at end: "homework tomorrow" -> "homework"
-      else if (title.endsWith(' $timeWord')) {
-        title = title.substring(0, title.length - timeWord.length - 1).trim();
-      }
-      // If only time word, use default
-      else if (title.trim() == timeWord) {
-        title = 'Voice Task';
-      }
+    // Remove time-related suffixes that shouldn't be in the title
+    final timeSuffixes = [
+      RegExp(r'\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)?.*$'),
+      RegExp(r'\s+tomorrow.*$'),
+      RegExp(r'\s+today.*$'),
+      RegExp(r'\s+tonight.*$'),
+      RegExp(r'\s+high priority.*$'),
+      RegExp(r'\s+low priority.*$'),
+      RegExp(r'\s+daily.*$'),
+      RegExp(r'\s+weekly.*$'),
+      RegExp(r'\s+monthly.*$'),
+    ];
+    
+    for (RegExp suffix in timeSuffixes) {
+      title = title.replaceFirst(suffix, '').trim();
     }
     
-    // Clean up and capitalize
-    title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Capitalize first letter
     if (title.isNotEmpty) {
       title = title[0].toUpperCase() + title.substring(1);
     }
     
-    return title.isEmpty ? 'Voice Task' : title;
+    final finalTitle = title.isEmpty ? 'Voice Task' : title;
+    print('VoiceParser: Final title: "$finalTitle"');
+    return finalTitle;
   }
 
   // NEW: Correct common speech misinterpretations
@@ -863,8 +688,14 @@ class VoiceParser {
       title = title.replaceAll(word, '').trim();
     }
     
+    // Remove duplicate words (fix "do do do homework" -> "do homework")
+    title = _removeDuplicateWords(title);
+    
     // Clean up extra spaces
     title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    // Remove common speech recognition artifacts
+    title = _cleanSpeechArtifacts(title);
     
     // Capitalize first letter
     if (title.isNotEmpty) {
@@ -872,6 +703,46 @@ class VoiceParser {
     }
     
     return title.trim().isEmpty ? 'New Voice Task' : title.trim();
+  }
+
+  // Remove duplicate consecutive words (fix "do do do homework" -> "do homework")
+  static String _removeDuplicateWords(String text) {
+    List<String> words = text.split(' ');
+    List<String> cleanWords = [];
+    
+    for (int i = 0; i < words.length; i++) {
+      String currentWord = words[i].toLowerCase();
+      
+      // Skip if this word is the same as the previous word
+      if (cleanWords.isEmpty || cleanWords.last.toLowerCase() != currentWord) {
+        cleanWords.add(words[i]);
+      }
+    }
+    
+    return cleanWords.join(' ');
+  }
+
+  // Clean common speech recognition artifacts
+  static String _cleanSpeechArtifacts(String text) {
+    String cleaned = text;
+    
+    // Remove common speech artifacts
+    final artifacts = [
+      RegExp(r'\b(um|uh|er|ah)\b', caseSensitive: false),
+      RegExp(r'\b(like|you know)\b', caseSensitive: false),
+      RegExp(r'\b(well|so)\s+', caseSensitive: false),
+      RegExp(r'\s+(please|thanks?)\s*$', caseSensitive: false),
+    ];
+    
+    for (RegExp artifact in artifacts) {
+      cleaned = cleaned.replaceAll(artifact, ' ');
+    }
+    
+    // Remove extra punctuation and clean spaces
+    cleaned = cleaned.replaceAll(RegExp(r'[.,!?]+$'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    return cleaned;
   }
 
   static DateTime? _extractDueDate(String input) {
@@ -914,24 +785,24 @@ class VoiceParser {
   }
 
   static String _extractCategory(String input) {
+    // Complete categories from manual task creation: 'general', 'work', 'personal', 'health', 'shopping', 'study'
     final categories = {
-      'work': ['work', 'office', 'meeting', 'project', 'client', 'boss'],
-      'personal': ['personal', 'home', 'family', 'friend'],
-      'health': ['health', 'doctor', 'medicine', 'exercise', 'gym', 'workout'],
-      'shopping': ['buy', 'shop', 'grocery', 'store', 'purchase'],
-      'study': ['study', 'homework', 'assignment', 'exam', 'class', 'school'],
-      'finance': ['pay', 'bill', 'bank', 'money', 'budget', 'tax'],
+      'work': ['work', 'office', 'meeting', 'project', 'client', 'boss', 'job', 'business', 'conference', 'presentation', 'deadline', 'report'],
+      'personal': ['personal', 'home', 'family', 'friend', 'call', 'visit', 'birthday', 'anniversary', 'relationship', 'social'],
+      'health': ['health', 'doctor', 'medicine', 'exercise', 'gym', 'workout', 'appointment', 'checkup', 'therapy', 'dental', 'medical', 'fitness'],
+      'shopping': ['buy', 'shop', 'grocery', 'store', 'purchase', 'groceries', 'market', 'mall', 'online', 'order', 'delivery'],
+      'study': ['study', 'homework', 'assignment', 'exam', 'class', 'school', 'university', 'college', 'research', 'learn', 'course', 'education'],
     };
     
     for (String category in categories.keys) {
       for (String keyword in categories[category]!) {
-        if (input.contains(keyword)) {
+        if (RegExp(r'\b' + keyword + r'\b', caseSensitive: false).hasMatch(input)) {
           return category;
         }
       }
     }
     
-    return 'general';
+    return 'general'; // Default category
   }
 
   static String _extractPriority(String input) {
@@ -946,37 +817,101 @@ class VoiceParser {
   }
 
   static String? _extractRecurringPattern(String input) {
-    if (input.contains('daily') || input.contains('every day')) {
+    // Daily patterns
+    if (input.contains('daily') || input.contains('every day') || 
+        input.contains('each day') || input.contains('everyday')) {
       return 'daily';
-    } else if (input.contains('weekly') || input.contains('every week')) {
+    }
+    
+    // Weekly patterns
+    if (input.contains('weekly') || input.contains('every week') || 
+        input.contains('each week') || input.contains('once a week') ||
+        input.contains('once weekly')) {
       return 'weekly';
-    } else if (input.contains('monthly') || input.contains('every month')) {
+    }
+    
+    // Monthly patterns
+    if (input.contains('monthly') || input.contains('every month') || 
+        input.contains('each month') || input.contains('once a month') ||
+        input.contains('once monthly')) {
       return 'monthly';
-    } else if (input.contains('yearly') || input.contains('every year')) {
+    }
+    
+    // Yearly patterns
+    if (input.contains('yearly') || input.contains('every year') || 
+        input.contains('each year') || input.contains('annually') ||
+        input.contains('once a year')) {
       return 'yearly';
     }
+    
     return null;
   }
 
+  static int? _extractRecurringInterval(String input) {
+    // Look for patterns like "every 2 days", "every 3 weeks", etc.
+    final intervalMatch = RegExp(r'every\s+(\d+)\s+(day|week|month|year)', caseSensitive: false).firstMatch(input);
+    if (intervalMatch != null) {
+      return int.tryParse(intervalMatch.group(1)!) ?? 1;
+    }
+    
+    // Look for patterns like "every other day", "every second week"
+    if (input.contains('every other') || input.contains('every second')) {
+      return 2;
+    } else if (input.contains('every third')) {
+      return 3;
+    } else if (input.contains('every fourth')) {
+      return 4;
+    }
+    
+    // Look for patterns like "twice daily", "three times weekly"
+    if (input.contains('twice') || input.contains('2 times')) {
+      return 2;
+    } else if (input.contains('three times') || input.contains('3 times')) {
+      return 3;
+    } else if (input.contains('four times') || input.contains('4 times')) {
+      return 4;
+    }
+    
+    // Look for number words
+    final numberWords = {
+      'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
+    };
+    
+    for (final entry in numberWords.entries) {
+      if (input.contains('every ${entry.key}')) {
+        return entry.value;
+      }
+    }
+    
+    // Default to 1 if recurring pattern is detected
+    return 1;
+  }
+
   static String? _extractColor(String input) {
+    // Complete colors from manual task creation: 'red', 'pink', 'purple', 'indigo', 'blue', 'cyan', 'teal', 'green', 'yellow', 'orange'
     final colorMap = {
-      'red': ['red', 'urgent'],
-      'blue': ['blue', 'work'],
-      'green': ['green', 'health'],
-      'yellow': ['yellow', 'personal'],
-      'purple': ['purple', 'study'],
-      'orange': ['orange', 'shopping'],
+      'red': ['red', 'urgent', 'important', 'critical'],
+      'pink': ['pink', 'rose', 'magenta'],
+      'purple': ['purple', 'violet', 'study', 'learning'],
+      'indigo': ['indigo', 'dark blue', 'navy'],
+      'blue': ['blue', 'work', 'business', 'office'],
+      'cyan': ['cyan', 'light blue', 'aqua'],
+      'teal': ['teal', 'turquoise', 'blue green'],
+      'green': ['green', 'health', 'fitness', 'nature'],
+      'yellow': ['yellow', 'personal', 'bright', 'sunny'],
+      'orange': ['orange', 'shopping', 'warm', 'energy'],
     };
     
     for (String color in colorMap.keys) {
       for (String keyword in colorMap[color]!) {
-        if (input.contains(keyword)) {
+        if (RegExp(r'\b' + keyword.replaceAll(' ', r'\s+') + r'\b', caseSensitive: false).hasMatch(input)) {
           return color;
         }
       }
     }
     
-    return null;
+    return 'blue'; // Default color to match manual task creation
   }
 
   // NEW: Comprehensive validation for voice commands
@@ -1089,6 +1024,377 @@ class VoiceParser {
     }
     
     return ValidationResult(isValid: true);
+  }
+
+  // Create task from any reasonable speech
+  static Task createTaskFromSpeech(String speech) {
+    print('VoiceParser: 🚀 CREATE TASK FROM SPEECH: "$speech"');
+    final title = extractTaskTitle(speech);
+    print('VoiceParser: 📝 EXTRACTED TITLE: "$title"');
+    final cleanSpeech = speech.toLowerCase();
+    
+    // Extract due date with time
+    DateTime? dueDate;
+    final now = DateTime.now();
+    
+    // Check for specific times first
+    final timeRegex = RegExp(r'at (\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?');
+    final timeMatch = timeRegex.firstMatch(cleanSpeech);
+    
+    if (timeMatch != null) {
+      int hour = int.parse(timeMatch.group(1)!);
+      int minute = timeMatch.group(2) != null ? int.parse(timeMatch.group(2)!) : 0;
+      String? ampm = timeMatch.group(3)?.toLowerCase();
+      
+      // Convert to 24-hour format
+      if (ampm == 'pm' && hour != 12) {
+        hour += 12;
+      } else if (ampm == 'am' && hour == 12) {
+        hour = 0;
+      } else if (ampm == null && hour <= 12) {
+        // Assume PM for times 1-12 without AM/PM specified
+        if (hour < 8) hour += 12; // 1-7 likely PM, 8-12 likely AM/PM as specified
+      }
+      
+      if (cleanSpeech.contains('tomorrow')) {
+        final tomorrow = now.add(Duration(days: 1));
+        dueDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, hour, minute);
+      } else {
+        // Default to today
+        dueDate = DateTime(now.year, now.month, now.day, hour, minute);
+        // If the time has already passed today, schedule for tomorrow
+        if (dueDate.isBefore(now)) {
+          final tomorrow = now.add(Duration(days: 1));
+          dueDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, hour, minute);
+        }
+      }
+    } else {
+      // Fallback to general date detection
+      if (cleanSpeech.contains('tomorrow')) {
+        final tomorrow = now.add(Duration(days: 1));
+        dueDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 23, 59);
+      } else if (cleanSpeech.contains('today')) {
+        dueDate = DateTime(now.year, now.month, now.day, 23, 59);
+      } else if (cleanSpeech.contains('tonight')) {
+        dueDate = DateTime(now.year, now.month, now.day, 20, 0);
+      }
+    }
+    
+    // Smart category detection
+    String category = 'general';
+    if (cleanSpeech.contains('homework') || cleanSpeech.contains('study') || cleanSpeech.contains('assignment') || 
+        cleanSpeech.contains('project') || cleanSpeech.contains('submit') || cleanSpeech.contains('research')) {
+      category = 'work';
+    } else if (cleanSpeech.contains('buy') || cleanSpeech.contains('grocery') || cleanSpeech.contains('groceries') || 
+               cleanSpeech.contains('shopping') || cleanSpeech.contains('purchase')) {
+      category = 'shopping';
+    } else if (cleanSpeech.contains('work') || cleanSpeech.contains('meeting') || cleanSpeech.contains('office') ||
+               cleanSpeech.contains('bills') || cleanSpeech.contains('pay bills')) {
+      category = 'work';
+    } else if (cleanSpeech.contains('call') || cleanSpeech.contains('email') || cleanSpeech.contains('message') ||
+               cleanSpeech.contains('mom') || cleanSpeech.contains('family') || cleanSpeech.contains('friend')) {
+      category = 'personal';
+    } else if (cleanSpeech.contains('exercise') || cleanSpeech.contains('gym') || cleanSpeech.contains('workout') ||
+               cleanSpeech.contains('fitness') || cleanSpeech.contains('health')) {
+      category = 'health';
+    }
+    
+    // Smart priority detection
+    String priority = 'medium';
+    if (cleanSpeech.contains('urgent') || cleanSpeech.contains('important') || cleanSpeech.contains('asap') || 
+        cleanSpeech.contains('high priority') || cleanSpeech.contains('high') || cleanSpeech.contains('critical')) {
+      priority = 'high';
+    } else if (cleanSpeech.contains('low priority') || cleanSpeech.contains('low')) {
+      priority = 'low';
+    }
+    
+    // Smart recurring pattern detection
+    String? recurringPattern = _extractRecurringPattern(cleanSpeech);
+    int? recurringInterval = _extractRecurringInterval(cleanSpeech);
+    bool isRecurring = recurringPattern != null;
+    
+    // Extract color
+    String? color = _extractColor(cleanSpeech);
+    
+    // Extract description
+    String? description = _extractDescription(cleanSpeech);
+    
+    // Extract reminder information
+    bool hasReminder = _extractHasReminder(cleanSpeech);
+    DateTime? reminderTime = _extractReminderTime(cleanSpeech, dueDate);
+    String reminderType = _extractReminderType(cleanSpeech);
+    int reminderMinutesBefore = _extractReminderMinutesBefore(cleanSpeech);
+    String notificationTone = _extractNotificationTone(cleanSpeech);
+    List<String> repeatDays = _extractRepeatDays(cleanSpeech);
+    
+    // CRITICAL: Auto-fix reminder inconsistencies
+    if (hasReminder && reminderTime == null) {
+      // If user wants reminder but no specific time, set default
+      reminderTime = dueDate ?? DateTime.now().add(Duration(hours: 1));
+    } else if (!hasReminder) {
+      // If no reminder requested, clear all reminder fields
+      reminderTime = null;
+      reminderType = 'once';
+      reminderMinutesBefore = 0;
+      repeatDays = [];
+    }
+    
+    final task = Task(
+      title: title,
+      description: description,
+      createdAt: DateTime.now(),
+      dueDate: dueDate,
+      category: category,
+      priority: priority,
+      color: color,
+      isRecurring: isRecurring,
+      recurringPattern: recurringPattern,
+      recurringInterval: isRecurring ? (recurringInterval ?? 1) : null,
+      status: 'pending',
+      // Reminder fields
+      hasReminder: hasReminder,
+      reminderTime: reminderTime,
+      reminderType: reminderType,
+      reminderMinutesBefore: reminderMinutesBefore,
+      notificationTone: notificationTone,
+      repeatDays: repeatDays,
+      isReminderActive: hasReminder,
+      // Initialize empty collections for voice notes and attachments
+      voiceNotes: [],
+      attachments: [],
+      hasVoiceNotes: false,
+      hasAttachments: false,
+    );
+    
+    // FINAL VALIDATION: Ensure all critical fields are properly set
+    final validatedTask = _validateAndFixTask(task);
+    
+    print('VoiceParser: ✅ CREATED TASK OBJECT: "${validatedTask.title}" | Category: ${validatedTask.category} | Priority: ${validatedTask.priority} | Recurring: $isRecurring ($recurringPattern every ${validatedTask.recurringInterval})');
+    return validatedTask;
+  }
+
+  // Extract reminder information from voice input
+  static bool _extractHasReminder(String input) {
+    final reminderPatterns = [
+      r'\bremind\s+me\b',
+      r'\bset\s+reminder\b',
+      r'\bnotify\s+me\b',
+      r'\balert\s+me\b',
+      r'\bnotification\b',
+      r'\breminder\b',
+      r'\balarm\b',
+    ];
+    
+    for (final pattern in reminderPatterns) {
+      if (RegExp(pattern, caseSensitive: false).hasMatch(input)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static DateTime? _extractReminderTime(String input, DateTime? dueDate) {
+    // If no reminder keywords, return null
+    if (!_extractHasReminder(input)) return null;
+    
+    final now = DateTime.now();
+    
+    // Check for specific time patterns
+    final timePatterns = [
+      // "remind me at 3pm", "notify at 9am"
+      RegExp(r'\b(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b', caseSensitive: false),
+      // "remind me in 30 minutes"
+      RegExp(r'\bin\s+(\d+)\s*(?:minute|min)s?\b', caseSensitive: false),
+      // "remind me in 2 hours"
+      RegExp(r'\bin\s+(\d+)\s*(?:hour|hr)s?\b', caseSensitive: false),
+      // "remind me 15 minutes before"
+      RegExp(r'(\d+)\s*(?:minute|min)s?\s+before\b', caseSensitive: false),
+    ];
+    
+    for (final pattern in timePatterns) {
+      final match = pattern.firstMatch(input);
+      if (match != null) {
+        if (pattern.pattern.contains('at|@')) {
+          // Specific time (3pm, 9am)
+          final hour = int.parse(match.group(1)!);
+          final minute = match.group(2) != null ? int.parse(match.group(2)!) : 0;
+          final ampm = match.group(3)!.toLowerCase();
+          
+          var adjustedHour = hour;
+          if (ampm == 'pm' && hour != 12) adjustedHour += 12;
+          if (ampm == 'am' && hour == 12) adjustedHour = 0;
+          
+          return DateTime(now.year, now.month, now.day, adjustedHour, minute);
+        } else if (pattern.pattern.contains('in.*minute')) {
+          // In X minutes
+          final minutes = int.parse(match.group(1)!);
+          return now.add(Duration(minutes: minutes));
+        } else if (pattern.pattern.contains('in.*hour')) {
+          // In X hours
+          final hours = int.parse(match.group(1)!);
+          return now.add(Duration(hours: hours));
+        } else if (pattern.pattern.contains('before')) {
+          // X minutes before due date
+          if (dueDate != null) {
+            final minutes = int.parse(match.group(1)!);
+            return dueDate.subtract(Duration(minutes: minutes));
+          }
+        }
+      }
+    }
+    
+    // Default: if due date exists, remind 30 minutes before
+    if (dueDate != null) {
+      return dueDate.subtract(const Duration(minutes: 30));
+    }
+    
+    // Default: remind in 1 hour
+    return now.add(const Duration(hours: 1));
+  }
+
+  static String _extractReminderType(String input) {
+    if (RegExp(r'\bdaily\b', caseSensitive: false).hasMatch(input)) return 'daily';
+    if (RegExp(r'\bweekly\b', caseSensitive: false).hasMatch(input)) return 'weekly';
+    if (RegExp(r'\bmonthly\b', caseSensitive: false).hasMatch(input)) return 'monthly';
+    return 'once'; // Default
+  }
+
+  static int _extractReminderMinutesBefore(String input) {
+    final patterns = [
+      RegExp(r'(\d+)\s*(?:minute|min)s?\s+before\b', caseSensitive: false),
+      RegExp(r'(\d+)\s*(?:hour|hr)s?\s+before\b', caseSensitive: false),
+    ];
+    
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(input);
+      if (match != null) {
+        final number = int.parse(match.group(1)!);
+        if (pattern.pattern.contains('hour')) {
+          return number * 60; // Convert hours to minutes
+        }
+        return number;
+      }
+    }
+    
+    return 30; // Default: 30 minutes before
+  }
+
+  static String _extractNotificationTone(String input) {
+    if (RegExp(r'\bchime\b', caseSensitive: false).hasMatch(input)) return 'chime';
+    if (RegExp(r'\bbell\b', caseSensitive: false).hasMatch(input)) return 'bell';
+    if (RegExp(r'\bwhistle\b', caseSensitive: false).hasMatch(input)) return 'whistle';
+    if (RegExp(r'\balarm\b', caseSensitive: false).hasMatch(input)) return 'alarm';
+    return 'default';
+  }
+
+  // Extract description from voice input
+  static String? _extractDescription(String input) {
+    // Look for description patterns
+    final descriptionPatterns = [
+      RegExp(r'\bdescription[:\s]+(.+?)(?:\s+(?:due|remind|priority|category|color)|$)', caseSensitive: false),
+      RegExp(r'\bdetails[:\s]+(.+?)(?:\s+(?:due|remind|priority|category|color)|$)', caseSensitive: false),
+      RegExp(r'\bnotes?[:\s]+(.+?)(?:\s+(?:due|remind|priority|category|color)|$)', caseSensitive: false),
+      RegExp(r'\babout[:\s]+(.+?)(?:\s+(?:due|remind|priority|category|color)|$)', caseSensitive: false),
+      // Pattern for "task title with description additional details"
+      RegExp(r'\bwith\s+(?:description|details|notes?)\s+(.+?)(?:\s+(?:due|remind|priority|category|color)|$)', caseSensitive: false),
+    ];
+    
+    for (final pattern in descriptionPatterns) {
+      final match = pattern.firstMatch(input);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!.trim();
+      }
+    }
+    
+    return null; // No description found
+  }
+
+  // Extract repeat days for weekly reminders
+  static List<String> _extractRepeatDays(String input) {
+    final days = <String>[];
+    
+    // Check for specific days mentioned
+    final dayPatterns = {
+      'monday': ['monday', 'mon'],
+      'tuesday': ['tuesday', 'tue'],
+      'wednesday': ['wednesday', 'wed'],
+      'thursday': ['thursday', 'thu'],
+      'friday': ['friday', 'fri'],
+      'saturday': ['saturday', 'sat'],
+      'sunday': ['sunday', 'sun'],
+    };
+    
+    for (final entry in dayPatterns.entries) {
+      for (final dayVariant in entry.value) {
+        if (RegExp(r'\b' + dayVariant + r'\b', caseSensitive: false).hasMatch(input)) {
+          days.add(entry.key.substring(0, 3)); // Add 3-letter abbreviation
+          break;
+        }
+      }
+    }
+    
+    // Check for common patterns
+    if (RegExp(r'\bweekdays?\b', caseSensitive: false).hasMatch(input)) {
+      days.addAll(['mon', 'tue', 'wed', 'thu', 'fri']);
+    }
+    if (RegExp(r'\bweekends?\b', caseSensitive: false).hasMatch(input)) {
+      days.addAll(['sat', 'sun']);
+    }
+    if (RegExp(r'\bevery\s+day\b', caseSensitive: false).hasMatch(input)) {
+      days.addAll(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+    }
+    
+    return days.toSet().toList(); // Remove duplicates
+  }
+
+  // CRITICAL: Validate and fix task to ensure all fields are properly set
+  static Task _validateAndFixTask(Task task) {
+    // Validate and fix priority
+    final validPriorities = ['high', 'medium', 'low'];
+    String fixedPriority = task.priority.toLowerCase();
+    if (!validPriorities.contains(fixedPriority)) {
+      fixedPriority = 'medium'; // Default fallback
+    }
+    
+    // Validate and fix category
+    final validCategories = ['general', 'work', 'personal', 'shopping', 'health', 'study', 'finance'];
+    String fixedCategory = task.category.toLowerCase();
+    if (!validCategories.contains(fixedCategory)) {
+      fixedCategory = 'general'; // Default fallback
+    }
+    
+    // Validate and fix recurring fields
+    String? fixedRecurringPattern = task.recurringPattern?.toLowerCase();
+    int? fixedRecurringInterval = task.recurringInterval;
+    
+    if (task.isRecurring) {
+      final validPatterns = ['daily', 'weekly', 'monthly', 'yearly'];
+      if (fixedRecurringPattern == null || !validPatterns.contains(fixedRecurringPattern)) {
+        fixedRecurringPattern = 'daily'; // Default fallback
+      }
+      if (fixedRecurringInterval == null || fixedRecurringInterval <= 0) {
+        fixedRecurringInterval = 1; // Default interval
+      }
+    } else {
+      fixedRecurringPattern = null;
+      fixedRecurringInterval = null;
+    }
+    
+    // Validate and fix reminder type
+    String fixedReminderType = task.reminderType.toLowerCase();
+    final validReminderTypes = ['once', 'daily', 'weekly', 'monthly'];
+    if (!validReminderTypes.contains(fixedReminderType)) {
+      fixedReminderType = 'once'; // Default fallback
+    }
+    
+    // Return validated task
+    return task.copyWith(
+      priority: fixedPriority,
+      category: fixedCategory,
+      recurringPattern: fixedRecurringPattern,
+      recurringInterval: fixedRecurringInterval,
+      reminderType: fixedReminderType,
+    );
   }
 
   // Validate parsed task

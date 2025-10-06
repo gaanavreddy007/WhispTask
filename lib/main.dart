@@ -1,6 +1,7 @@
-// ignore_for_file: avoid_print, unused_local_variable, constant_identifier_names, unused_element, unused_import
+// ignore_for_file: avoid_print, unused_local_variable, constant_identifier_names, unused_element, unused_import, unnecessary_import
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -36,7 +37,7 @@ import 'widgets/task_calendar.dart';
 import 'services/notification_service.dart';
 import 'services/tts_service.dart';
 import 'services/widget_service.dart';
-import 'services/revenue_cat_service.dart';
+import 'services/web_payment_service.dart';
 import 'services/ad_service.dart';
 import 'services/voice_service.dart';
 
@@ -54,24 +55,26 @@ Future<void> main() async {
   await SentryFlutter.init(
     (options) {
       options.dsn = 'https://57a64cf15be0fbc47501e30720a65089@o4509944727142400.ingest.us.sentry.io/4509944729174016';
-      options.tracesSampleRate = 1.0;
-      options.debug = true;
-      options.environment = 'development';
+      // Reduce sample rate for better performance
+      options.tracesSampleRate = kDebugMode ? 0.5 : 0.05; // Reduced for faster startup
+      options.debug = false; // Disable debug for faster startup
+      options.environment = kDebugMode ? 'development' : 'production';
       options.sendDefaultPii = false;
-      options.enablePrintBreadcrumbs = true;
-      // Force send in debug mode
+      options.enablePrintBreadcrumbs = false; // Disable for faster startup
       options.dist = '1';
       options.release = 'whisptask@1.0.0+1';
-      // Enhanced logging
+      
+      // Disable detailed logging for faster startup
+      // Only enable in debug mode if needed for debugging
+      
+      // Filter out non-critical events in production
       options.beforeSend = (event, {hint}) {
-        print('=== SENTRY DEBUG ===');
-        print('Event ID: ${event.eventId}');
-        print('Event Type: ${event.type}');
-        print('Message: ${event.message?.formatted}');
-        print('DSN: ${options.dsn}');
-        print('Environment: ${event.environment}');
-        print('Release: ${event.release}');
-        print('==================');
+        // Skip debug/info level events in production for performance
+        if (!kDebugMode && event.level != null) {
+          if (event.level == SentryLevel.debug || event.level == SentryLevel.info) {
+            return null; // Don't send debug/info events in production
+          }
+        }
         return event;
       };
     },
@@ -81,6 +84,13 @@ Future<void> main() async {
   // Global error handling for crashes - integrate with Sentry
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
+    
+    // Special handling for LateInitializationError
+    final errorMessage = details.exception.toString();
+    if (errorMessage.contains('LateInitializationError') || errorMessage.contains('has not been initialized')) {
+      print('🚨 CRITICAL: LateInitializationError detected - ${details.exception}');
+      print('Stack trace: ${details.stack}');
+    }
     
     // Send to Sentry
     Sentry.captureException(
@@ -95,6 +105,7 @@ Future<void> main() async {
         parameters: {
           'error': details.exception.toString(),
           'stack': details.stack.toString().substring(0, 500), // Limit length
+          'is_late_error': errorMessage.contains('LateInitializationError') ? 'true' : 'false',
         },
       );
     } catch (e) {
@@ -102,34 +113,56 @@ Future<void> main() async {
     }
   };
 
+  // Handle platform errors (including LateInitializationError)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    final errorMessage = error.toString();
+    if (errorMessage.contains('LateInitializationError') || errorMessage.contains('has not been initialized')) {
+      print('🚨 CRITICAL: Platform LateInitializationError - $error');
+      print('Stack trace: $stack');
+    }
+    
+    Sentry.captureException(error, stackTrace: stack);
+    return true;
+  };
+
   try {
     // Initialize Firebase first (required for other services)
     await Firebase.initializeApp();
     print('Firebase initialized successfully');
 
-    // Initialize critical services in parallel
-    await Future.wait([
-      // Firebase App Check for security
-      FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.debug,
-      ).then((_) => print('Firebase App Check initialized')),
-      
-      // Initialize timezone data for notifications
-      Future.sync(() {
-        tz.initializeTimeZones();
-        print('Timezone data initialized');
-      }),
-      
-      // Initialize notifications (critical for user experience)
-      NotificationService().initialize()
-        .then((_) => print('Notification service initialized')),
-    ]);
+    // Initialize only timezone data synchronously (ultra-lightweight)
+    tz.initializeTimeZones();
+    print('Timezone data initialized');
+    
+    // Move ALL other services to background initialization
+    Future.microtask(() async {
+      try {
+        await NotificationService().initialize();
+        print('Notification service initialized');
+      } catch (e) {
+        print('Notification service failed: $e');
+      }
+    });
+    
+    // Initialize Firebase App Check in background (not critical for startup)
+    Future.microtask(() async {
+      try {
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: AndroidProvider.debug,
+        );
+        print('Firebase App Check initialized');
+      } catch (e) {
+        print('Firebase App Check initialization failed: $e');
+      }
+    });
 
-    // Initialize Firebase Analytics (non-blocking)
-    FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-    print('Firebase Analytics initialized');
+    // Initialize Firebase Analytics in background (non-blocking)
+    Future.microtask(() {
+      FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+      print('Firebase Analytics initialized');
+    });
 
-    // Initialize non-critical services in background after app starts
+    // Initialize non-critical services in background after app starts (faster delay)
     _initializeNonCriticalServices();
     
   } catch (e) {
@@ -150,28 +183,16 @@ Future<void> main() async {
 
 // Initialize non-critical services in background after app starts
 void _initializeNonCriticalServices() {
-  Future.delayed(const Duration(milliseconds: 500), () async {
+  // Remove delay completely for instant background loading
+  Future.microtask(() async {
     try {
-      // Initialize services in parallel that aren't needed immediately
-      await Future.wait([
-        // TTS service (used for voice feedback)
-        TtsService().initialize()
-          .then((_) => print('TTS service initialized')),
-        
-        // Widget service (for home screen widgets)
-        WidgetService.initializeWidget()
-          .then((_) => print('Widget service initialized')),
-        
-        // RevenueCat service (for premium features)
-        RevenueCatService.initialize()
-          .then((_) => print('RevenueCat service initialized')),
-        
-        // Ad service (for displaying ads)
-        AdService.initialize()
-          .then((_) => print('Ad service initialized')),
-      ]);
+      // Initialize services in parallel without waiting - fire and forget
+      TtsService().initialize().then((_) => print('TTS service initialized')).catchError((e) => print('TTS init error: $e'));
+      WidgetService.initializeWidget().then((_) => print('Widget service initialized')).catchError((e) => print('Widget init error: $e'));
+      WebPaymentService.initialize().then((_) => print('Web Payment service initialized')).catchError((e) => print('Payment init error: $e'));
+      AdService.initialize().then((_) => print('Ad service initialized')).catchError((e) => print('Ad init error: $e'));
       
-      print('All non-critical services initialized');
+      print('All non-critical services started in background');
     } catch (e) {
       print('Non-critical service initialization error: $e');
       // Log but don't block app startup
@@ -192,26 +213,52 @@ class WhispTaskApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        // AuthProvider - Critical, load immediately with optimized initialization
         ChangeNotifierProvider(
           create: (_) {
-            final languageProvider = LanguageProvider();
-            languageProvider.initialize();
-            return languageProvider;
+            final provider = AuthProvider();
+            // Start auth initialization immediately in background
+            Future.microtask(() => provider.initializeAuth());
+            return provider;
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) {
-            final themeProvider = ThemeProvider();
-            themeProvider.initialize();
-            return themeProvider;
-          },
-        ),
-        ChangeNotifierProvider(create: (_) => VoiceProvider()),
         
-        // Task Provider with Auth dependency - Lazy loaded
+        // LanguageProvider - Critical for localization, ultra-fast initialization
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = LanguageProvider();
+            // Initialize immediately in microtask for instant startup
+            Future.microtask(() => provider.initialize());
+            return provider;
+          },
+          lazy: false,
+        ),
+        
+        // ThemeProvider - Critical for UI, ultra-fast initialization
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = ThemeProvider();
+            // Initialize immediately in microtask for instant startup
+            Future.microtask(() => provider.initialize());
+            return provider;
+          },
+          lazy: false,
+        ),
+        
+        // VoiceProvider - Not immediately needed, lazy load
+        ChangeNotifierProvider(
+          create: (_) => VoiceProvider(),
+          lazy: true,
+        ),
+        
+        // Task Provider with Auth dependency - Ultra-fast lazy loaded
         ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
-          create: (_) => TaskProvider(),
+          create: (_) {
+            final provider = TaskProvider();
+            // Pre-initialize voice commands in background
+            Future.microtask(() => provider.initializeVoiceCommands());
+            return provider;
+          },
           update: (_, auth, previous) {
             if (previous != null) {
               previous.updateAuth(auth);
@@ -219,6 +266,8 @@ class WhispTaskApp extends StatelessWidget {
             } else {
               final taskProvider = TaskProvider();
               taskProvider.updateAuth(auth);
+              // Pre-initialize voice commands in background
+              Future.microtask(() => taskProvider.initializeVoiceCommands());
               return taskProvider;
             }
           },
@@ -229,7 +278,9 @@ class WhispTaskApp extends StatelessWidget {
         builder: (context, authProvider, themeProvider, languageProvider, _) {
           return MaterialApp(
             title: 'WhispTask',
+            // Optimize for faster startup
             debugShowCheckedModeBanner: false,
+            showPerformanceOverlay: false,
             theme: ThemeProvider.lightTheme,
             darkTheme: ThemeProvider.darkTheme,
             themeMode: themeProvider.themeMode,

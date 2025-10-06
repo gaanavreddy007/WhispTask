@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/validators.dart';
 
 class PasswordStrengthIndicator extends StatefulWidget {
@@ -95,7 +96,7 @@ class _PasswordStrengthIndicatorState extends State<PasswordStrengthIndicator>
       children: [
         if (!widget.compact)
           Text(
-            'Password Strength',
+            AppLocalizations.of(context).passwordStrength,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -165,7 +166,7 @@ class _PasswordStrengthIndicatorState extends State<PasswordStrengthIndicator>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password Requirements',
+          AppLocalizations.of(context).passwordRequirements,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
@@ -252,23 +253,23 @@ class _PasswordStrengthIndicatorState extends State<PasswordStrengthIndicator>
     
     return [
       PasswordRequirement(
-        text: 'At least 8 characters',
+        text: AppLocalizations.of(context).atLeast8Characters,
         isMet: password.length >= 8,
       ),
       PasswordRequirement(
-        text: 'Contains uppercase letter',
+        text: AppLocalizations.of(context).containsUppercase,
         isMet: password.contains(RegExp(r'[A-Z]')),
       ),
       PasswordRequirement(
-        text: 'Contains lowercase letter',
+        text: AppLocalizations.of(context).containsLowercase,
         isMet: password.contains(RegExp(r'[a-z]')),
       ),
       PasswordRequirement(
-        text: 'Contains number',
+        text: AppLocalizations.of(context).containsNumber,
         isMet: password.contains(RegExp(r'[0-9]')),
       ),
       PasswordRequirement(
-        text: 'Contains special character',
+        text: AppLocalizations.of(context).containsSpecialChar,
         isMet: password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')),
       ),
     ];
@@ -410,7 +411,7 @@ class _CircularPasswordStrengthIndicatorState
                       ),
                     ),
                     Text(
-                      'Strong',
+                      AppLocalizations.of(context).strong,
                       style: TextStyle(
                         fontSize: widget.size * 0.1,
                         color: Colors.grey[600],

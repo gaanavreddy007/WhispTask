@@ -684,7 +684,16 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get continueAsGuest => 'Continue as Guest';
-  
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String get linkWithGoogle => 'Link with Google';
+
   @override
   String get byContingTermsPrivacy => 'By continuing, you agree to our Terms of Service and Privacy Policy';
   
@@ -1186,5 +1195,569 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get cancelReminderAction => 'Cancel Reminder';
+  
+  @override
+  String get accountDeletedSuccessfully => 'Account deleted successfully';
+  
+  @override
+  String get accountSecurity => 'Account Security';
+  
+  @override
+  String get accountType => 'Account Type';
+  
+  @override
+  String get activeReminders => 'Active Reminders';
+  
+  @override
+  String get afterDate => 'After Date';
+  
+  @override
+  String get ago => 'ago';
+  
+  @override
+  String get analyticsDataDescription => 'Help improve the app by sharing anonymous usage data';
+  
+  @override
+  String get analyticsSettingsUpdated => 'Analytics settings updated successfully';
+  
+  @override
+  String get areYouSureDeleteTask => 'Are you sure you want to delete this task?';
+  
+  @override
+  String get attachFilesAndPhotos => 'Attach files and photos';
+  
+  @override
+  String get availableHours => 'Available 24/7';
+  
+  @override
+  String get beforeDate => 'Before Date';
+  
+  @override
+  String get biometricAuthenticationDescription => 'Use your fingerprint or face to unlock the app';
+  
+  @override
+  String get biometricUpdatedSuccessfully => 'Biometric settings updated successfully';
+  
+  @override
+  String get cameraPermissionDescription => 'Allow camera access to capture photos for tasks';
+  
+  @override
+  String get cameraPermissionRequired => 'Camera permission required';
+  
+  @override
+  String get cancelReminder => 'Cancel Reminder';
+  
+  @override
+  String get cancelReminderButton => 'Cancel Reminder';
+  
+  @override
+  String get categories => 'Categories';
+  
+  @override
+  String get choose => 'Choose';
+  
+  @override
+  String get clearAllFilters => 'Clear All Filters';
+  
+  @override
+  String get colors => 'Colors';
+  
+  @override
+  String get confirmAccountDeletion => 'Confirm Account Deletion';
+  
+  @override
+  String get confirmDeleteTask => 'Confirm Delete Task';
+  
+  @override
+  String get contactSupport => 'Contact Support';
+  
+  @override
+  String get copy => 'Copy';
+  
+  @override
+  String get crashReportSettingsUpdated => 'Crash report settings updated';
+  
+  @override
+  String get currentUserNotAnonymous => 'Current user is not anonymous';
+  
+  @override
+  String get customDateRange => 'Custom Date Range';
+  
+  @override
+  String get dailyTaskLimitReached => 'Daily task limit reached';
+  
+  @override
+  String get dangerZone => 'Danger Zone';
+  
+  @override
+  String get dates => 'Dates';
+  
+  @override
+  String get deleteAccountConfirmation => 'Are you sure you want to delete your account?';
+  
+  @override
+  String get deleteAccountDescription => 'This action cannot be undone. All your data will be permanently deleted.';
+  
+  @override
+  String get deleteAllTasksConfirmation => 'Are you sure you want to delete all tasks?';
+  
+  @override
+  String get deleteAllTasksDescription => 'This will permanently delete all your tasks and cannot be undone.';
+  
+  @override
+  String get downloadAccountData => 'Download Account Data';
+  
+  @override
+  String get downloadAccountDataDescription => 'Export all your account data and tasks';
+  
+  @override
+  String get dueDateAndTime => 'Due Date & Time';
+  
+  @override
+  String get dueDateCannotBeInPast => 'Due date cannot be in the past';
+  
+  @override
+  String get dueDateRange => 'Due Date Range';
+  
+  @override
+  String get emailSupport => 'Email Support';
+  
+  @override
+  String get emailVerified => 'Email Verified';
+  
+  @override
+  String get endDate => 'End Date';
+  
+  @override
+  String get enjoyingPremiumFeatures => 'Enjoying premium features?';
+  
+  @override
+  String get enterPasswordToConfirm => 'Enter your password to confirm';
+  
+  @override
+  String get exportCompleteDescription => 'Your data has been exported successfully';
+  
+  @override
+  String get exportFailed => 'Export failed';
+  
+  @override
+  String get failedToAddTask => 'Failed to add task';
+  
+  @override
+  String get failedToCancelReminder => 'Failed to cancel reminder';
+  
+  @override
+  String get failedToClearCache => 'Failed to clear cache';
+  
+  @override
+  String get failedToCreateBackup => 'Failed to create backup';
+  
+  @override
+  String get failedToDeleteAllTasks => 'Failed to delete all tasks';
+  
+  @override
+  String get failedToDeleteTask => 'Failed to delete task';
+  
+  @override
+  String get failedToDeleteTasks => 'Failed to delete tasks';
+  
+  @override
+  String get failedToDuplicateTask => 'Failed to duplicate task';
+  
+  @override
+  String get failedToExportUserData => 'Failed to export user data';
+  
+  @override
+  String get failedToGetBackups => 'Failed to get backups';
+  
+  @override
+  String get failedToGetSyncStatistics => 'Failed to get sync statistics';
+  
+  @override
+  String get failedToImportUserData => 'Failed to import user data';
+  
+  @override
+  String get failedToInitializeAuth => 'Failed to initialize authentication';
+  
+  @override
+  String get failedToLinkAnonymousAccount => 'Failed to link anonymous account';
+  
+  @override
+  String get failedToLoadTasks => 'Failed to load tasks';
+  
+  @override
+  String get failedToRegister => 'Failed to register';
+  
+  @override
+  String get failedToResetPassword => 'Failed to reset password';
+  
+  @override
+  String get failedToResetPreferences => 'Failed to reset preferences';
+  
+  @override
+  String get failedToResolveSyncConflicts => 'Failed to resolve sync conflicts';
+  
+  @override
+  String get failedToRestoreFromBackup => 'Failed to restore from backup';
+  
+  @override
+  String get failedToSetReminder => 'Failed to set reminder';
+  
+  @override
+  String get failedToSignIn => 'Failed to sign in';
+  
+  @override
+  String get failedToSnoozeReminder => 'Failed to snooze reminder';
+  
+  @override
+  String get failedToSyncAcrossDevices => 'Failed to sync across devices';
+  
+  @override
+  String get failedToSyncPreferences => 'Failed to sync preferences';
+  
+  @override
+  String get failedToSyncUserData => 'Failed to sync user data';
+  
+  @override
+  String get failedToToggleTaskCompletion => 'Failed to toggle task completion';
+  
+  @override
+  String get failedToUpdateDisplaySettings => 'Failed to update display settings';
+  
+  @override
+  String get failedToUpdateNotificationSettings => 'Failed to update notification settings';
+  
+  @override
+  String get failedToUpdatePreferences => 'Failed to update preferences';
+  
+  @override
+  String get failedToUpdatePrivacySettings => 'Failed to update privacy settings';
+  
+  @override
+  String get failedToUpdateProfile => 'Failed to update profile';
+  
+  @override
+  String get failedToUpdateTask => 'Failed to update task';
+  
+  @override
+  String get failedToUpdateTasks => 'Failed to update tasks';
+  
+  @override
+  String get failedToUpdateVoiceSettings => 'Failed to update voice settings';
+  
+  @override
+  String get fileAttachments => 'File Attachments';
+  
+  @override
+  String get filterTasks => 'Filter Tasks';
+  
+  @override
+  String get fromDateToDate => 'From date to date';
+  
+  @override
+  String get getHelpDescription => 'Get help and support for using the app';
+  
+  @override
+  String get inTime => 'in time';
+  
+  @override
+  String get justNow => 'Just now';
+  
+  @override
+  String get lastSignIn => 'Last Sign In';
+  
+  @override
+  String get listening => 'Listening...';
+  
+  @override
+  String get liveChat => 'Live Chat';
+  
+  @override
+  String get loginAlerts => 'Login Alerts';
+  
+  @override
+  String get loginAlertsComingSoon => 'Login alerts coming soon';
+  
+  @override
+  String get loginAlertsDescription => 'Get notified when someone signs into your account';
+  
+  @override
+  String get markDone => 'Mark Done';
+  
+  @override
+  String get markPending => 'Mark Pending';
+  
+  @override
+  String get microphonePermissionDenied => 'Microphone permission denied';
+  
+  @override
+  String get microphonePermissionDeniedDescription => 'Please enable microphone permission in settings to use voice features';
+  
+  @override
+  String get microphonePermissionDescription => 'Allow microphone access to use voice commands';
+  
+  @override
+  String get microphonePermissionRequired => 'Microphone permission required';
+  
+  @override
+  String get minutes => 'minutes';
+  
+  @override
+  String get nameCannotBeEmpty => 'Name cannot be empty';
+  
+  @override
+  String get needHelpContactUs => 'Need help? Contact us';
+  
+  @override
+  String get nextWeek => 'Next Week';
+  
+  @override
+  String get no => 'No';
+  
+  @override
+  String get notSet => 'Not Set';
+  
+  @override
+  String get notificationPermissionDescription => 'Allow notifications to receive task reminders';
+  
+  @override
+  String get notificationPermissionRequired => 'Notification permission required';
+  
+  @override
+  String get onDate => 'On Date';
+  
+  @override
+  String get overdueTasksOnly => 'Overdue Tasks Only';
+  
+  @override
+  String get passwordMustBe6Characters => 'Password must be at least 6 characters';
+  
+  @override
+  String get passwordRequirements => 'Password Requirements';
+  
+  @override
+  String get passwordStrength => 'Password Strength';
+  
+  @override
+  String get pleaseEnterValidEmail => 'Please enter a valid email';
+  
+  @override
+  String get pleaseEnterValidInterval => 'Please enter a valid interval';
+  
+  @override
+  String get pleaseEnterYourName => 'Please enter your name';
+  
+  @override
+  String get pleaseEnterYourPassword => 'Please enter your password';
+  
+  @override
+  String get pleaseSelectRecurringPattern => 'Please select a recurring pattern';
+  
+  @override
+  String get processing => 'Processing...';
+  
+  @override
+  String get properties => 'Properties';
+  
+  @override
+  String get recurringTaskMessage => 'This is a recurring task';
+  
+  @override
+  String get recurringTasksOnly => 'Recurring Tasks Only';
+  
+  @override
+  String get reminderCannotBeInPast => 'Reminder cannot be in the past';
+  
+  @override
+  String get reminderIn => 'Reminder in';
+  
+  @override
+  String get reminderNeedAttention => 'Reminder needs attention';
+  
+  @override
+  String get reminderNeedsAttention => 'Reminder needs attention';
+  
+  @override
+  String get reminderSet => 'Reminder set';
+  
+  @override
+  String get reminderSetFor => 'Reminder set for';
+  
+  @override
+  String get reminderSnoozedFor15Minutes => 'Reminder snoozed for 15 minutes';
+  
+  @override
+  String get reminderSnoozedFor5Minutes => 'Reminder snoozed for 5 minutes';
+  
+  @override
+  String get reminderSnoozedMinutes => 'Reminder snoozed for %d minutes';
+  
+  @override
+  String get reminderTimeInPast => 'Reminder time cannot be in the past';
+  
+  @override
+  String get reminders => 'Reminders';
+  
+  @override
+  String get repeatEvery => 'Repeat Every';
+  
+  @override
+  String get repeatEveryHelper => 'Set how often this task repeats';
+  
+  @override
+  String get repeatEveryHelperText => 'Choose the interval for task repetition';
+  
+  @override
+  String get repeatEveryNumber => 'Repeat every %d';
+  
+  @override
+  String get requestingCameraPermission => 'Requesting camera permission...';
+  
+  @override
+  String get requestingMicrophonePermission => 'Requesting microphone permission...';
+  
+  @override
+  String get requestingNotificationPermission => 'Requesting notification permission...';
+  
+  @override
+  String get requestingPermissions => 'Requesting permissions...';
+  
+  @override
+  String get requestingStoragePermission => 'Requesting storage permission...';
+  
+  @override
+  String get restoreFailed => 'Restore failed';
+  
+  @override
+  String get saving => 'Saving...';
+  
+  @override
+  String get securityOptions => 'Security Options';
+  
+  @override
+  String get selectCategories => 'Select Categories';
+  
+  @override
+  String get selectDate => 'Select Date';
+  
+  @override
+  String get selectDueDateFirst => 'Please select due date first';
+  
+  @override
+  String get selectTime => 'Select Time';
+  
+  @override
+  String get selectedColon => 'Selected:';
+  
+  @override
+  String get sentryTestCompleted => 'Sentry test completed';
+  
+  @override
+  String get sentryTestFailed => 'Sentry test failed';
+  
+  @override
+  String get showOnlyTasksPastDue => 'Show only tasks past due';
+  
+  @override
+  String get showOnlyTasksReminders => 'Show only tasks with reminders';
+  
+  @override
+  String get showOnlyTasksRepeat => 'Show only repeating tasks';
+  
+  @override
+  String get snooze15m => 'Snooze 15m';
+  
+  @override
+  String get snooze5Min => 'Snooze 5min';
+  
+  @override
+  String get soon => 'Soon';
+  
+  @override
+  String get specialFilters => 'Special Filters';
+  
+  @override
+  String get startDate => 'Start Date';
+  
+  @override
+  String get status => 'Status';
+  
+  @override
+  String get storagePermissionDescription => 'Allow storage access to save files and attachments';
+  
+  @override
+  String get storagePermissionRequired => 'Storage permission required';
+  
+  @override
+  String get strong => 'Strong';
+  
+  @override
+  String get supportTheAppWithPremium => 'Support the app with premium';
+  
+  @override
+  String get taskAndReminderDeletedSuccessfully => 'Task and reminder deleted successfully';
+  
+  @override
+  String get taskCompletedNextOccurrence => 'Task completed, next occurrence scheduled';
+  
+  @override
+  String get taskDeletedSuccess => 'Task deleted successfully';
+  
+  @override
+  String get taskDeletedSuccessfully => 'Task deleted successfully';
+  
+  @override
+  String get taskDetails => 'Task Details';
+  
+  @override
+  String get taskDuplicatedSuccess => 'Task duplicated successfully';
+  
+  @override
+  String get taskHasActiveReminder => 'This task has an active reminder';
+  
+  @override
+  String get taskHasActiveReminderDeleteWarning => 'This task has an active reminder that will be cancelled';
+  
+  @override
+  String get taskMarkedIncomplete => 'Task marked as incomplete';
+  
+  @override
+  String get tasksWithRemindersOnly => 'Tasks with reminders only';
+  
+  @override
+  String get testCrash => 'Test Crash';
+  
+  @override
+  String get testCrashDescription => 'Test crash reporting functionality';
+  
+  @override
+  String get thisMonth => 'This Month';
+  
+  @override
+  String get unlockPremiumDescription => 'Unlock premium features for the best experience';
+  
+  @override
+  String get updated => 'Updated';
+  
+  @override
+  String get user => 'User';
+  
+  @override
+  String get userNotAuthenticated => 'User not authenticated';
+  
+  @override
+  String get voiceServiceUnavailable => 'Voice service unavailable';
+  
+  @override
+  String get willCancelActiveReminder => 'This will cancel the active reminder';
+  
+  @override
+  String get willStopFutureRecurring => 'This will stop future recurring instances';
+  
+  @override
+  String get yes => 'Yes';
+  
+  @override
+  String get yesterday => 'Yesterday';
   
 }

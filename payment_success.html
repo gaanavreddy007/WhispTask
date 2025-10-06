@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - WhispTask</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Animated background particles */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(-100px) rotate(180deg); opacity: 1; }
+        }
+        
+        .success-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 60px 48px;
+            box-shadow: 
+                0 40px 80px rgba(0,0,0,0.15),
+                0 0 0 1px rgba(255,255,255,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            max-width: 580px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            animation: successEntry 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes successEntry {
+            0% { 
+                opacity: 0; 
+                transform: scale(0.8) translateY(50px); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1) translateY(0); 
+            }
+        }
+        
+        .success-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #10b981, #059669, #047857);
+            border-radius: 32px 32px 0 0;
+            animation: shimmer 2s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .celebration-icon {
+            font-size: 5em;
+            margin-bottom: 24px;
+            position: relative;
+            display: inline-block;
+            animation: celebrationBounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes celebrationBounce {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+        
+        .checkmark {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 32px;
+            position: relative;
+            animation: checkmarkPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s both;
+        }
+        
+        @keyframes checkmarkPop {
+            0% { transform: scale(0) rotate(180deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        
+        .checkmark i {
+            color: white;
+            font-size: 2.5em;
+            animation: checkmarkDraw 0.5s ease-out 1s both;
+        }
+        
+        @keyframes checkmarkDraw {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .success-title {
+            font-size: 2.8em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            animation: titleSlide 0.8s ease-out 0.3s both;
+        }
+        
+        @keyframes titleSlide {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .success-subtitle {
+            font-size: 1.3em;
+            color: #64748b;
+            font-weight: 500;
+            margin-bottom: 40px;
+            animation: subtitleFade 0.8s ease-out 0.5s both;
+        }
+        
+        @keyframes subtitleFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .premium-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 32px rgba(251, 191, 36, 0.3);
+            animation: badgeGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes badgeGlow {
+            0% { box-shadow: 0 8px 32px rgba(251, 191, 36, 0.3); }
+            100% { box-shadow: 0 12px 48px rgba(251, 191, 36, 0.5); }
+        }
+        
+        .plan-details {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-radius: 24px;
+            padding: 32px;
+            margin: 32px 0;
+            border: 2px solid rgba(16, 185, 129, 0.2);
+            position: relative;
+            overflow: hidden;
+            animation: detailsSlide 0.8s ease-out 0.7s both;
+        }
+        
+        @keyframes detailsSlide {
+            0% { opacity: 0; transform: translateX(-30px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        
+        .plan-details::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+        
+        .plan-info {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #047857;
+            margin-bottom: 12px;
+        }
+        
+        .plan-expiry {
+            color: #059669;
+            font-weight: 500;
+        }
+        
+        .features-unlocked {
+            margin: 32px 0;
+            animation: featuresReveal 0.8s ease-out 0.9s both;
+        }
+        
+        @keyframes featuresReveal {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .features-title {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 20px;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        
+        .feature-unlock {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            transition: all 0.3s ease;
+            animation: featureUnlock 0.6s ease-out calc(1.1s + var(--delay)) both;
+        }
+        
+        @keyframes featureUnlock {
+            0% { opacity: 0; transform: scale(0.8) rotate(-5deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        
+        .feature-unlock:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+        }
+        
+        .feature-unlock i {
+            color: #10b981;
+            font-size: 1.3em;
+        }
+        
+        .feature-unlock span {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .action-buttons {
+            margin-top: 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            animation: buttonsSlide 0.8s ease-out 1.3s both;
+        }
+        
+        @keyframes buttonsSlide {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .btn {
+            padding: 20px 40px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.2em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #64748b;
+            border: 2px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .countdown {
+            margin-top: 32px;
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            animation: countdownPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes countdownPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .countdown-text {
+            color: #059669;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .countdown-timer {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: #047857;
+        }
+        
+        @media (max-width: 768px) {
+            .success-container {
+                padding: 40px 32px;
+                margin: 10px;
+            }
+            
+            .success-title {
+                font-size: 2.2em;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles"></div>
+    
+    <div class="success-container">
+        <div class="checkmark">
+            <i class="fas fa-check"></i>
+        </div>
+        
+        <div class="success-title">Payment Successful!</div>
+        <div class="success-subtitle">Welcome to WhispTask Premium</div>
+        
+        <div class="premium-badge">
+            <i class="fas fa-crown"></i>
+            <span>Premium Member</span>
+        </div>
+        
+        <div class="plan-details">
+            <div class="plan-info" id="planInfo">Monthly Premium Plan Activated</div>
+            <div class="plan-expiry" id="planExpiry">Valid until: Next month</div>
+        </div>
+        
+        <div class="features-unlocked">
+            <div class="features-title">🎉 Features Unlocked</div>
+            <div class="features-grid">
+                <div class="feature-unlock" style="--delay: 0s;">
+                    <i class="fas fa-microphone"></i>
+                    <span>Unlimited Voice Commands</span>
+                </div>
+                <div class="feature-unlock" style="--delay: 0.1s;">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Advanced Analytics</span>
+                </div>
+                <div class="feature-unlock" style="--delay: 0.2s;">
+                    <i class="fas fa-headset"></i>
+                    <span>Priority Support</span>
+                </div>
+                <div class="feature-unlock" style="--delay: 0.3s;">
+                    <i class="fas fa-cloud-sync"></i>
+                    <span>Cloud Sync</span>
+                </div>
+                <div class="feature-unlock" style="--delay: 0.4s;">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Voice Models</span>
+                </div>
+                <div class="feature-unlock" style="--delay: 0.5s;">
+                    <i class="fas fa-ad"></i>
+                    <span>Ad-Free Experience</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="returnToApp()">
+                <i class="fas fa-rocket"></i>
+                <span>Start Using Premium</span>
+            </button>
+            <button class="btn btn-secondary" onclick="shareSuccess()">
+                <i class="fas fa-share-alt"></i>
+                <span>Share the Joy</span>
+            </button>
+        </div>
+        
+        <div class="countdown">
+            <div class="countdown-text">Returning to app in:</div>
+            <div class="countdown-timer" id="countdown">5</div>
+        </div>
+    </div>
+
+    <script>
+        // Get plan type from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const planType = urlParams.get('plan') || 'monthly';
+        
+        // Update UI based on plan type
+        function updatePlanUI() {
+            const planInfo = document.getElementById('planInfo');
+            const planExpiry = document.getElementById('planExpiry');
+            
+            if (planType === 'yearly') {
+                planInfo.textContent = 'Yearly Premium Plan Activated';
+                planExpiry.textContent = 'Valid until: ' + getExpiryDate(365);
+            } else {
+                planInfo.textContent = 'Monthly Premium Plan Activated';
+                planExpiry.textContent = 'Valid until: ' + getExpiryDate(30);
+            }
+        }
+        
+        function getExpiryDate(days) {
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+        
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.querySelector('.particles');
+            const particleCount = 50;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Random size and position
+                const size = Math.random() * 8 + 4;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Countdown timer
+        function startCountdown() {
+            let timeLeft = 5;
+            const countdownElement = document.getElementById('countdown');
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                countdownElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    returnToApp();
+                }
+            }, 1000);
+            
+            return timer;
+        }
+        
+        let countdownTimer;
+        
+        function returnToApp() {
+            // Add exit animation
+            const container = document.querySelector('.success-container');
+            container.style.transition = 'all 0.5s ease';
+            container.style.transform = 'scale(0.9) translateY(-20px)';
+            container.style.opacity = '0';
+            
+            setTimeout(() => {
+                // This will be detected by the WebView and close it with success=true
+                window.location.href = 'about:blank';
+            }, 500);
+        }
+        
+        function shareSuccess() {
+            // Create share animation
+            const btn = event.target.closest('.btn');
+            btn.style.transform = 'scale(0.95)';
+            
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+                
+                // Try to use Web Share API if available
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'WhispTask Premium',
+                        text: 'I just upgraded to WhispTask Premium! 🎉 Amazing voice-powered task management.',
+                        url: 'https://whisptask.com'
+                    });
+                } else {
+                    // Fallback: copy to clipboard
+                    const shareText = 'I just upgraded to WhispTask Premium! 🎉 Amazing voice-powered task management. Check it out!';
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        // Show success feedback
+                        btn.innerHTML = '<i class="fas fa-check"></i><span>Copied to Clipboard!</span>';
+                        setTimeout(() => {
+                            btn.innerHTML = '<i class="fas fa-share-alt"></i><span>Share the Joy</span>';
+                        }, 2000);
+                    });
+                }
+            }, 150);
+        }
+        
+        // Add confetti effect
+        function createConfetti() {
+            const colors = ['#10b981', '#059669', '#fbbf24', '#f59e0b', '#667eea', '#764ba2'];
+            const confettiCount = 100;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'absolute';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.top = '-10px';
+                confetti.style.borderRadius = '50%';
+                confetti.style.pointerEvents = 'none';
+                confetti.style.zIndex = '1000';
+                
+                document.body.appendChild(confetti);
+                
+                // Animate confetti falling
+                const fallDuration = Math.random() * 3000 + 2000;
+                const rotation = Math.random() * 360;
+                
+                confetti.animate([
+                    { 
+                        transform: `translateY(0) rotate(0deg)`,
+                        opacity: 1
+                    },
+                    { 
+                        transform: `translateY(${window.innerHeight + 100}px) rotate(${rotation}deg)`,
+                        opacity: 0
+                    }
+                ], {
+                    duration: fallDuration,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                }).onfinish = () => {
+                    confetti.remove();
+                };
+            }
+        }
+        
+        // Add celebration sound effect (silent for demo)
+        function playCelebrationSound() {
+            // In a real app, you would play a success sound here
+            console.log('🎉 Celebration sound played!');
+        }
+        
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePlanUI();
+            createParticles();
+            createConfetti();
+            playCelebrationSound();
+            
+            // Start countdown after a delay to let animations play
+            setTimeout(() => {
+                countdownTimer = startCountdown();
+            }, 2000);
+            
+            // Pause countdown on hover
+            const container = document.querySelector('.success-container');
+            container.addEventListener('mouseenter', () => {
+                if (countdownTimer) {
+                    clearInterval(countdownTimer);
+                    document.querySelector('.countdown-text').textContent = 'Countdown paused';
+                }
+            });
+            
+            container.addEventListener('mouseleave', () => {
+                document.querySelector('.countdown-text').textContent = 'Returning to app in:';
+                countdownTimer = startCountdown();
+            });
+        });
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                returnToApp();
+            } else if (e.key === 's' || e.key === 'S') {
+                shareSuccess();
+            }
+        });
+        
+        // Add touch gestures for mobile
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const swipeDistance = touchStartY - touchEndY;
+            
+            // Swipe up to return to app
+            if (swipeDistance > 50) {
+                returnToApp();
+            }
+        });
+    </script>
+</body>
+</html>

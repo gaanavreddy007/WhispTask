@@ -1,8 +1,8 @@
 // ignore_for_file: prefer_const_constructors
 
 import 'package:flutter/material.dart';
-import '../screens/premium_purchase_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../screens/premium_purchase_screen.dart';
 
 class PremiumFeaturesCard extends StatelessWidget {
   const PremiumFeaturesCard({super.key});
@@ -21,7 +21,7 @@ class PremiumFeaturesCard extends StatelessWidget {
                 Icon(Icons.star, color: Colors.amber, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Premium Features',
+                  AppLocalizations.of(context).premiumFeatures,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -32,7 +32,7 @@ class PremiumFeaturesCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '• Custom voice packs\n• Offline mode\n• Smart tags\n• Custom themes\n• Advanced analytics',
+              '• ${AppLocalizations.of(context).customVoicePacks}\n• ${AppLocalizations.of(context).offlineMode}\n• ${AppLocalizations.of(context).smartTags}\n• ${AppLocalizations.of(context).customThemes}\n• ${AppLocalizations.of(context).advancedAnalytics}',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],

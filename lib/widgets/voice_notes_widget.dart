@@ -381,7 +381,7 @@ class _QuickVoiceRecordButtonState extends State<QuickVoiceRecordButton> {
         ),
         child: Icon(
           _isRecording ? Icons.stop : Icons.mic,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onPrimary,
           size: 28,
         ),
       ),

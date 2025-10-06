@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - WhispTask Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 30%, #34d399 70%, #10b981 100%);
+            background-size: 400% 400%;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            animation: successGradient 8s ease-in-out infinite;
+            overflow: hidden;
+        }
+        
+        @keyframes successGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .success-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(25px);
+            border-radius: 32px;
+            padding: 60px 50px;
+            box-shadow: 
+                0 40px 80px rgba(16, 185, 129, 0.2),
+                0 0 0 1px rgba(255,255,255,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            max-width: 580px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            animation: slideUpSuccess 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUpSuccess {
+            from { 
+                opacity: 0; 
+                transform: translateY(40px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        
+        .success-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #10b981, #34d399, #059669);
+            animation: successShimmer 3s linear infinite;
+        }
+        
+        @keyframes successShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .success-icon-container {
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+            animation: successPulse 2s ease-in-out infinite;
+            position: relative;
+        }
+        
+        @keyframes successPulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 25px 50px rgba(16, 185, 129, 0.4);
+            }
+        }
+        
+        .success-icon::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            border-radius: 50%;
+            animation: ripple 2s linear infinite;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+        
+        .success-icon i {
+            font-size: 3.5em;
+            color: white;
+            animation: checkmarkDraw 0.8s ease-in-out 0.3s both;
+        }
+        
+        @keyframes checkmarkDraw {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .success-title {
+            font-size: 2.8em;
+            font-weight: 900;
+            background: linear-gradient(135deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            animation: titleSlide 0.8s ease-out 0.5s both;
+        }
+        
+        @keyframes titleSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .success-subtitle {
+            font-size: 1.3em;
+            color: #64748b;
+            font-weight: 500;
+            margin-bottom: 40px;
+            line-height: 1.6;
+            animation: subtitleFade 0.8s ease-out 0.7s both;
+        }
+        
+        @keyframes subtitleFade {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .premium-features {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border-radius: 20px;
+            padding: 32px;
+            margin: 40px 0;
+            border: 2px solid rgba(16, 185, 129, 0.1);
+            animation: featuresSlide 0.8s ease-out 0.9s both;
+        }
+        
+        @keyframes featuresSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .features-title {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #059669;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            text-align: left;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            animation: featureFloat 0.6s ease-out both;
+        }
+        
+        .feature-item:nth-child(1) { animation-delay: 1.1s; }
+        .feature-item:nth-child(2) { animation-delay: 1.2s; }
+        .feature-item:nth-child(3) { animation-delay: 1.3s; }
+        .feature-item:nth-child(4) { animation-delay: 1.4s; }
+        
+        @keyframes featureFloat {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .feature-icon {
+            color: #10b981;
+            font-size: 1.4em;
+            margin-right: 16px;
+            min-width: 24px;
+        }
+        
+        .feature-text {
+            font-size: 1em;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .countdown-section {
+            margin: 40px 0;
+            padding: 24px;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            animation: countdownSlide 0.8s ease-out 1.5s both;
+        }
+        
+        @keyframes countdownSlide {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .countdown-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #059669;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .countdown-timer {
+            font-size: 2.2em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .countdown-subtitle {
+            font-size: 0.95em;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 40px;
+            animation: buttonsSlide 0.8s ease-out 1.7s both;
+        }
+        
+        @keyframes buttonsSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .btn {
+            padding: 18px 36px;
+            border: none;
+            border-radius: 16px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            text-transform: none;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 48px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #64748b;
+            border: 2px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .floating-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(16, 185, 129, 0.6);
+            border-radius: 50%;
+            animation: float 6s linear infinite;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .success-container {
+                padding: 40px 30px;
+                margin: 10px;
+            }
+            
+            .success-title {
+                font-size: 2.2em;
+            }
+            
+            .success-icon {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .success-icon i {
+                font-size: 2.8em;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .countdown-timer {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-particles" id="particles"></div>
+    
+    <div class="success-container">
+        <div class="success-icon-container">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+        </div>
+        
+        <h1 class="success-title">Payment Successful!</h1>
+        <p class="success-subtitle">
+            Welcome to WhispTask Premium! Your subscription is now active and ready to supercharge your productivity.
+        </p>
+        
+        <div class="premium-features">
+            <div class="features-title">
+                <i class="fas fa-crown"></i>
+                <span>Premium Features Unlocked</span>
+            </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <i class="fas fa-microphone feature-icon"></i>
+                    <span class="feature-text">Unlimited Voice Commands</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-chart-line feature-icon"></i>
+                    <span class="feature-text">Advanced Analytics</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-cloud-sync feature-icon"></i>
+                    <span class="feature-text">Cloud Synchronization</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-headset feature-icon"></i>
+                    <span class="feature-text">Priority Support</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="countdown-section">
+            <div class="countdown-title">
+                <i class="fas fa-clock"></i>
+                <span>Returning to app in</span>
+            </div>
+            <div class="countdown-timer" id="countdown">5</div>
+            <div class="countdown-subtitle">seconds</div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="returnToApp()">
+                <i class="fas fa-rocket" style="margin-right: 8px;"></i>
+                Start Using Premium Features
+            </button>
+            <button class="btn btn-secondary" onclick="returnToApp()">
+                <i class="fas fa-arrow-left" style="margin-right: 8px;"></i>
+                Return to App Now
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Countdown timer
+        let countdownValue = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        function updateCountdown() {
+            countdownElement.textContent = countdownValue;
+            
+            if (countdownValue <= 0) {
+                returnToApp();
+                return;
+            }
+            
+            countdownValue--;
+            setTimeout(updateCountdown, 1000);
+        }
+        
+        function returnToApp() {
+            // Add exit animation
+            const container = document.querySelector('.success-container');
+            container.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            container.style.transform = 'translateY(-20px) scale(0.95)';
+            container.style.opacity = '0.8';
+            
+            setTimeout(() => {
+                // Communicate back to Flutter app
+                if (window.PaymentHandler) {
+                    window.PaymentHandler.postMessage('success');
+                } else {
+                    // Fallback for testing
+                    window.close();
+                }
+            }, 500);
+        }
+        
+        // Add celebration effect
+        function addCelebrationEffect() {
+            // Create confetti-like effect
+            const colors = ['#10b981', '#34d399', '#059669', '#6ee7b7'];
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'absolute';
+                confetti.style.width = '6px';
+                confetti.style.height = '6px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = '50%';
+                confetti.style.top = '30%';
+                confetti.style.borderRadius = '50%';
+                confetti.style.pointerEvents = 'none';
+                confetti.style.animation = `confetti ${Math.random() * 2 + 1}s ease-out forwards`;
+                
+                document.body.appendChild(confetti);
+                
+                // Remove confetti after animation
+                setTimeout(() => {
+                    confetti.remove();
+                }, 3000);
+            }
+        }
+        
+        // Add confetti animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes confetti {
+                0% {
+                    transform: translate(0, 0) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(${Math.random() * 400 - 200}px, ${Math.random() * 400 + 200}px) rotate(${Math.random() * 360}deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            setTimeout(updateCountdown, 1000);
+            setTimeout(addCelebrationEffect, 800);
+            
+            // Add subtle mouse movement effect
+            document.addEventListener('mousemove', (e) => {
+                const container = document.querySelector('.success-container');
+                const x = (e.clientX / window.innerWidth) * 5;
+                const y = (e.clientY / window.innerHeight) * 5;
+                
+                container.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                returnToApp();
+            }
+        });
+    </script>
+</body>
+</html>

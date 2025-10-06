@@ -19,7 +19,7 @@ class AddTaskScreen extends StatefulWidget {
   State<AddTaskScreen> createState() => _AddTaskScreenState();
 }
 
-class _AddTaskScreenState extends State<AddTaskScreen> {
+class _AddTaskScreenState extends State<AddTaskScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -43,7 +43,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   String _taskColor = 'blue';
   int _reminderMinutesBefore = 0;
 
-  final List<String> _availableColors = [
+  late AnimationController _colorAnimationController;
+  late Animation<double> _colorScaleAnimation;
+
+  static const List<String> _availableColors = [
     'red', 'pink', 'purple', 'indigo', 'blue', 
     'cyan', 'teal', 'green', 'yellow', 'orange'
   ];
@@ -52,13 +55,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   final TranscriptionService _transcriptionService = TranscriptionService();
   bool _isInitialized = false;
 
-  final List<String> _priorities = ['high', 'medium', 'low'];
-  final List<String> _categories = ['general', 'work', 'personal', 'health', 'shopping', 'study'];
-  final List<String> _recurringPatterns = ['daily', 'weekly', 'monthly', 'yearly'];
+  static const List<String> _priorities = ['high', 'medium', 'low'];
+  static const List<String> _categories = ['general', 'work', 'personal', 'health', 'shopping', 'study'];
+  static const List<String> _recurringPatterns = ['daily', 'weekly', 'monthly', 'yearly'];
 
   @override
   void initState() {
     super.initState();
+    _colorAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200), // Faster animation
+      vsync: this,
+    );
+    _colorScaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate( // Reduced scale
+      CurvedAnimation(parent: _colorAnimationController, curve: Curves.easeOut) // Simpler curve
+    );
+    
     _initializeServices();
     if (widget.taskToEdit != null) {
       _populateFields(widget.taskToEdit!);
@@ -120,30 +131,65 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text(widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: Text(
+          widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceVariant.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.arrow_back, size: 20),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         actions: [
-          Consumer<TaskProvider>(
-            builder: (context, taskProvider, child) {
-              return IconButton(
-                icon: taskProvider.isCreating || taskProvider.isUpdating
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.check),
-                onPressed: taskProvider.isCreating || taskProvider.isUpdating
-                    ? null
-                    : _saveTask,
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Consumer<TaskProvider>(
+              builder: (context, taskProvider, child) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: taskProvider.isCreating || taskProvider.isUpdating
+                        ? colorScheme.surfaceVariant.withOpacity(0.8)
+                        : colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: taskProvider.isCreating || taskProvider.isUpdating
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onSurfaceVariant),
+                            ),
+                          )
+                        : Icon(Icons.check_rounded, color: colorScheme.onPrimary),
+                    onPressed: taskProvider.isCreating || taskProvider.isUpdating
+                        ? null
+                        : _saveTask,
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -151,672 +197,100 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         builder: (context, taskProvider, child) {
           return Form(
             key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Error message
-                  if (taskProvider.error != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
+            child: CustomScrollView(
+              slivers: [
+                // App Bar Space
+                SliverToBoxAdapter(
+                  child: SizedBox(height: MediaQuery.of(context).padding.top + 80),
+                ),
+                
+                // Error Message
+                if (taskProvider.error != null)
+                  SliverToBoxAdapter(
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Theme.of(context).colorScheme.error),
+                        color: colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: colorScheme.error.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error, color: Theme.of(context).colorScheme.error),
-                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Icons.error_rounded, 
+                                     color: colorScheme.error, size: 20),
+                          ),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               taskProvider.error!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+                              style: TextStyle(
+                                color: colorScheme.onErrorContainer,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close),
+                            icon: Icon(Icons.close_rounded, size: 20),
                             onPressed: taskProvider.clearError,
-                            iconSize: 20,
+                            style: IconButton.styleFrom(
+                              foregroundColor: colorScheme.error,
+                            ),
                           ),
                         ],
                       ),
                     ),
-
-                  // Title Field
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: '${AppLocalizations.of(context).taskTitle} *',
-                      hintText: AppLocalizations.of(context).taskTitleHint,
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.task),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return AppLocalizations.of(context).pleaseEnterTaskTitle;
-                      }
-                      if (value.length > 100) {
-                        return AppLocalizations.of(context).titleTooLong;
-                      }
-                      return null;
-                    },
-                    maxLength: 100,
                   ),
-                  const SizedBox(height: 16),
 
-                  // Description Field
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: AppLocalizations.of(context).descriptionOptional,
-                      hintText: AppLocalizations.of(context).addMoreDetails,
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 3,
-                    maxLength: 500,
-                    validator: (value) {
-                      if (value != null && value.length > 500) {
-                        return AppLocalizations.of(context).descriptionTooLong;
-                      }
-                      return null;
-                    },
+                // Main Content
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Title and Description Section
+                      _buildTitleDescriptionSection(),
+                      const SizedBox(height: 24),
+
+                      // Voice Notes Section
+                      if (_isInitialized)
+                        _buildVoiceNotesSection()
+                      else
+                        _buildLoadingSection(),
+                      const SizedBox(height: 24),
+
+                      // File Attachments Section
+                      _buildFileAttachmentsSection(),
+                      const SizedBox(height: 24),
+
+                      // Task Properties Section
+                      _buildTaskPropertiesSection(),
+                      const SizedBox(height: 24),
+
+                      // Due Date and Time Section
+                      _buildDueDateSection(),
+                      const SizedBox(height: 24),
+
+                      // Reminder Section
+                      _buildReminderSection(),
+                      const SizedBox(height: 24),
+
+                      // Recurring Task Section
+                      _buildRecurringSection(),
+                      const SizedBox(height: 32),
+
+                      // Save Button
+                      _buildSaveButton(taskProvider),
+                      const SizedBox(height: 32),
+                    ]),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Voice Notes Section
-                  if (_isInitialized)
-                    EnhancedVoiceNotesWidget(
-                      taskId: widget.taskToEdit?.id ?? '',
-                      voiceNotes: _voiceNotes,
-                      onVoiceNoteAdded: (voiceNote) {
-                        setState(() {
-                          _voiceNotes.add(voiceNote);
-                        });
-                      },
-                      onVoiceNoteDeleted: (voiceNoteId) {
-                        setState(() {
-                          _voiceNotes.removeWhere((note) => note.id == voiceNoteId);
-                        });
-                      },
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(AppLocalizations.of(context).initializingVoiceServices),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-
-                  // File Attachments Section
-                  FileAttachmentsWidget(
-                    taskId: widget.taskToEdit?.id ?? '',
-                    attachments: _attachments,
-                    onAttachmentAdded: (attachment) {
-                      setState(() {
-                        _attachments.add(attachment);
-                      });
-                    },
-                    onAttachmentDeleted: (attachmentId) {
-                      setState(() {
-                        _attachments.removeWhere((att) => att.id == attachmentId);
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Priority, Category, and Color Row
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context).taskProperties,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        // Priority and Category Row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _priority,
-                                decoration: InputDecoration(
-                                  labelText: AppLocalizations.of(context).priority,
-                                  prefixIcon: Icon(_getPriorityIcon(_priority), 
-                                                 color: _getPriorityColor(_priority)),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: _priorities.map((priority) {
-                                  return DropdownMenuItem(
-                                    value: priority,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(_getPriorityIcon(priority), 
-                                             size: 14, color: _getPriorityColor(priority)),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: Text(
-                                            priority.toUpperCase(),
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 12),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _priority = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _category,
-                                decoration: InputDecoration(
-                                  labelText: AppLocalizations.of(context).category,
-                                  prefixIcon: Icon(_getCategoryIcon(_category)),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                                items: _categories.map((category) {
-                                  return DropdownMenuItem(
-                                    value: category,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(_getCategoryIcon(category), size: 13),
-                                        const SizedBox(width: 3),
-                                        Flexible(
-                                          child: Text(
-                                            category.toUpperCase(),
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 11),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _category = value!;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Color Selection Section
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.palette, size: 18, color: Colors.grey),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Task Color',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            
-                            Container(
-                              height: 60,
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: _availableColors.map((colorName) {
-                                          final color = _parseTaskColor(colorName);
-                                          final isSelected = _taskColor == colorName;
-                                          
-                                          return Container(
-                                            margin: const EdgeInsets.only(right: 8),
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _taskColor = colorName;
-                                                });
-                                              },
-                                              child: AnimatedContainer(
-                                                duration: const Duration(milliseconds: 200),
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: color,
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: isSelected ? Colors.black : Colors.grey.shade400,
-                                                    width: isSelected ? 3 : 1,
-                                                  ),
-                                                  boxShadow: isSelected ? [
-                                                    BoxShadow(
-                                                      color: color.withOpacity(0.4),
-                                                      blurRadius: 8,
-                                                      spreadRadius: 2,
-                                                    ),
-                                                  ] : null,
-                                                ),
-                                                child: isSelected
-                                                    ? Icon(
-                                                        Icons.check,
-                                                        color: _getContrastColor(color),
-                                                        size: 20,
-                                                      )
-                                                    : null,
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            
-                            // Selected color indicator
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: _parseTaskColor(_taskColor),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.grey.shade400),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Selected: ${_taskColor.toUpperCase()}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Due Date and Time
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Due Date & Time',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          
-                          // Date Picker
-                          ListTile(
-                            leading: const Icon(Icons.calendar_today),
-                            title: Text(_dueDate == null 
-                                ? 'No due date set' 
-                                : 'Date: ${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}'),
-                            trailing: _dueDate != null 
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      setState(() {
-                                        _dueDate = null;
-                                        _dueTime = null;
-                                      });
-                                    },
-                                  )
-                                : null,
-                            onTap: _selectDueDate,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: BorderSide(color: Colors.grey.shade300),
-                            ),
-                          ),
-                          
-                          if (_dueDate != null) ...[
-                            const SizedBox(height: 8),
-                            // Time Picker
-                            ListTile(
-                              leading: const Icon(Icons.access_time),
-                              title: Text(_dueTime == null 
-                                  ? 'No time set' 
-                                  : 'Time: ${_dueTime!.format(context)}'),
-                              trailing: _dueTime != null 
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      onPressed: () {
-                                        setState(() {
-                                          _dueTime = null;
-                                        });
-                                      },
-                                    )
-                                  : null,
-                              onTap: _selectDueTime,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(color: Colors.grey.shade300),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // NEW: Reminder Section
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.notifications),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Reminder',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              const Spacer(),
-                              Switch(
-                                value: _hasReminder,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _hasReminder = value;
-                                    if (!value) {
-                                      _reminderTime = null;
-                                      _reminderType = 'once';
-                                      _notificationTone = 'default';
-                                      _repeatDays = [];
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          
-                          if (_hasReminder) ...[
-                            const SizedBox(height: 12),
-                            ListTile(
-                              leading: const Icon(Icons.schedule),
-                              title: const Text('Set Reminder Time'),
-                              subtitle: Text(_reminderTime == null 
-                                  ? 'Tap to set reminder' 
-                                  : NotificationHelper.formatReminderTime(_reminderTime)),
-                              trailing: _reminderTime != null 
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      onPressed: () {
-                                        setState(() {
-                                          _reminderTime = null;
-                                        });
-                                      },
-                                    )
-                                  : const Icon(Icons.arrow_forward_ios),
-                              onTap: _selectReminder,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: BorderSide(color: Colors.grey.shade300),
-                              ),
-                            ),
-                            
-                            if (_reminderTime != null) ...[
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.shade200),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(NotificationHelper.getReminderIcon(_reminderType), 
-                                             size: 16, color: Colors.blue),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Type: ${NotificationHelper.reminderTypes[_reminderType]}',
-                                          style: const TextStyle(fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(NotificationHelper.getNotificationToneIcon(_notificationTone), 
-                                             size: 16, color: Colors.blue),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Tone: ${NotificationHelper.notificationTones[_notificationTone]}',
-                                          style: const TextStyle(fontWeight: FontWeight.w500),
-                                        ),
-                                      ],
-                                    ),
-                                    if (_reminderType == 'weekly' && _repeatDays.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.date_range, size: 16, color: Colors.blue),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              'Days: ${_repeatDays.map((d) => d.toUpperCase()).join(', ')}',
-                                              style: const TextStyle(fontWeight: FontWeight.w500),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                            
-                            // Validation message for reminder
-                            if (_hasReminder && _reminderTime != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  NotificationHelper.getTimeUntilReminder(_reminderTime) == 'Overdue'
-                                      ? '⚠️ Reminder time is in the past'
-                                      : '✅ Reminder in ${NotificationHelper.getTimeUntilReminder(_reminderTime)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: NotificationHelper.getTimeUntilReminder(_reminderTime) == 'Overdue'
-                                        ? Colors.red
-                                        : Colors.green,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Recurring Task Section
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CheckboxListTile(
-                            title: const Text('Recurring Task'),
-                            subtitle: const Text('Repeat this task automatically'),
-                            value: _isRecurring,
-                            onChanged: (value) {
-                              setState(() {
-                                _isRecurring = value!;
-                                if (!_isRecurring) _recurringPattern = null;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-
-                          if (_isRecurring) ...[
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              initialValue: _recurringPattern,
-                              decoration: const InputDecoration(
-                                labelText: 'Repeat Pattern',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.repeat),
-                              ),
-                              hint: const Text('Select repeat pattern'),
-                              items: _recurringPatterns.map((pattern) {
-                                return DropdownMenuItem(
-                                  value: pattern,
-                                  child: Text(pattern.toUpperCase()),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _recurringPattern = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (_isRecurring && value == null) {
-                                  return 'Please select a repeat pattern';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              initialValue: _recurringInterval.toString(),
-                              decoration: const InputDecoration(
-                                labelText: 'Repeat Every (number)',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.numbers),
-                                helperText: 'e.g., 2 for every 2 days/weeks/months',
-                              ),
-                              keyboardType: TextInputType.number,
-                              onChanged: (value) {
-                                setState(() {
-                                  _recurringInterval = int.tryParse(value) ?? 1;
-                                });
-                              },
-                              validator: (value) {
-                                if (_isRecurring) {
-                                  final interval = int.tryParse(value ?? '');
-                                  if (interval == null || interval < 1) {
-                                    return 'Please enter a valid interval (1 or greater)';
-                                  }
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Save Button
-                  ElevatedButton(
-                    onPressed: taskProvider.isCreating || taskProvider.isUpdating
-                        ? null
-                        : _saveTask,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: taskProvider.isCreating || taskProvider.isUpdating
-                        ? const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Saving...'),
-                            ],
-                          )
-                        : Text(
-                            widget.taskToEdit == null ? 'Add Task' : 'Update Task',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -824,33 +298,1337 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
+  Widget _buildTitleDescriptionSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          // Title Field
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: TextFormField(
+              controller: _titleController,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+              ),
+              decoration: InputDecoration(
+                labelText: '${AppLocalizations.of(context).taskTitle} *',
+                labelStyle: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+                hintText: AppLocalizations.of(context).taskTitleHint,
+                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                ),
+                filled: true,
+                fillColor: colorScheme.surface,
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.task_alt_rounded, 
+                             color: colorScheme.primary, size: 20),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return AppLocalizations.of(context).pleaseEnterTaskTitle;
+                }
+                if (value.length > 100) {
+                  return AppLocalizations.of(context).titleTooLong;
+                }
+                return null;
+              },
+              maxLength: 100,
+            ),
+          ),
+
+          // Description Field
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: TextFormField(
+              controller: _descriptionController,
+              style: TextStyle(
+                fontSize: 16,
+                height: 1.5,
+              ),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).descriptionOptional,
+                labelStyle: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+                hintText: AppLocalizations.of(context).addMoreDetails,
+                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                ),
+                filled: true,
+                fillColor: colorScheme.surface,
+                prefixIcon: Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.description_rounded, 
+                             color: colorScheme.secondary, size: 20),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                alignLabelWithHint: true,
+              ),
+              maxLines: 4,
+              minLines: 3,
+              maxLength: 500,
+              validator: (value) {
+                if (value != null && value.length > 500) {
+                  return AppLocalizations.of(context).descriptionTooLong;
+                }
+                return null;
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceNotesSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.mic_rounded, 
+                             color: colorScheme.tertiary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).voiceCommands,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppLocalizations.of(context).voiceInputHint,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: EnhancedVoiceNotesWidget(
+              taskId: widget.taskToEdit?.id ?? '',
+              voiceNotes: _voiceNotes,
+              onVoiceNoteAdded: (voiceNote) {
+                setState(() {
+                  _voiceNotes.add(voiceNote);
+                });
+              },
+              onVoiceNoteDeleted: (voiceNoteId) {
+                setState(() {
+                  _voiceNotes.removeWhere((note) => note.id == voiceNoteId);
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            AppLocalizations.of(context).initializingVoiceServices,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFileAttachmentsSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.attach_file_rounded, 
+                             color: Theme.of(context).colorScheme.secondary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).add,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppLocalizations.of(context).taskDescription,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            child: FileAttachmentsWidget(
+              taskId: widget.taskToEdit?.id ?? '',
+              attachments: _attachments,
+              onAttachmentAdded: (attachment) {
+                setState(() {
+                  _attachments.add(attachment);
+                });
+              },
+              onAttachmentDeleted: (attachmentId) {
+                setState(() {
+                  _attachments.removeWhere((att) => att.id == attachmentId);
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskPropertiesSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.tune_rounded, 
+                             color: colorScheme.primary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  AppLocalizations.of(context).taskProperties,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Priority and Category Row
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDropdownField(
+                    value: _priority,
+                    items: _priorities,
+                    label: AppLocalizations.of(context).priority,
+                    icon: _getPriorityIcon(_priority),
+                    iconColor: _getPriorityColor(_priority),
+                    onChanged: (value) => setState(() => _priority = value!),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDropdownField(
+                    value: _category,
+                    items: _categories,
+                    label: AppLocalizations.of(context).category,
+                    icon: _getCategoryIcon(_category),
+                    iconColor: colorScheme.secondary,
+                    onChanged: (value) => setState(() => _category = value!),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Color Selection Section
+            _buildColorSelection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String value,
+    required List<String> items,
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: colorScheme.primary,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 18),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        filled: true,
+        fillColor: colorScheme.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      items: items.map((item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(
+            item.toUpperCase(),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildColorSelection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.palette_rounded, 
+                 size: 20, 
+                 color: colorScheme.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Text(
+              AppLocalizations.of(context).taskColor,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _availableColors.length,
+                  itemBuilder: (context, index) {
+                    final colorName = _availableColors[index];
+                    final color = _parseTaskColor(colorName);
+                    final isSelected = _taskColor == colorName;
+                    
+                    return Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: GestureDetector(
+                        onTap: () {
+                          _colorAnimationController.forward().then((_) {
+                            _colorAnimationController.reverse();
+                          });
+                          setState(() {
+                            _taskColor = colorName;
+                          });
+                        },
+                        child: AnimatedBuilder(
+                          animation: _colorAnimationController,
+                          builder: (context, child) {
+                            final scale = isSelected ? _colorScaleAnimation.value : 1.0;
+                            return Transform.scale(
+                              scale: scale,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.3),
+                                    width: isSelected ? 3 : 2,
+                                  ),
+                                  boxShadow: isSelected ? [
+                                    BoxShadow(
+                                      color: color.withOpacity(0.4),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                    ),
+                                  ] : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: isSelected
+                                    ? Icon(
+                                        Icons.check_rounded,
+                                        color: _getContrastColor(color),
+                                        size: 24,
+                                      )
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Selected color indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _parseTaskColor(_taskColor).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _parseTaskColor(_taskColor).withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: _parseTaskColor(_taskColor),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${AppLocalizations.of(context).selectedColon} ${_taskColor.toUpperCase()}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _parseTaskColor(_taskColor),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDueDateSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.schedule_rounded, 
+                             color: Theme.of(context).colorScheme.primary, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  AppLocalizations.of(context).dueDate,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Date Picker
+            _buildDateTimeCard(
+              icon: Icons.calendar_today_rounded,
+              title: _dueDate == null 
+                  ? AppLocalizations.of(context).dueDate 
+                  : '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}',
+              subtitle: _dueDate == null ? AppLocalizations.of(context).dueDate : AppLocalizations.of(context).dueDate,
+              onTap: _selectDueDate,
+              hasValue: _dueDate != null,
+              onClear: _dueDate != null ? () {
+                setState(() {
+                  _dueDate = null;
+                  _dueTime = null;
+                });
+              } : null,
+            ),
+            
+            if (_dueDate != null) ...[
+              const SizedBox(height: 12),
+              // Time Picker
+              _buildDateTimeCard(
+                icon: Icons.access_time_rounded,
+                title: _dueTime == null 
+                    ? AppLocalizations.of(context).dueDate 
+                    : _dueTime!.format(context),
+                subtitle: AppLocalizations.of(context).dueDate,
+                onTap: _selectDueTime,
+                hasValue: _dueTime != null,
+                onClear: _dueTime != null ? () {
+                  setState(() {
+                    _dueTime = null;
+                  });
+                } : null,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTimeCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    required bool hasValue,
+    VoidCallback? onClear,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasValue 
+              ? colorScheme.primary.withOpacity(0.3) 
+              : colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: hasValue 
+                ? colorScheme.primary.withOpacity(0.1) 
+                : colorScheme.surfaceVariant.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: hasValue ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: hasValue ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: onClear != null 
+            ? IconButton(
+                icon: Icon(Icons.clear_rounded, size: 20),
+                onPressed: onClear,
+                style: IconButton.styleFrom(
+                  foregroundColor: colorScheme.error,
+                  backgroundColor: colorScheme.error.withOpacity(0.1),
+                ),
+              )
+            : Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: colorScheme.onSurfaceVariant,
+              ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReminderSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.notifications_rounded, 
+                             color: Colors.purple, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context).reminder,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: _hasReminder 
+                        ? Colors.purple.withOpacity(0.1) 
+                        : colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Switch(
+                    value: _hasReminder,
+                    onChanged: (value) {
+                      setState(() {
+                        _hasReminder = value;
+                        if (!value) {
+                          _reminderTime = null;
+                          _reminderType = 'once';
+                          _notificationTone = 'default';
+                          _repeatDays = [];
+                        }
+                      });
+                    },
+                    activeColor: Colors.purple,
+                    activeTrackColor: Colors.purple.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+            
+            if (_hasReminder) ...[
+              const SizedBox(height: 20),
+              _buildReminderCard(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReminderCard() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _reminderTime != null 
+                  ? Colors.purple.withOpacity(0.3) 
+                  : colorScheme.outline.withOpacity(0.2),
+            ),
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _reminderTime != null 
+                    ? Colors.purple.withOpacity(0.1) 
+                    : colorScheme.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.schedule_rounded,
+                color: _reminderTime != null ? Colors.purple : colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+            ),
+            title: Text(
+              AppLocalizations.of(context).reminder,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            subtitle: Text(
+              _reminderTime == null 
+                  ? AppLocalizations.of(context).reminder 
+                  : NotificationHelper.formatReminderTime(_reminderTime),
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            trailing: _reminderTime != null 
+                ? IconButton(
+                    icon: Icon(Icons.clear_rounded, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _reminderTime = null;
+                      });
+                    },
+                    style: IconButton.styleFrom(
+                      foregroundColor: colorScheme.error,
+                      backgroundColor: colorScheme.error.withOpacity(0.1),
+                    ),
+                  )
+                : Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            onTap: _selectReminder,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+        
+        if (_reminderTime != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.purple.withOpacity(0.1),
+                  Colors.purple.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.purple.withOpacity(0.2)),
+            ),
+            child: Column(
+              children: [
+                _buildReminderDetailRow(
+                  icon: NotificationHelper.getReminderIcon(_reminderType),
+                  label: AppLocalizations.of(context).category,
+                  value: NotificationHelper.reminderTypes[_reminderType] ?? _reminderType,
+                ),
+                const SizedBox(height: 12),
+                _buildReminderDetailRow(
+                  icon: NotificationHelper.getNotificationToneIcon(_notificationTone),
+                  label: AppLocalizations.of(context).notifications,
+                  value: NotificationHelper.notificationTones[_notificationTone] ?? _notificationTone,
+                ),
+                if (_reminderType == 'weekly' && _repeatDays.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildReminderDetailRow(
+                    icon: Icons.date_range_rounded,
+                    label: AppLocalizations.of(context).today,
+                    value: _repeatDays.map((d) => d.toUpperCase()).join(', '),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Validation message for reminder
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                  ? colorScheme.errorContainer
+                  : Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                    ? colorScheme.error.withOpacity(0.3)
+                    : Colors.green.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                      ? Icons.warning_rounded
+                      : Icons.check_circle_rounded,
+                  color: NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                      ? colorScheme.error
+                      : Colors.green,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                        ? AppLocalizations.of(context).reminderTimeInPast
+                        : '${AppLocalizations.of(context).reminderIn} ${NotificationHelper.getTimeUntilReminder(_reminderTime)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: NotificationHelper.getTimeUntilReminder(_reminderTime) == AppLocalizations.of(context).overdue
+                          ? colorScheme.onErrorContainer
+                          : Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildReminderDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.purple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: Colors.purple),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              color: Colors.purple.shade700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecurringSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.repeat_rounded, 
+                             color: Colors.teal, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).tasks,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppLocalizations.of(context).taskDescription,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: _isRecurring 
+                        ? Colors.teal.withOpacity(0.1) 
+                        : colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Switch(
+                    value: _isRecurring,
+                    onChanged: (value) {
+                      setState(() {
+                        _isRecurring = value;
+                        if (!_isRecurring) _recurringPattern = null;
+                      });
+                    },
+                    activeColor: Colors.teal,
+                    activeTrackColor: Colors.teal.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+
+            if (_isRecurring) ...[
+              const SizedBox(height: 20),
+              
+              DropdownButtonFormField<String>(
+                value: _recurringPattern,
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).category,
+                  labelStyle: TextStyle(
+                    color: Colors.teal,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.teal, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surface,
+                  prefixIcon: Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.repeat_rounded, color: Colors.teal, size: 18),
+                  ),
+                ),
+                hint: Text(AppLocalizations.of(context).category),
+                items: _recurringPatterns.map((pattern) {
+                  return DropdownMenuItem(
+                    value: pattern,
+                    child: Text(
+                      pattern.toUpperCase(),
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _recurringPattern = value;
+                  });
+                },
+                validator: (value) {
+                  if (_isRecurring && (value == null || value.isEmpty)) {
+                    return 'Please select a recurring pattern (daily, weekly, monthly, or yearly)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              TextFormField(
+                initialValue: _recurringInterval.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).repeatEveryNumber,
+                  labelStyle: TextStyle(
+                    color: Colors.teal,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.teal, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surface,
+                  prefixIcon: Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.numbers_rounded, color: Colors.teal, size: 18),
+                  ),
+                  helperText: AppLocalizations.of(context).repeatEveryHelper,
+                  helperStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    _recurringInterval = int.tryParse(value) ?? 1;
+                  });
+                },
+                validator: (value) {
+                  if (_isRecurring) {
+                    final interval = int.tryParse(value ?? '');
+                    if (interval == null || interval < 1) {
+                      return 'Please enter a valid interval (1 or greater)';
+                    }
+                    if (interval > 365) {
+                      return 'Interval cannot be more than 365';
+                    }
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSaveButton(TaskProvider taskProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      width: double.infinity,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: taskProvider.isCreating || taskProvider.isUpdating
+              ? [
+                  colorScheme.surfaceVariant,
+                  colorScheme.surfaceVariant.withOpacity(0.8),
+                ]
+              : [
+                  colorScheme.primary,
+                  colorScheme.primary.withOpacity(0.8),
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: taskProvider.isCreating || taskProvider.isUpdating
+            ? null
+            : [
+                BoxShadow(
+                  color: colorScheme.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: ElevatedButton(
+        onPressed: taskProvider.isCreating || taskProvider.isUpdating
+            ? null
+            : _saveTask,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: taskProvider.isCreating || taskProvider.isUpdating
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    AppLocalizations.of(context).saving,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurfaceVariant,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+      ),
+    );
+  }
+
+
+  // Helper Methods - Enhanced versions
   Color _getPriorityColor(String priority) {
-    switch (priority) {
+    switch (priority.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return Colors.red.shade600;
       case 'medium':
-        return Colors.orange;
+        return Colors.orange.shade600;
       case 'low':
-        return Colors.green;
+        return Colors.green.shade600;
       default:
-        return Colors.grey;
+        return Colors.grey.shade600;
+    }
+  }
+
+  IconData _getPriorityIcon(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'high': return Icons.priority_high_rounded;
+      case 'medium': return Icons.remove_rounded;
+      case 'low': return Icons.expand_more_rounded;
+      default: return Icons.flag_rounded;
     }
   }
 
   IconData _getCategoryIcon(String category) {
-    switch (category) {
+    switch (category.toLowerCase()) {
       case 'work':
-        return Icons.work;
+        return Icons.work_rounded;
       case 'personal':
-        return Icons.person;
+        return Icons.person_rounded;
       case 'health':
-        return Icons.health_and_safety;
+        return Icons.health_and_safety_rounded;
       case 'shopping':
-        return Icons.shopping_cart;
+        return Icons.shopping_cart_rounded;
       case 'study':
-        return Icons.school;
+        return Icons.school_rounded;
       default:
-        return Icons.category;
+        return Icons.category_rounded;
     }
   }
 
@@ -860,6 +1638,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       initialDate: _dueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.blue,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     
     if (picked != null && picked != _dueDate) {
@@ -880,7 +1668,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Future<void> _selectDueTime() async {
     if (_dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a due date first')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).error),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -888,6 +1680,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _dueTime ?? TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Colors.blue,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     
     if (picked != null && picked != _dueTime) {
@@ -906,30 +1708,34 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   DateTime? _combineDateAndTime() {
     if (_dueDate == null) return null;
+    if (_dueTime == null) return _dueDate;
     
-    if (_dueTime == null) {
-      return _dueDate;
-    }
+    // Safe null check before using !
+    final dueDate = _dueDate;
+    final dueTime = _dueTime;
+    if (dueDate == null || dueTime == null) return _dueDate;
     
     return DateTime(
-      _dueDate!.year,
-      _dueDate!.month,
-      _dueDate!.day,
-      _dueTime!.hour,
-      _dueTime!.minute,
+      dueDate.year,
+      dueDate.month,
+      dueDate.day,
+      dueTime.hour,
+      dueTime.minute,
     );
   }
 
   Future<void> _saveTask() async {
-    if (_formKey.currentState!.validate()) {
+    final formState = _formKey.currentState;
+    if (formState != null && formState.validate()) {
       final combinedDateTime = _combineDateAndTime();
       
       // Validate due date is not in the past
       if (combinedDateTime != null && combinedDateTime.isBefore(DateTime.now())) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Due date and time cannot be in the past'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: Text(AppLocalizations.of(context).error),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -938,9 +1744,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       // NEW: Validate reminder time
       if (_hasReminder && _reminderTime != null && _reminderTime!.isBefore(DateTime.now())) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reminder time cannot be in the past'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: Text(AppLocalizations.of(context).error),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -967,6 +1774,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         reminderMinutesBefore: _reminderMinutesBefore,
         voiceNotes: _voiceNotes,
         attachments: _attachments,
+        // Ensure recurring tasks have proper validation
+        status: 'pending',
       );
 
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
@@ -985,10 +1794,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.taskToEdit == null 
-                ? '✅ ${AppLocalizations.of(context).taskAddedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}' 
-                : '✅ ${AppLocalizations.of(context).taskUpdatedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}'),
+                ? '${AppLocalizations.of(context).taskAddedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}' 
+                : '${AppLocalizations.of(context).taskUpdatedSuccessfully} ${_hasReminder ? AppLocalizations.of(context).withReminder : ""}'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            action: SnackBarAction(
+              label: AppLocalizations.of(context).edit,
+              textColor: Theme.of(context).colorScheme.onPrimary,
+              onPressed: () {
+                // Optional: Navigate to task details or home
+              },
+            ),
           ),
         );
       }
@@ -1016,19 +1836,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return luminance > 0.5 ? Colors.black : Colors.white;
   }
 
-  IconData _getPriorityIcon(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high': return Icons.priority_high;
-      case 'medium': return Icons.remove;
-      case 'low': return Icons.expand_more;
-      default: return Icons.flag;
-    }
-  }
-
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _colorAnimationController.dispose();
     _transcriptionService.dispose();
     super.dispose();
   }

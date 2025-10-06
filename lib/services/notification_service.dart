@@ -16,6 +16,8 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/task.dart';
+import 'sentry_service.dart';
+import '../providers/auth_provider.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -27,50 +29,72 @@ class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   bool _isInitialized = false;
+  static AuthProvider? _authProvider;
+  
+  /// Set auth provider for user preference checking
+  static void setAuthProvider(AuthProvider authProvider) {
+    _authProvider = authProvider;
+  }
+  
+  /// Check if notifications are enabled for the user
+  static bool _areNotificationsEnabled() {
+    final user = _authProvider?.user;
+    final notificationsEnabled = user?.preferences.notificationsEnabled ?? true;
+    print('NotificationService: Notifications ${notificationsEnabled ? "enabled" : "disabled"} for user');
+    return notificationsEnabled;
+  }
 
   // Initialize notification service
   Future<void> initialize() async {
-    if (_isInitialized) return;
-
-    try {
-      debugPrint('🔔 Starting NotificationService initialization...');
-
-      // Initialize timezone data
-      tz_data.initializeTimeZones();
-      debugPrint('✅ Timezone data initialized');
-
-      // Initialize local notifications
-      await _initializeLocalNotifications();
-      debugPrint('✅ Local notifications initialized');
-      
-      // Initialize Firebase messaging
-      await _initializeFirebaseMessaging();
-      debugPrint('✅ Firebase messaging initialized');
-
-      // Create notification channel for Android
-      await _createNotificationChannel();
-      debugPrint('✅ Notification channel created');
-
-      // Request permissions explicitly
-      await _requestAllPermissions();
-      debugPrint('✅ Permissions requested');
-
-      _isInitialized = true;
-      debugPrint('🎉 NotificationService initialized successfully');
-      
-    } catch (e) {
-      print('Error initializing notifications: $e');
-      await Sentry.captureException(
-        e,
-        stackTrace: StackTrace.current,
-        withScope: (scope) {
-          scope.setTag('service', 'notification');
-          scope.setTag('operation', 'initialize');
-          scope.level = SentryLevel.error;
-        },
-      );
-      _isInitialized = false;
+    if (_isInitialized) {
+      SentryService.logNotificationEvent('initialize_skipped_already_initialized');
+      return;
     }
+
+    await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logNotificationEvent('notification_service_initialization_start');
+        debugPrint('🔔 Starting NotificationService initialization...');
+
+        // Initialize timezone data
+        tz_data.initializeTimeZones();
+        SentryService.logNotificationEvent('timezone_data_initialized');
+        debugPrint('✅ Timezone data initialized');
+
+        // Initialize local notifications
+        await _initializeLocalNotifications();
+        SentryService.logNotificationEvent('local_notifications_initialized');
+        debugPrint('✅ Local notifications initialized');
+        
+        // Initialize Firebase messaging
+        await _initializeFirebaseMessaging();
+        SentryService.logNotificationEvent('firebase_messaging_initialized');
+        debugPrint('✅ Firebase messaging initialized');
+
+        // Create notification channel for Android
+        await _createNotificationChannel();
+        SentryService.logNotificationEvent('notification_channel_created');
+        debugPrint('✅ Notification channel created');
+
+        // Request permissions explicitly
+        await _requestAllPermissions();
+        SentryService.logNotificationEvent('permissions_requested');
+        debugPrint('✅ Permissions requested');
+
+        _isInitialized = true;
+        SentryService.logNotificationEvent('notification_service_initialization_complete');
+        debugPrint('🎉 NotificationService initialized successfully');
+      },
+      operationName: 'notification_service_initialize',
+      description: 'Initialize NotificationService with all components',
+      category: 'notification',
+    ).catchError((e) {
+      SentryService.logNotificationEvent('notification_service_initialization_failed', data: {
+        'error': e.toString(),
+      });
+      print('Error initializing notifications: $e');
+      _isInitialized = false;
+    });
   }
 
   // Initialize local notifications
@@ -470,6 +494,11 @@ class NotificationService {
     String? payload,
     String reminderType = 'once', // Default to 'once'
   }) async {
+    // Check if notifications are enabled for the user
+    if (!_areNotificationsEnabled()) {
+      print('NotificationService: Skipping notification scheduling - notifications disabled by user');
+      return;
+    }
     final task = Task(
       id: id.toString(),
       title: title,
@@ -537,28 +566,6 @@ class NotificationService {
     return pending;
   }
 
-  // Send test notification - FIXED VERSION
-  Future<void> sendTestNotification() async {
-    try {
-      debugPrint('🧪 Sending test notification...');
-      
-      await _showLocalNotification(
-        id: 999,
-        title: '🎉 WhispTask Ready!',
-        body: 'Notifications are working perfectly! You\'re all set to manage your tasks.',
-        tone: 'default',
-      );
-      
-      debugPrint('✅ Test notification sent successfully');
-      
-      // Wait a moment to check if notification actually appeared
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-    } catch (e) {
-      debugPrint('❌ Failed to send test notification: $e');
-      rethrow; // Re-throw so the error shows in the UI
-    }
-  }
 
   // Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
@@ -577,29 +584,4 @@ class NotificationService {
     await openAppSettings();
   }
 
-  // Debug method to print all settings
-  Future<void> debugNotificationSettings() async {
-    debugPrint('🔍 === Notification Debug Info ===');
-    debugPrint('Service initialized: $_isInitialized');
-    debugPrint('Platform: ${Platform.operatingSystem}');
-    
-    if (Platform.isAndroid) {
-      final notificationStatus = await Permission.notification.status;
-      final alarmStatus = await Permission.scheduleExactAlarm.status;
-      debugPrint('Notification permission: $notificationStatus');
-      debugPrint('Exact alarm permission: $alarmStatus');
-    }
-    
-    final pending = await getPendingNotifications();
-    debugPrint('Pending notifications: ${pending.length}');
-    
-    try {
-      final fcmSettings = await _firebaseMessaging.getNotificationSettings();
-      debugPrint('FCM authorization: ${fcmSettings.authorizationStatus}');
-    } catch (e) {
-      debugPrint('FCM settings unavailable: $e');
-    }
-    
-    debugPrint('=== End Debug Info ===');
-  }
 }

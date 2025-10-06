@@ -11,12 +11,14 @@ import '../utils/notification_helper.dart';
 import '../providers/auth_provider.dart';
 import '../services/voice_service.dart';
 import '../services/voice_parser.dart';
+import '../services/background_voice_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../services/tts_service.dart';
 import '../services/voice_error_handler.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../services/user_preferences_service.dart';
 import '../services/sentry_service.dart';
+import '../services/performance_service.dart';
 
 // Helper class for storing task matches with scores
 class TaskMatch {
@@ -29,6 +31,7 @@ class TaskMatch {
 class TaskProvider extends ChangeNotifier {
   // Private fields
   final TaskService _taskService = TaskService();
+  final PerformanceService _performanceService = PerformanceService();
   AuthProvider? _authProvider;
   String? _currentUserId;
   
@@ -115,9 +118,10 @@ class TaskProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   Map<String, int> get taskStats => _taskStats;
   Map<String, dynamic> get analyticsData => _analyticsData;
-  
-  // NEW: Voice command getters
   bool get isProcessingVoiceCommand => _isProcessingVoiceCommand;
+
+  // Disposal tracking to prevent rendering assertion errors
+  bool _disposed = false;
   String get lastVoiceCommand => _lastVoiceCommand;
   bool get isVoiceCommandActive => _voiceService?.isWakeWordActive ?? false;
   
@@ -319,7 +323,9 @@ class TaskProvider extends ChangeNotifier {
         _updateTaskLists();
         // Auto-update analytics when tasks change
         loadAnalytics();
-        notifyListeners();
+        // Trigger productivity score recalculation
+        print('TaskProvider: Tasks updated from stream, recalculating productivity score...');
+        _safeNotifyListeners();
       },
       onError: (error) {
         _setError('Failed to load tasks: $error');
@@ -448,6 +454,10 @@ class TaskProvider extends ChangeNotifier {
           'task_title': task.title,
           'task_priority': task.priority.toString(),
           'has_due_date': (task.dueDate != null).toString(),
+          'is_recurring': task.isRecurring.toString(),
+          'recurring_pattern': task.recurringPattern ?? 'none',
+          'recurring_interval': task.recurringInterval?.toString() ?? 'none',
+          'has_reminder': task.hasReminder.toString(),
         });
 
         _setLoading(true);
@@ -475,7 +485,7 @@ class TaskProvider extends ChangeNotifier {
               print('Note: Productivity score not saved (${e.toString().split(':').last.trim()})');
             }
             
-            notifyListeners();
+            _safeNotifyListeners();
             
             // Schedule notification if reminder is set using NotificationHelper
             if (task.hasReminder && task.reminderTime != null && task.notificationId != null) {
@@ -543,6 +553,7 @@ class TaskProvider extends ChangeNotifier {
         await _loadTaskStats();
         await loadAnalytics();
         _clearError();
+        _safeNotifyListeners(); // Ensure UI updates when task is updated
       } else {
         _setError('Failed to update task');
       }
@@ -573,6 +584,11 @@ class TaskProvider extends ChangeNotifier {
       return false;
     }
 
+    if (taskId.isEmpty) {
+      _setError('Invalid task ID');
+      return false;
+    }
+
     _setLoading(true);
     try {
       final bool success = await _taskService.deleteTask(taskId, _currentUserId!);
@@ -588,7 +604,7 @@ class TaskProvider extends ChangeNotifier {
           // Remove task from local list
           _tasks.removeAt(taskIndex);
         }
-        notifyListeners();
+        _safeNotifyListeners();
         
         await _loadTaskStats();
         await loadAnalytics();
@@ -618,41 +634,89 @@ class TaskProvider extends ChangeNotifier {
 
   /// Toggle task completion - ENHANCED with recurring task handling
   Future<bool> toggleTaskCompletion(String taskId) async {
-    if (_currentUserId == null) {
-      _setError('User not authenticated');
-      return false;
-    }
-
-    try {
-      final bool success = await _taskService.toggleTaskCompletion(taskId, _currentUserId!);
-      
-      if (success) {
-        // Reload tasks to reflect the change immediately
-        await _loadUserTasks();
-        
-        // Get the updated task
-        final updatedTask = _tasks.firstWhere((t) => t.id == taskId);
-        
-        // Cancel notification if task is now completed
-        if (updatedTask.isCompleted && updatedTask.notificationId != null) {
-          await NotificationService().cancelNotification(updatedTask.notificationId!);
+    final result = await SentryService.wrapWithErrorTracking(
+      () async {
+        if (_currentUserId == null) {
+          SentryService.captureMessage(
+            'Attempted to toggle task completion without authenticated user',
+            level: 'warning',
+          );
+          _setError('User not authenticated');
+          return false;
         }
-        
-        await _loadTaskStats();
-        await loadAnalytics();
-        _clearError();
-        
-        // Force UI update
-        notifyListeners();
-      } else {
-        _setError('Failed to toggle task completion');
-      }
-      
-      return success;
-    } catch (e) {
-      _setError('Failed to toggle task completion: $e');
-      return false;
-    }
+
+        SentryService.logTaskOperation('toggle_task_completion_start', taskId: taskId, data: {
+          'user_id': _currentUserId!,
+        });
+
+        try {
+          final bool success = await _taskService.toggleTaskCompletion(taskId, _currentUserId!);
+          
+          if (success) {
+            // Reload tasks to reflect the change immediately
+            await _loadUserTasks();
+            
+            // Get the updated task with safe error handling
+            Task? updatedTask;
+            try {
+              updatedTask = _tasks.firstWhere((t) => t.id == taskId);
+            } catch (e) {
+              // If task not found in local list, try to get it from service
+              SentryService.logTaskOperation('task_not_found_in_local_list', taskId: taskId, data: {
+                'error': e.toString(),
+                'local_task_count': _tasks.length.toString(),
+              });
+              
+              updatedTask = await _taskService.getUserTask(taskId, _currentUserId!);
+            }
+            
+            // Cancel notification if task is now completed
+            if (updatedTask != null && updatedTask.isCompleted && updatedTask.notificationId != null) {
+              try {
+                await NotificationService().cancelNotification(updatedTask.notificationId!);
+                SentryService.logTaskOperation('notification_cancelled_success', taskId: taskId);
+              } catch (notificationError) {
+                // Log but don't fail the operation for notification errors
+                SentryService.logTaskOperation('notification_cancel_failed', taskId: taskId, data: {
+                  'error': notificationError.toString(),
+                });
+              }
+            }
+            
+            await _loadTaskStats();
+            await loadAnalytics();
+            _clearError();
+            
+            SentryService.logTaskOperation('toggle_task_completion_success', taskId: taskId, data: {
+              'task_completed': updatedTask?.isCompleted.toString() ?? 'unknown',
+            });
+            
+            // Force UI update
+            _safeNotifyListeners();
+          } else {
+            SentryService.logTaskOperation('toggle_task_completion_service_failed', taskId: taskId);
+            _setError('Failed to toggle task completion');
+          }
+          
+          return success;
+        } catch (e) {
+          SentryService.logTaskOperation('toggle_task_completion_error', taskId: taskId, data: {
+            'error': e.toString(),
+            'error_type': e.runtimeType.toString(),
+          });
+          _setError('Failed to toggle task completion: $e');
+          return false;
+        }
+      },
+      operation: 'toggle_task_completion',
+      description: 'Toggle task completion status with safe error handling',
+      extra: {
+        'task_id': taskId,
+        'user_id': _currentUserId ?? 'unknown',
+      },
+    );
+    
+    return result ?? false;
   }
 
   void setRecurringFilter(bool showRecurringOnly) {
@@ -664,28 +728,28 @@ class TaskProvider extends ChangeNotifier {
     _selectedCategories.contains(category)
         ? _selectedCategories.remove(category)
         : _selectedCategories.add(category);
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   void togglePriorityFilter(String priority) {
     _selectedPriorities.contains(priority)
         ? _selectedPriorities.remove(priority)
         : _selectedPriorities.add(priority);
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   void toggleStatusFilter(String status) {
     _selectedStatuses.contains(status)
         ? _selectedStatuses.remove(status)
         : _selectedStatuses.add(status);
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   void toggleColorFilter(String color) {
     _selectedColors.contains(color)
         ? _selectedColors.remove(color)
         : _selectedColors.add(color);
-    notifyListeners();
+    _debouncedNotifyListeners();
   }
 
   String getDateFilterLabel() {
@@ -743,10 +807,10 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Search tasks
+  /// Search tasks with debouncing for better performance
   Future<void> searchTasks(String query) async {
     _searchQuery = query;
-    notifyListeners();
+    _debouncedNotifyListeners(delay: const Duration(milliseconds: 100)); // Faster response for search
   }
 
 
@@ -905,17 +969,36 @@ class TaskProvider extends ChangeNotifier {
   // Helper methods
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void _setError(String error) {
     _errorMessage = error;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void _clearError() {
     _errorMessage = '';
-    notifyListeners();
+    _safeNotifyListeners();
+  }
+
+  // Safe notification method to prevent rendering assertion errors
+  void _safeNotifyListeners() {
+    try {
+      if (!_disposed) {
+        notifyListeners();
+      }
+    } catch (e) {
+      // Silently catch any rendering assertion errors
+      print('Error in notifyListeners: $e');
+    }
+  }
+
+  /// Debounced notify listeners to improve performance
+  void _debouncedNotifyListeners({Duration delay = const Duration(milliseconds: 50)}) {
+    _performanceService.debounce('task_provider_notify', () {
+      _safeNotifyListeners();
+    }, delay: delay);
   }
 
   // NEW: Voice Command Methods
@@ -934,26 +1017,53 @@ class TaskProvider extends ChangeNotifier {
         return;
       }
       
-      // Initialize voice service
       _voiceService = VoiceService();
-      final voiceInitialized = await _voiceService!.initialize();
-      print('Voice service initialized: $voiceInitialized');
-      if (!voiceInitialized) {
-        _handleVoiceError(VoiceError.notInitialized());
-        return;
-      }
+      await _voiceService!.initialize(_authProvider!);
       
-      // Listen to voice command stream with enhanced error handling
+      // Set up direct callback as backup
+      _voiceService!.setDirectCommandCallback((command) {
+        print('TaskProvider: ✅ Direct callback received command: "$command"');
+        processVoiceTaskCommandEnhanced(command);
+      });
+      
+      // Add a small delay to ensure stream controllers are ready
+      await Future.delayed(Duration(milliseconds: 100));
+      
+      // Set up voice command stream listener
+      print('TaskProvider: Setting up voice command stream listener...');
+      print('TaskProvider: Voice command stream available: ${_voiceService!.voiceCommandStream != null}');
       _voiceCommandSubscription = _voiceService!.voiceCommandStream?.listen(
         (command) {
-          print('Voice command received: $command');
+          print('TaskProvider: ✅ Voice command received from stream: "$command"');
+          print('TaskProvider: About to process command...');
           processVoiceTaskCommandEnhanced(command);
         },
         onError: (error) {
-          print('Voice command stream error: $error');
+          print('TaskProvider: ❌ Voice command stream error: $error');
           _handleVoiceError(VoiceError.speechRecognitionError(error.toString()));
         },
       );
+
+      // Set up live speech results stream for transcript display
+      _voiceService!.speechResultsStream?.listen(
+        (liveText) {
+          print('TaskProvider: Live speech result: "$liveText"');
+          // Update VoiceProvider with live transcript
+          _updateLiveTranscript(liveText);
+        },
+        onError: (error) {
+          print('TaskProvider: Speech results stream error: $error');
+        },
+      );
+      
+      if (_voiceCommandSubscription != null) {
+        print('TaskProvider: ✅ Voice command stream subscription created successfully');
+      } else {
+        print('TaskProvider: ❌ Failed to create voice command stream subscription');
+      }
+      
+      // Process any stored background commands
+      await _processStoredBackgroundCommands();
       
       // Provide initialization feedback
       await _ttsService!.speakListeningStarted();
@@ -961,6 +1071,31 @@ class TaskProvider extends ChangeNotifier {
       
     } catch (e) {
       _handleVoiceError(VoiceError.commandProcessingFailed('initialization', e.toString()));
+    }
+  }
+
+  // Process stored background commands when app reopens
+  Future<void> _processStoredBackgroundCommands() async {
+    try {
+      // Import the background voice service
+      final storedCommands = await BackgroundVoiceService.getStoredCommands();
+      
+      if (storedCommands.isNotEmpty) {
+        print('TaskProvider: Processing ${storedCommands.length} stored background commands');
+        
+        for (final commandData in storedCommands) {
+          final command = commandData['command'] as String?;
+          if (command != null && command.isNotEmpty) {
+            print('TaskProvider: Processing stored command: $command');
+            await processVoiceTaskCommandEnhanced(command);
+            await Future.delayed(const Duration(milliseconds: 500)); // Small delay between commands
+          }
+        }
+        
+        await _ttsService?.speak('Processed ${storedCommands.length} voice commands from background');
+      }
+    } catch (e) {
+      print('TaskProvider: Error processing stored background commands: $e');
     }
   }
 
@@ -1009,9 +1144,12 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Enhanced Voice Command Processing with smart task detection
+
+
+
+  // Enhanced Voice Command Processing with automatic CRUD operations
   Future<void> processVoiceTaskCommandEnhanced(String command) async {
-    print('TaskProvider: Processing voice input: "$command"');
+    print('TaskProvider: ✅ PROCESSING VOICE COMMAND: "$command"');
 
     if (_isProcessingVoiceCommand) {
       print('TaskProvider: Already processing a command, skipping.');
@@ -1021,33 +1159,505 @@ class TaskProvider extends ChangeNotifier {
     _isProcessingVoiceCommand = true;
 
     try {
-      // Use the enhanced parser that can detect time-based updates
-      final parsedCommand = VoiceParser.parseVoiceCommand(command);
+      // Clean the command first - remove duplicates and artifacts
+      String cleanedCommand = _cleanVoiceCommand(command);
+      print('TaskProvider: Cleaned command: "$cleanedCommand"');
       
-      // Handle validation errors
-      if (parsedCommand['type'] == 'error') {
-        print('TaskProvider: Invalid command - ${parsedCommand['errorType']}');
-        await _ttsService?.speak(parsedCommand['suggestion'] ?? 'Please try again');
-        return;
+      final lowerCommand = cleanedCommand.toLowerCase().trim();
+      
+      
+      // Process different command types with AUTOMATIC execution (no confirmation)
+      if (_isMarkDoneCommand(lowerCommand)) {
+        print('TaskProvider: ✅ AUTO-EXECUTING MARK DONE COMMAND');
+        await _handleMarkDoneCommandAutomatic(cleanedCommand);
       }
-      
-      // Handle task updates (including time-based updates like "homework tomorrow")
-      if (parsedCommand['type'] == 'task_update') {
-        print('TaskProvider: Detected task update command');
-        await _handleTaskUpdate(parsedCommand);
-      } 
-      // Handle task creation
-      else if (parsedCommand['type'] == 'create_task') {
-        print('TaskProvider: Detected task creation command');
-        await _handleTaskCreation(parsedCommand);
+      else if (_isDeleteCommand(lowerCommand)) {
+        print('TaskProvider: ✅ AUTO-EXECUTING DELETE COMMAND');
+        await _handleDeleteCommandAutomatic(cleanedCommand);
+      }
+      else if (_isUpdateCommand(lowerCommand)) {
+        print('TaskProvider: ✅ AUTO-EXECUTING UPDATE COMMAND');
+        await _handleUpdateCommandAutomatic(cleanedCommand);
+      }
+      // Fallback: automatically create task
+      else {
+        print('TaskProvider: ✅ AUTO-CREATING TASK FROM VOICE');
+        await _handleVoiceTaskCreationAutomatic(cleanedCommand.isNotEmpty ? cleanedCommand : command);
       }
       
     } catch (e) {
-      print('TaskProvider: Error processing voice command: $e');
-      _handleVoiceError(VoiceError.commandProcessingFailed(command, e.toString()));
+      print('TaskProvider: ❌ ERROR PROCESSING VOICE COMMAND: $e');
+      print('TaskProvider: Stack trace: ${StackTrace.current}');
+      await _ttsService?.speak('Sorry, I had trouble processing that command.');
     } finally {
       _isProcessingVoiceCommand = false;
+      print('TaskProvider: 🏁 COMMAND PROCESSING COMPLETE');
       notifyListeners();
+    }
+  }
+
+  // Check if command is for marking tasks as done
+  bool _isMarkDoneCommand(String command) {
+    final markDonePatterns = [
+      'mark', 'complete', 'finish', 'done', 'finished', 'completed'
+    ];
+    
+    // Also check for specific phrases
+    final markDonePhrases = [
+      'mark as done', 'mark as complete', 'mark complete', 'mark done',
+      'complete task', 'finish task', 'task done', 'task complete'
+    ];
+    
+    // Check patterns
+    bool hasPattern = markDonePatterns.any((pattern) => command.contains(pattern));
+    // Check phrases
+    bool hasPhrase = markDonePhrases.any((phrase) => command.contains(phrase));
+    
+    print('TaskProvider: Mark done check - patterns: $hasPattern, phrases: $hasPhrase');
+    return hasPattern || hasPhrase;
+  }
+
+  // Check if this is an update command
+  bool _isUpdateCommand(String command) {
+    final updatePatterns = [
+      'update', 'change', 'modify', 'edit', 'rename', 'reschedule', 'move', 'remind'
+    ];
+    
+    // Also check for time-based update phrases
+    final updatePhrases = [
+      'remind tomorrow', 'remind today', 'update tomorrow', 'change to tomorrow',
+      'move to tomorrow', 'reschedule to', 'set reminder', 'remind me'
+    ];
+    
+    bool hasPattern = updatePatterns.any((pattern) => command.contains(pattern));
+    bool hasPhrase = updatePhrases.any((phrase) => command.contains(phrase));
+    
+    print('TaskProvider: Update check - patterns: $hasPattern, phrases: $hasPhrase');
+    return hasPattern || hasPhrase;
+  }
+
+  // Check if this is a delete command
+  bool _isDeleteCommand(String command) {
+    final deletePatterns = [
+      'delete', 'remove', 'cancel', 'drop', 'erase'
+    ];
+    
+    final deletePhrases = [
+      'delete task', 'remove task', 'cancel task', 'drop task'
+    ];
+    
+    bool hasPattern = deletePatterns.any((pattern) => command.contains(pattern));
+    bool hasPhrase = deletePhrases.any((phrase) => command.contains(phrase));
+    
+    print('TaskProvider: Delete check - patterns: $hasPattern, phrases: $hasPhrase');
+    return hasPattern || hasPhrase;
+  }
+
+  // Check if we should create a new task
+  bool _shouldCreateTask(String command) {
+    // Don't create if it's clearly an update/delete/complete command
+    if (_isMarkDoneCommand(command) || _isUpdateCommand(command) || _isDeleteCommand(command)) {
+      print('TaskProvider: Not creating task - detected as CRUD operation');
+      return false;
+    }
+    
+    // Create if it has creation keywords or meaningful content
+    final creationKeywords = ['add', 'create', 'new', 'buy', 'call', 'email', 'get', 'do', 'go', 'visit', 'make', 'schedule'];
+    bool hasCreationKeyword = creationKeywords.any((keyword) => command.contains(keyword));
+    bool hasContent = command.split(' ').length >= 2;
+    
+    print('TaskProvider: Create task check - keywords: $hasCreationKeyword, content: $hasContent');
+    return hasCreationKeyword || hasContent;
+  }
+
+  // Handle mark as done commands with fuzzy matching
+  Future<void> _handleMarkDoneCommand(String command) async {
+    print('TaskProvider: Handling mark done command: "$command"');
+    
+    // Extract task identifier using existing logic
+    String taskIdentifier = VoiceParser.extractTaskIdentifierFromCommand(command);
+    
+    if (taskIdentifier.isEmpty || taskIdentifier.length < 2) {
+      await _ttsService?.speak('I couldn\'t identify which task to mark as done. Please be more specific.');
+      return;
+    }
+    
+    // Find matching tasks with scores
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    // Take the best match
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    print('TaskProvider: Found matching task: "${task.title}" (score: ${bestMatch.score})');
+    
+    if (task.isCompleted) {
+      await _ttsService?.speak('Task "${task.title}" is already completed.');
+      return;
+    }
+    
+    // Mark as completed
+    final success = await markTaskCompleteByVoice(task.id);
+    
+    if (success) {
+      await _ttsService?.speak('Marked "${task.title}" as complete.');
+      print('TaskProvider: Successfully completed task: "${task.title}"');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t mark that task as complete.');
+      print('TaskProvider: Failed to complete task: "${task.title}"');
+    }
+  }
+
+  // Handle update commands
+  Future<void> _handleUpdateCommand(String command) async {
+    print('TaskProvider: Handling update command: "$command"');
+    
+    // Extract task identifier and new information
+    String taskIdentifier = _extractTaskIdentifierForUpdate(command);
+    String newInfo = _extractUpdateInfo(command);
+    
+    if (taskIdentifier.isEmpty) {
+      await _ttsService?.speak('I couldn\'t identify which task to update. Please specify the task name.');
+      return;
+    }
+    
+    // Find matching tasks
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    // Update the task based on the command
+    Task updatedTask = task;
+    
+    if (command.contains('rename') || command.contains('change title')) {
+      updatedTask = task.copyWith(title: newInfo.isNotEmpty ? newInfo : task.title);
+      await _ttsService?.speak('Renamed task to "$newInfo".');
+    } else if (command.contains('reschedule') || command.contains('move')) {
+      // Simple date parsing for common terms
+      DateTime? newDate;
+      if (newInfo.contains('tomorrow')) {
+        newDate = DateTime.now().add(const Duration(days: 1));
+      } else if (newInfo.contains('today')) {
+        newDate = DateTime.now();
+      } else if (newInfo.contains('tonight')) {
+        newDate = DateTime.now();
+      }
+      
+      if (newDate != null) {
+        updatedTask = task.copyWith(dueDate: newDate);
+        await _ttsService?.speak('Rescheduled task to ${newDate.day}/${newDate.month}.');
+      }
+    } else {
+      // General update
+      updatedTask = task.copyWith(title: newInfo.isNotEmpty ? newInfo : task.title);
+      await _ttsService?.speak('Updated task "${task.title}".');
+    }
+    
+    final success = await updateTask(updatedTask);
+    
+    if (!success) {
+      await _ttsService?.speak('Sorry, I couldn\'t update that task.');
+    }
+  }
+
+  // Handle delete commands
+  Future<void> _handleDeleteCommand(String command) async {
+    print('TaskProvider: Handling delete command: "$command"');
+    
+    // Extract task identifier
+    String taskIdentifier = VoiceParser.extractTaskIdentifierFromCommand(command);
+    
+    if (taskIdentifier.isEmpty || taskIdentifier.length < 2) {
+      await _ttsService?.speak('I couldn\'t identify which task to delete. Please be more specific.');
+      return;
+    }
+    
+    // Find matching tasks
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    print('TaskProvider: Found matching task to delete: "${task.title}" (score: ${bestMatch.score})');
+    
+    // Delete the task
+    final success = await deleteTask(task.id ?? '');
+    
+    if (success) {
+      await _ttsService?.speak('Deleted task "${task.title}".');
+      print('TaskProvider: Successfully deleted task: "${task.title}"');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t delete that task.');
+      print('TaskProvider: Failed to delete task: "${task.title}"');
+    }
+  }
+
+  // Extract task identifier for update commands
+  String _extractTaskIdentifierForUpdate(String command) {
+    // Remove update keywords to get the task identifier
+    String cleaned = command
+        .replaceAll(RegExp(r'\b(update|change|modify|edit|rename|reschedule|move)\b'), '')
+        .trim();
+    
+    // Split by common separators and take the first meaningful part
+    final parts = cleaned.split(RegExp(r'\b(to|with|for)\b'));
+    return parts.isNotEmpty ? parts[0].trim() : '';
+  }
+
+  // Extract new information from update commands
+  String _extractUpdateInfo(String command) {
+    // Look for patterns like "to [new info]" or "with [new info]"
+    final match = RegExp(r'\b(to|with|for)\s+(.+)').firstMatch(command);
+    return match?.group(2)?.trim() ?? '';
+  }
+
+  // Handle voice task creation
+  Future<void> _handleVoiceTaskCreation(String command) async {
+    print('TaskProvider: 🎯 CREATING TASK FROM SPEECH: "$command"');
+    
+    // Use enhanced parser to create task
+    final task = VoiceParser.createTaskFromSpeech(command);
+    print('TaskProvider: 📝 PARSED TASK: "${task.title}" | Category: ${task.category} | Priority: ${task.priority}');
+    
+    // Validate task
+    if (task.title.isEmpty || task.title.length < 2) {
+      print('TaskProvider: ❌ INVALID TASK TITLE: "${task.title}"');
+      await _ttsService?.speak('I couldn\'t understand the task. Please try again.');
+      return;
+    }
+    
+    // Check for duplicates with high confidence
+    final existingMatches = _findMatchingTasksWithScores(task.title, threshold: 0.8);
+    if (existingMatches.isNotEmpty) {
+      final similarTask = existingMatches.first.task;
+      print('TaskProvider: ⚠️ DUPLICATE DETECTED: "${similarTask.title}"');
+      await _ttsService?.speak('You already have a similar task: "${similarTask.title}". Should I create it anyway?');
+      return;
+    }
+    
+    print('TaskProvider: 💾 ATTEMPTING TO ADD TASK...');
+    final success = await addTask(task);
+    
+    if (success) {
+      String response = 'Created task "${task.title}"';
+      if (task.dueDate != null) {
+        if (task.dueDate!.day == DateTime.now().add(Duration(days: 1)).day) {
+          response += ' for tomorrow';
+        } else if (task.dueDate!.day == DateTime.now().day) {
+          response += ' for today';
+        }
+      }
+      await _ttsService?.speak(response);
+      print('TaskProvider: ✅ SUCCESSFULLY CREATED TASK: "${task.title}"');
+      print('TaskProvider: 📊 TOTAL TASKS NOW: ${_tasks.length}');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t create that task.');
+      print('TaskProvider: ❌ FAILED TO CREATE TASK FROM: "$command"');
+    }
+  }
+
+  // Automatic CRUD handlers that execute without user confirmation
+  
+  // Handle mark as done commands automatically
+  Future<void> _handleMarkDoneCommandAutomatic(String command) async {
+    print('TaskProvider: Auto-handling mark done command: "$command"');
+    
+    // Extract task identifier using existing logic
+    String taskIdentifier = VoiceParser.extractTaskIdentifierFromCommand(command);
+    
+    if (taskIdentifier.isEmpty || taskIdentifier.length < 2) {
+      await _ttsService?.speak('I couldn\'t identify which task to mark as done.');
+      return;
+    }
+    
+    // Find matching tasks with scores
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    // Take the best match and execute automatically
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    print('TaskProvider: Auto-completing task: "${task.title}" (score: ${bestMatch.score})');
+    
+    if (task.isCompleted) {
+      await _ttsService?.speak('Task "${task.title}" is already completed.');
+      return;
+    }
+    
+    // Mark as completed automatically
+    final success = await markTaskCompleteByVoice(task.id);
+    
+    if (success) {
+      await _ttsService?.speak('Automatically marked "${task.title}" as complete.');
+      print('TaskProvider: Auto-completed task: "${task.title}"');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t mark that task as complete.');
+      print('TaskProvider: Failed to auto-complete task: "${task.title}"');
+    }
+  }
+
+  // Handle delete commands automatically
+  Future<void> _handleDeleteCommandAutomatic(String command) async {
+    print('TaskProvider: Auto-handling delete command: "$command"');
+    
+    // Extract task identifier
+    String taskIdentifier = VoiceParser.extractTaskIdentifierFromCommand(command);
+    
+    if (taskIdentifier.isEmpty || taskIdentifier.length < 2) {
+      await _ttsService?.speak('I couldn\'t identify which task to delete.');
+      return;
+    }
+    
+    // Find matching tasks
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    print('TaskProvider: Auto-deleting task: "${task.title}" (score: ${bestMatch.score})');
+    
+    // Delete the task automatically
+    final success = await deleteTask(task.id ?? '');
+    
+    if (success) {
+      await _ttsService?.speak('Automatically deleted task "${task.title}".');
+      print('TaskProvider: Auto-deleted task: "${task.title}"');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t delete that task.');
+      print('TaskProvider: Failed to auto-delete task: "${task.title}"');
+    }
+  }
+
+  // Handle update commands automatically
+  Future<void> _handleUpdateCommandAutomatic(String command) async {
+    print('TaskProvider: Auto-handling update command: "$command"');
+    
+    // Extract task identifier and new information
+    String taskIdentifier = _extractTaskIdentifierForUpdate(command);
+    String newInfo = _extractUpdateInfo(command);
+    
+    if (taskIdentifier.isEmpty) {
+      await _ttsService?.speak('I couldn\'t identify which task to update.');
+      return;
+    }
+    
+    // Find matching tasks
+    final matchingTasks = _findMatchingTasksWithScores(taskIdentifier, threshold: 0.3);
+    
+    if (matchingTasks.isEmpty) {
+      await _ttsService?.speak('I couldn\'t find a task matching "$taskIdentifier".');
+      return;
+    }
+    
+    final bestMatch = matchingTasks.first;
+    final task = bestMatch.task;
+    
+    // Update the task based on the command automatically
+    Task updatedTask = task;
+    String updateType = 'updated';
+    
+    if (command.contains('rename') || command.contains('change title')) {
+      updatedTask = task.copyWith(title: newInfo.isNotEmpty ? newInfo : task.title);
+      updateType = 'renamed';
+      await _ttsService?.speak('Automatically renamed task to "$newInfo".');
+    } else if (command.contains('reschedule') || command.contains('move')) {
+      // Simple date parsing for common terms
+      DateTime? newDate;
+      if (newInfo.contains('tomorrow')) {
+        newDate = DateTime.now().add(const Duration(days: 1));
+      } else if (newInfo.contains('today')) {
+        newDate = DateTime.now();
+      } else if (newInfo.contains('tonight')) {
+        newDate = DateTime.now();
+      }
+      
+      if (newDate != null) {
+        updatedTask = task.copyWith(dueDate: newDate);
+        updateType = 'rescheduled';
+        await _ttsService?.speak('Automatically rescheduled task to ${newDate.day}/${newDate.month}.');
+      }
+    } else {
+      // General update
+      updatedTask = task.copyWith(title: newInfo.isNotEmpty ? newInfo : task.title);
+      await _ttsService?.speak('Automatically updated task "${task.title}".');
+    }
+    
+    final success = await updateTask(updatedTask);
+    
+    if (success) {
+      print('TaskProvider: Auto-$updateType task: "${task.title}"');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t update that task.');
+      print('TaskProvider: Failed to auto-update task: "${task.title}"');
+    }
+  }
+
+  // Handle voice task creation automatically
+  Future<void> _handleVoiceTaskCreationAutomatic(String command) async {
+    print('TaskProvider: 🎯 AUTO-CREATING TASK FROM SPEECH: "$command"');
+    
+    // Use enhanced parser to create task
+    final task = VoiceParser.createTaskFromSpeech(command);
+    print('TaskProvider: 📝 AUTO-PARSED TASK: "${task.title}" | Category: ${task.category} | Priority: ${task.priority}');
+    
+    // Validate task
+    if (task.title.isEmpty || task.title.length < 2) {
+      print('TaskProvider: ❌ INVALID TASK TITLE: "${task.title}"');
+      await _ttsService?.speak('I couldn\'t understand the task. Please try again.');
+      return;
+    }
+    
+    // Check for duplicates with high confidence - but create anyway if voice command
+    final existingMatches = _findMatchingTasksWithScores(task.title, threshold: 0.9);
+    if (existingMatches.isNotEmpty) {
+      final similarTask = existingMatches.first.task;
+      print('TaskProvider: ⚠️ SIMILAR TASK EXISTS: "${similarTask.title}" - creating anyway');
+    }
+    
+    print('TaskProvider: 💾 AUTO-ADDING TASK...');
+    final success = await addTask(task);
+    
+    if (success) {
+      String response = 'Automatically created task "${task.title}"';
+      if (task.dueDate != null) {
+        if (task.dueDate!.day == DateTime.now().add(Duration(days: 1)).day) {
+          response += ' for tomorrow';
+        } else if (task.dueDate!.day == DateTime.now().day) {
+          response += ' for today';
+        }
+      }
+      await _ttsService?.speak(response);
+      print('TaskProvider: ✅ AUTO-CREATED TASK: "${task.title}"');
+      print('TaskProvider: 📊 TOTAL TASKS NOW: ${_tasks.length}');
+    } else {
+      await _ttsService?.speak('Sorry, I couldn\'t create that task.');
+      print('TaskProvider: ❌ FAILED TO AUTO-CREATE TASK FROM: "$command"');
     }
   }
   
@@ -1529,8 +2139,14 @@ class TaskProvider extends ChangeNotifier {
     }).toList();
   }
 
-  // Enhanced TTS feedback with error handling
+  // Enhanced TTS feedback with error handling - DISABLED FOR USER PREFERENCE
   Future<void> _speakFeedback(String message) async {
+    // Voice announcements disabled - only log the message
+    debugPrint('Voice feedback (disabled): $message');
+    return;
+    
+    // Original code commented out to disable voice announcements
+    /*
     try {
       if (_ttsService != null && _ttsService!.isInitialized) {
         await _ttsService!.speak(message);
@@ -1541,13 +2157,9 @@ class TaskProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error speaking feedback: $e');
     }
+    */
   }
 
-  // Test voice command reliability
-  Future<double> testVoiceReliability() async {
-    if (_voiceService == null) return 0.0;
-    return await _voiceService!.getCommandReliabilityScore();
-  }
 
   // Get voice command help
   String getVoiceCommandHelp() {
@@ -1569,28 +2181,158 @@ Examples:
 
   // Add this method to calculate daily productivity score
   double calculateDailyProductivityScore() {
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(Duration(days: 1));
-    
-    final todayTasks = _tasks.where((task) {
-      return task.createdAt.isAfter(startOfDay) && 
-             task.createdAt.isBefore(endOfDay);
-    }).toList();
-    
-    if (todayTasks.isEmpty) return 0.0;
-    
-    final completedTasks = todayTasks.where((task) => 
-      task.status == TaskStatus.completed).length;
-    
-    return (completedTasks / todayTasks.length) * 100;
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+      
+      // Get tasks that are due today or were completed today
+      final todayTasks = _tasks.where((task) {
+        // Include tasks due today
+        if (task.dueDate != null) {
+          final dueDate = task.dueDate!;
+          final dueDateStart = DateTime(dueDate.year, dueDate.month, dueDate.day);
+          if (dueDateStart.isAtSameMomentAs(startOfDay)) {
+            return true;
+          }
+        }
+        
+        // Include tasks completed today
+        if (task.isCompleted && task.completedAt != null) {
+          return task.completedAt!.isAfter(startOfDay) && 
+                 task.completedAt!.isBefore(endOfDay);
+        }
+        
+        // Include tasks created today (for tasks without due dates)
+        if (task.dueDate == null && !task.isCompleted) {
+          return task.createdAt.isAfter(startOfDay) && 
+                 task.createdAt.isBefore(endOfDay);
+        }
+        
+        return false;
+      }).toList();
+      
+      print('ProductivityScore: Found ${todayTasks.length} tasks for today');
+      
+      if (todayTasks.isEmpty) {
+        // If no tasks for today, check if there are any completed tasks today
+        final completedToday = _tasks.where((task) => 
+          task.isCompleted && 
+          task.completedAt != null &&
+          task.completedAt!.isAfter(startOfDay) && 
+          task.completedAt!.isBefore(endOfDay)
+        ).length;
+        
+        print('ProductivityScore: No scheduled tasks, but $completedToday completed today');
+        return completedToday > 0 ? 50.0 : 0.0; // Give partial score for completing any tasks
+      }
+      
+      final completedTasks = todayTasks.where((task) => task.isCompleted).length;
+      print('ProductivityScore: $completedTasks completed out of ${todayTasks.length}');
+      
+      // Calculate score with bonus for early completion
+      double baseScore = (completedTasks / todayTasks.length) * 100;
+      
+      // Add bonus points for completing tasks early or on time
+      int bonusPoints = 0;
+      for (final task in todayTasks) {
+        if (task.isCompleted && 
+            task.completedAt != null && 
+            task.dueDate != null) {
+          if (task.completedAt!.isBefore(task.dueDate!)) {
+            bonusPoints += 5; // 5% bonus for early completion
+          }
+        }
+      }
+      
+      final finalScore = (baseScore + bonusPoints).clamp(0.0, 100.0);
+      print('ProductivityScore: Final score = $finalScore (base: $baseScore, bonus: $bonusPoints)');
+      
+      return finalScore;
+    } catch (e) {
+      print('ProductivityScore: Error calculating score - $e');
+      return 0.0;
+    }
   }
 
   // Add this getter for easy access
   double get dailyProductivityScore => calculateDailyProductivityScore();
+  
+  // Method to manually refresh productivity score (for debugging)
+  void refreshProductivityScore() {
+    print('TaskProvider: Manually refreshing productivity score...');
+    final score = calculateDailyProductivityScore();
+    print('TaskProvider: Current productivity score = $score');
+    _safeNotifyListeners();
+  }
+
+  // Getter for voice service (needed by VoiceIntegrationService)
+  VoiceService? get voiceService => _voiceService;
+
+  // Update live transcript in VoiceProvider for real-time display
+  void _updateLiveTranscript(String liveText) {
+    // Find VoiceProvider and update live transcript
+    // This will be called from the speech results stream
+    print('TaskProvider: Updating live transcript: "$liveText"');
+    // Note: VoiceProvider will be updated via the UI context
+  }
+
+  // Clean voice command - remove duplicates and artifacts for all command types
+  String _cleanVoiceCommand(String command) {
+    String cleaned = command.trim();
+    
+    // Remove duplicate consecutive words (fix "do do do homework" -> "do homework")
+    cleaned = _removeDuplicateWords(cleaned);
+    
+    // Remove common speech artifacts
+    cleaned = _cleanSpeechArtifacts(cleaned);
+    
+    return cleaned;
+  }
+
+  // Remove duplicate consecutive words
+  String _removeDuplicateWords(String text) {
+    List<String> words = text.split(' ');
+    List<String> cleanWords = [];
+    
+    for (int i = 0; i < words.length; i++) {
+      String currentWord = words[i].toLowerCase();
+      
+      // Skip if this word is the same as the previous word
+      if (cleanWords.isEmpty || cleanWords.last.toLowerCase() != currentWord) {
+        cleanWords.add(words[i]);
+      }
+    }
+    
+    return cleanWords.join(' ');
+  }
+
+  // Clean common speech recognition artifacts
+  String _cleanSpeechArtifacts(String text) {
+    String cleaned = text;
+    
+    // Remove common speech artifacts
+    final artifacts = [
+      RegExp(r'\b(um|uh|er|ah)\b', caseSensitive: false),
+      RegExp(r'\b(like|you know)\b', caseSensitive: false),
+      RegExp(r'\b(well|so)\s+', caseSensitive: false),
+      RegExp(r'\s+(please|thanks?)\s*$', caseSensitive: false),
+    ];
+    
+    for (RegExp artifact in artifacts) {
+      cleaned = cleaned.replaceAll(artifact, ' ');
+    }
+    
+    // Remove extra punctuation and clean spaces
+    cleaned = cleaned.replaceAll(RegExp(r'[.,!?]+$'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    return cleaned;
+  }
 
   @override
   void dispose() {
+    _disposed = true;
     _tasksStreamSubscription?.cancel();
     _voiceCommandSubscription?.cancel();
     _voiceService?.dispose();

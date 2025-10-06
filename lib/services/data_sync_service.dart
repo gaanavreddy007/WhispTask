@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart' show UserPreferences;
 import '../services/user_preferences_service.dart';
+import '../services/sentry_service.dart';
 import '../models/task_model.dart';
 
 class DataSyncService {
@@ -83,14 +84,29 @@ class DataSyncService {
 
   // Calculate and sync analytics automatically
   Future<void> calculateAndSyncAnalytics() async {
-    try {
-      if (_currentUserId == null) return;
+    await SentryService.wrapWithComprehensiveTracking(
+      () async {
+        SentryService.logDatabaseOperation('calculate_sync_analytics_start', 'analytics', data: {
+          'user_id': _currentUserId ?? 'null',
+        });
+        
+        if (_currentUserId == null) {
+          SentryService.logDatabaseOperation('calculate_sync_analytics_skipped', 'analytics', data: {
+            'reason': 'no_user_logged_in',
+          });
+          return;
+        }
 
-      // Get all user tasks
-      QuerySnapshot tasksSnapshot = await _firestore
-          .collection('tasks')
-          .where('userId', isEqualTo: _currentUserId)
-          .get();
+        // Get all user tasks
+        QuerySnapshot tasksSnapshot = await _firestore
+            .collection('tasks')
+            .where('userId', isEqualTo: _currentUserId)
+            .get();
+            
+        SentryService.logDatabaseOperation('tasks_fetched_for_analytics', 'tasks', data: {
+          'user_id': _currentUserId!,
+          'task_count': tasksSnapshot.docs.length.toString(),
+        });
 
       List<TaskModel> tasks = tasksSnapshot.docs
           .map((doc) => TaskModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
@@ -121,21 +137,35 @@ class DataSyncService {
       // Get last activity date
       DateTime? lastActivityDate = _getLastActivityDate(tasks);
 
-      // Update analytics
-      await updateUserAnalytics(
-        totalTasks: totalTasks,
-        completedTasks: completedTasks,
-        tasksCreatedToday: tasksCreatedToday,
-        currentStreak: currentStreak,
-        longestStreak: longestStreak,
-        averageCompletionTime: averageCompletionTime,
-        completionByDay: completionByDay,
-        lastActivityDate: lastActivityDate,
-      );
-
-    } catch (e) {
+        // Update analytics
+        await updateUserAnalytics(
+          totalTasks: totalTasks,
+          completedTasks: completedTasks,
+          tasksCreatedToday: tasksCreatedToday,
+          currentStreak: currentStreak,
+          longestStreak: longestStreak,
+          averageCompletionTime: averageCompletionTime,
+          completionByDay: completionByDay,
+          lastActivityDate: lastActivityDate,
+        );
+        
+        SentryService.logDatabaseOperation('calculate_sync_analytics_complete', 'analytics', data: {
+          'user_id': _currentUserId!,
+          'total_tasks': totalTasks.toString(),
+          'completed_tasks': completedTasks.toString(),
+          'current_streak': currentStreak.toString(),
+        });
+      },
+      operationName: 'calculate_sync_analytics',
+      description: 'Calculate and sync user analytics data',
+      category: 'database',
+    ).catchError((e) {
+      SentryService.logDatabaseOperation('calculate_sync_analytics_failed', 'analytics', data: {
+        'user_id': _currentUserId ?? 'null',
+        'error': e.toString(),
+      });
       print('Error calculating analytics: $e');
-    }
+    });
   }
 
   // Export complete user data

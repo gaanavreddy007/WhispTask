@@ -1352,12 +1352,6 @@ class NotificationHelper {
                   onTap: () => Navigator.of(context).pop('delete'),
                 ),
               ],
-              
-              ListTile(
-                leading: const Icon(Icons.science),
-                title: const Text('Test Notification'),
-                onTap: () => Navigator.of(context).pop('test'),
-              ),
             ],
           ),
           actions: [

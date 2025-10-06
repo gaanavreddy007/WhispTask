@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'user_preferences_service.dart';
 import 'data_sync_service.dart';
@@ -13,6 +14,7 @@ import 'sentry_service.dart';
 class AuthService with ChangeNotifier {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   UserPreferencesService? _preferencesService;
   DataSyncService? _dataSyncService;
@@ -472,11 +474,168 @@ class AuthService with ChangeNotifier {
     }
   }
 
+  // Sign in with Google
+  Future<UserModel?> signInWithGoogle() async {
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User canceled the sign-in
+        return null;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in with the credential
+      UserCredential result = await _firebaseAuth.signInWithCredential(credential);
+      User? user = result.user;
+
+      if (user != null) {
+        // Create or update enhanced user document
+        await _createOrUpdateGoogleUserDocument(user, googleUser);
+        
+        // Initialize sync for new device (skip in test mode)
+        if (!_isTestMode && _dataSyncService != null) {
+          await _dataSyncService!.initializeSyncForNewDevice();
+          if (await _dataSyncService!.hasSyncConflicts()) {
+            await _dataSyncService!.resolveSyncConflicts();
+          }
+        }
+        
+        // Return complete Firestore data
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        return UserModel.fromFirestore(userDoc);
+      }
+      
+      return null;
+    } catch (e) {
+      if (_isTestMode) {
+        print('Google sign-in error in test mode: $e');
+        return null;
+      }
+      throw _handleAuthError(e);
+    }
+  }
+
+  // Link anonymous account with Google
+  Future<UserModel?> linkAnonymousWithGoogle() async {
+    try {
+      if (!isAnonymous) {
+        throw Exception('Current user is not anonymous');
+      }
+
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        return null;
+      }
+
+      // Obtain the auth details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Link with credential
+      UserCredential result = await _firebaseAuth.currentUser!.linkWithCredential(credential);
+      User? user = result.user;
+
+      if (user != null) {
+        // Update user document
+        await _updateEnhancedUserDocument(
+          user, 
+          displayName: googleUser.displayName,
+          isAnonymous: false,
+        );
+        
+        // Return complete Firestore data
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+        return UserModel.fromFirestore(userDoc);
+      }
+      
+      return null;
+    } catch (e) {
+      throw _handleAuthError(e);
+    }
+  }
+
+  // Sign out from Google
+  Future<void> signOutGoogle() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      print('Error signing out from Google: $e');
+    }
+  }
+
+  // Create or update user document for Google sign-in
+  Future<void> _createOrUpdateGoogleUserDocument(User user, GoogleSignInAccount googleUser) async {
+    try {
+      DocumentReference userRef = _firestore.collection('users').doc(user.uid);
+      DocumentSnapshot userDoc = await userRef.get();
+      
+      String deviceTimezone = DateTime.now().timeZoneName;
+      String deviceLanguage = 'en';
+      
+      if (userDoc.exists) {
+        // Update existing user
+        await userRef.update({
+          'lastSignIn': FieldValue.serverTimestamp(),
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'syncVersion': FieldValue.increment(1),
+          'email': user.email,
+          'displayName': user.displayName ?? googleUser.displayName ?? 'User',
+        });
+      } else {
+        // Create new user document
+        await userRef.set({
+          'uid': user.uid,
+          'email': user.email,
+          'displayName': user.displayName ?? googleUser.displayName ?? 'User',
+          'isAnonymous': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastSignIn': FieldValue.serverTimestamp(),
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'timezone': deviceTimezone,
+          'language': deviceLanguage,
+          'provider': 'google',
+          
+          // Initialize preferences with defaults
+          'preferences': UserPreferences.defaultPreferences().toMap(),
+          
+          // Initialize analytics with defaults
+          'analytics': UserAnalytics.defaultAnalytics().toMap(),
+          
+          // Sync metadata
+          'syncVersion': 1,
+          'lastSyncAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      print('Error creating/updating Google user document: $e');
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     try {
       // Create automatic backup before signing out
       await _dataSyncService?.createAutomaticBackup();
+      
+      // Sign out from Google if signed in with Google
+      await signOutGoogle();
       
       // Clean up listeners
       _preferencesService?.dispose();
@@ -673,10 +832,27 @@ class AuthService with ChangeNotifier {
           return 'Please log in again to perform this action.';
         case 'credential-already-in-use':
           return 'This account is already linked with another user.';
+        // Add Google-specific cases
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with this email using a different sign-in method.';
+        case 'invalid-credential':
+          return 'The Google sign-in credential is invalid.';
         default:
           return 'Authentication error: ${error.message}';
       }
     }
+    
+    // Handle Google Sign-In specific errors
+    if (error.toString().contains('GoogleSignIn')) {
+      if (error.toString().contains('network_error')) {
+        return 'Network error. Please check your internet connection.';
+      }
+      if (error.toString().contains('sign_in_canceled')) {
+        return ''; // Don't show error for user cancellation
+      }
+      return 'Google sign-in failed. Please try again.';
+    }
+    
     return 'An unexpected error occurred. Please try again.';
   }
 

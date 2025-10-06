@@ -1,12 +1,16 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, duplicate_ignore, use_build_context_synchronously
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, duplicate_ignore, use_build_context_synchronously, unused_import, unused_import
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/voice_provider.dart';
 import '../providers/task_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/task.dart';
 import '../l10n/app_localizations.dart';
 import '../services/sentry_service.dart';
+import '../utils/safe_context_helper.dart';
+// ignore: unused_import
+import '../widgets/loading_splash_overlay.dart';
 
 class VoiceInputScreen extends StatefulWidget {
   const VoiceInputScreen({super.key});
@@ -19,7 +23,10 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  final TextEditingController _textController = TextEditingController();
+  late AnimationController _waveController;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -30,16 +37,42 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     
     try {
       _pulseController = AnimationController(
-        duration: const Duration(seconds: 1),
+        duration: const Duration(milliseconds: 800), // Faster animation
         vsync: this,
       );
       _pulseAnimation = Tween<double>(
         begin: 1.0,
-        end: 1.2,
+        end: 1.1, // Reduced scale for better performance
       ).animate(CurvedAnimation(
         parent: _pulseController,
         curve: Curves.easeInOut,
       ));
+
+      _waveController = AnimationController(
+        duration: const Duration(milliseconds: 1500), // Faster wave animation
+        vsync: this,
+      );
+
+      _slideController = AnimationController(
+        duration: const Duration(milliseconds: 800),
+        vsync: this,
+      );
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0.3),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutCubic,
+      ));
+      _fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOut,
+      ));
+
+      _slideController.forward();
     } catch (e, stackTrace) {
       SentryService.captureException(
         e,
@@ -53,21 +86,28 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _waveController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   void _toggleListening() {
+    if (!mounted) return;
+    
     try {
       final voiceProvider = context.read<VoiceProvider>();
+      final authProvider = context.read<AuthProvider>();
       
       if (voiceProvider.isListening) {
         SentryService.logUserAction('voice_stop_listening');
         voiceProvider.stopListening();
         _pulseController.stop();
+        _waveController.stop();
       } else {
         SentryService.logUserAction('voice_start_listening');
-        voiceProvider.startListening();
+        voiceProvider.startListening(authProvider);
         _pulseController.repeat(reverse: true);
+        _waveController.repeat();
       }
     } catch (e, stackTrace) {
       SentryService.captureException(
@@ -79,13 +119,9 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
     }
   }
 
-  // Manual test method for debugging parsing logic
-  void _testCommand(String command) {
-    final taskProvider = context.read<TaskProvider>();
-    taskProvider.processVoiceTaskCommandEnhanced(command);
-  }
-
   Future<void> _saveTask() async {
+    if (!mounted) return;
+    
     return SentryService.wrapWithErrorTracking(
       () async {
         final voiceProvider = context.read<VoiceProvider>();
@@ -94,6 +130,9 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
         SentryService.logUserAction('voice_save_task_attempt', data: {
           'has_preview_task': (voiceProvider.previewTask != null).toString(),
           'is_valid': voiceProvider.isCurrentTaskValid().toString(),
+          'is_recurring': (voiceProvider.previewTask?.isRecurring ?? false).toString(),
+          'recurring_pattern': voiceProvider.previewTask?.recurringPattern ?? 'none',
+          'recurring_interval': voiceProvider.previewTask?.recurringInterval?.toString() ?? 'none',
         });
         
         if (voiceProvider.previewTask == null || !voiceProvider.isCurrentTaskValid()) {
@@ -102,7 +141,11 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
             category: 'validation',
             level: 'warning',
           );
-          _showSnackBar(AppLocalizations.of(context).pleaseProvideValidTask, isError: true);
+          _showSnackBar(SafeContextHelper.getLocalizedText(
+            context, 
+            (l) => l.pleaseProvideValidTask, 
+            'Please provide a valid task'
+          ), isError: true);
           return;
         }
 
@@ -111,10 +154,24 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
         SentryService.logUserAction('voice_task_saved_success', data: {
           'task_title': voiceProvider.previewTask!.title,
           'task_priority': voiceProvider.previewTask!.priority.toString(),
+          'task_category': voiceProvider.previewTask!.category,
+          'is_recurring': voiceProvider.previewTask!.isRecurring.toString(),
+          'recurring_pattern': voiceProvider.previewTask!.recurringPattern ?? 'none',
+          'recurring_interval': voiceProvider.previewTask!.recurringInterval?.toString() ?? 'none',
+          'has_due_date': (voiceProvider.previewTask!.dueDate != null).toString(),
         });
         
-        _showSnackBar(AppLocalizations.of(context).taskCreatedSuccessfully, isError: false);
+        _showSnackBar(SafeContextHelper.getLocalizedText(
+          context, 
+          (l) => l.taskCreatedSuccessfully, 
+          'Task created successfully'
+        ), isError: false);
         voiceProvider.clearSession();
+        
+        // Navigate back to task list screen after successful save
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       },
       operation: 'save_voice_task',
       description: 'Save task from voice input',
@@ -123,320 +180,649 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   }
 
   void _showSnackBar(String message, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : Colors.green,
-        duration: const Duration(seconds: 3),
-      ),
+    SafeContextHelper.showSafeSnackBar(
+      context,
+      message,
+      backgroundColor: isError ? Colors.red : Colors.green.shade600,
     );
+  }
+
+  // Helper method for safe localized text
+  String _getSafeText(String Function(AppLocalizations) getter, String fallback) {
+    return SafeContextHelper.getLocalizedText(context, getter, fallback);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).voiceInput),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: Text(
+          SafeContextHelper.getLocalizedText(
+            context, 
+            (l) => l.voiceInput, 
+            'Voice Input'
+          ),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () => _showHelpDialog(),
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.help_outline, size: 22),
+              onPressed: () => _showHelpDialog(),
+            ),
           ),
         ],
       ),
-      body: Consumer<VoiceProvider>(
-        builder: (context, voiceProvider, child) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Text input for testing commands (bypass microphone)
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(AppLocalizations.of(context).testCommandsTitle, 
-                           style: TextStyle(fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: _textController,
-                        decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context).testCommandsHint,
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (_textController.text.isNotEmpty) {
-                            _testCommand(_textController.text);
-                            _textController.clear();
-                          }
-                        },
-                        child: Text(AppLocalizations.of(context).testCommand),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Voice button
-                Center(
-                  child: GestureDetector(
-                    onTap: _toggleListening,
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: voiceProvider.isListening ? _pulseAnimation.value : 1.0,
-                          child: Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: voiceProvider.isListening 
-                                ? Theme.of(context).colorScheme.error 
-                                : Theme.of(context).colorScheme.primary,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (voiceProvider.isListening 
-                                    ? Theme.of(context).colorScheme.error 
-                                    : Theme.of(context).colorScheme.primary).withOpacity(0.3),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    const Color(0xFF1a1a2e),
+                    const Color(0xFF16213e),
+                    const Color(0xFF0f3460),
+                  ]
+                : [
+                    const Color(0xFFF8FAFC),
+                    const Color(0xFFE2E8F0),
+                    const Color(0xFFCBD5E1),
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Consumer<VoiceProvider>(
+            builder: (context, voiceProvider, child) {
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // Voice button with wave animation
+                    Expanded(
+                      flex: 2,
+                      child: Center(
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: FadeTransition(
+                            opacity: _fadeAnimation,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Outer wave rings
+                                if (voiceProvider.isListening) ...[
+                                  for (int i = 0; i < 3; i++)
+                                    AnimatedBuilder(
+                                      animation: _waveController,
+                                      builder: (context, child) {
+                                        final delay = i * 0.3;
+                                        final animation = Tween<double>(
+                                          begin: 0.5,
+                                          end: 2.0,
+                                        ).animate(CurvedAnimation(
+                                          parent: _waveController,
+                                          curve: Interval(delay, 1.0, curve: Curves.easeOut),
+                                        ));
+                                        return Transform.scale(
+                                          scale: animation.value,
+                                          child: Container(
+                                            width: 160,
+                                            height: 160,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: (isDarkMode ? Colors.cyanAccent : Colors.blue)
+                                                    .withOpacity(0.3 * (1 - animation.value / 2)),
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                ],
+                                
+                                // Main voice button
+                                GestureDetector(
+                                  onTap: _toggleListening,
+                                  child: AnimatedBuilder(
+                                    animation: _pulseAnimation,
+                                    builder: (context, child) {
+                                      return Transform.scale(
+                                        scale: voiceProvider.isListening ? _pulseAnimation.value : 1.0,
+                                        child: Container(
+                                          width: 120,
+                                          height: 120,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: voiceProvider.isListening 
+                                ? [theme.colorScheme.error.withOpacity(0.7), theme.colorScheme.error, theme.colorScheme.error.withOpacity(1.2)]
+                                                : isDarkMode 
+                                                  ? [Colors.cyan.shade300, Colors.cyan.shade500, Colors.cyan.shade700]
+                                                  : [theme.colorScheme.primary.withOpacity(0.7), theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(1.2)],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: (voiceProvider.isListening 
+                                                  ? theme.colorScheme.error 
+                                                  : isDarkMode ? Colors.cyan : theme.colorScheme.primary).withOpacity(0.4),
+                                                blurRadius: 30,
+                                                spreadRadius: 0,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            voiceProvider.isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                            size: 48,
+                                            color: theme.colorScheme.onPrimary,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              voiceProvider.isListening ? Icons.stop : Icons.mic,
-                              size: 40,
-                              color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Status text with enhanced styling
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDarkMode ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.1),
+                        ),
+                      ),
+                      child: Text(
+                        voiceProvider.isListening 
+                            ? _getSafeText((l) => l.listeningSpeak, 'Listening... Speak now')
+                            : voiceProvider.isInitialized 
+                                ? _getSafeText((l) => l.tapToSpeak, 'Tap to speak') 
+                                : _getSafeText((l) => l.initializing, 'Initializing...'),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: voiceProvider.isListening 
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Content area
+                    Expanded(
+                      flex: 3,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: [
+                            // Error message with enhanced styling
+                            if (voiceProvider.errorMessage.isNotEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                margin: const EdgeInsets.only(bottom: 20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [theme.colorScheme.errorContainer.withOpacity(0.3), theme.colorScheme.errorContainer.withOpacity(0.5)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: theme.colorScheme.error.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.error.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(Icons.error_outline, color: theme.colorScheme.error, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        voiceProvider.errorMessage,
+                                        style: TextStyle(
+                                          color: theme.colorScheme.onErrorContainer,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            
+                            // Recognized text with glassmorphism effect
+                            if (voiceProvider.recognizedText.isNotEmpty) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode 
+                                    ? Colors.white.withOpacity(0.1)
+                                    : Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isDarkMode 
+                                      ? Colors.white.withOpacity(0.2)
+                                      : theme.colorScheme.primary.withOpacity(0.2),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: isDarkMode 
+                                                ? [Colors.cyan.shade400, Colors.cyan.shade600]
+                                                : [theme.colorScheme.primary.withOpacity(0.8), theme.colorScheme.primary],
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(Icons.record_voice_over, color: theme.colorScheme.onPrimary, size: 16),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _getSafeText((l) => l.youSaid, 'You said:'),
+                                          style: TextStyle(
+                                            color: isDarkMode ? Colors.cyan.shade300 : theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      voiceProvider.recognizedText,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        height: 1.5,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 20),
+                            ],
+                            
+                            // Task preview with enhanced design
+                            if (voiceProvider.previewTask != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: isDarkMode 
+                                      ? [Colors.green.withOpacity(0.2), Colors.green.withOpacity(0.1)]
+                                      : [Colors.green.shade50, Colors.green.shade100],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.3),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withOpacity(0.1),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [Colors.green.withOpacity(0.8), Colors.green],
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(Icons.preview, color: Colors.white, size: 16),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _getSafeText((l) => l.taskPreview, 'Task Preview'),
+                                          style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildTaskPreview(voiceProvider.previewTask!),
+                                  ],
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 24),
+                              
+                              // Action buttons with modern styling
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ElevatedButton.icon(
+                                        onPressed: voiceProvider.clearSession,
+                                        icon: const Icon(Icons.refresh_rounded, size: 20),
+                                        label: Text(
+                                          _getSafeText((l) => l.clear, 'Clear'),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: theme.colorScheme.surfaceVariant,
+                                          foregroundColor: theme.colorScheme.onSurfaceVariant,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        gradient: voiceProvider.isCurrentTaskValid() 
+                                          ? LinearGradient(
+                                              colors: isDarkMode 
+                                                ? [Colors.cyan.shade400, Colors.cyan.shade600]
+                                                : [theme.colorScheme.primary.withOpacity(0.9), theme.colorScheme.primary],
+                                            )
+                                          : null,
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: voiceProvider.isCurrentTaskValid() ? [
+                                          BoxShadow(
+                                            color: (isDarkMode ? Colors.cyan : theme.colorScheme.primary).withOpacity(0.3),
+                                            blurRadius: 15,
+                                            offset: const Offset(0, 6),
+                                          ),
+                                        ] : null,
+                                      ),
+                                      child: ElevatedButton.icon(
+                                        onPressed: voiceProvider.isCurrentTaskValid() ? _saveTask : null,
+                                        icon: const Icon(Icons.save_rounded, size: 20),
+                                        label: Text(
+                                          _getSafeText((l) => l.saveTask, 'Save Task'),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: voiceProvider.isCurrentTaskValid() 
+                                            ? Colors.transparent 
+                                            : Colors.grey.shade400,
+                                          foregroundColor: theme.colorScheme.onPrimary,
+                                          elevation: 0,
+                                          shadowColor: Colors.transparent,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 32),
+                            ],
+                            
+                            // Instructions with modern card design
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: isDarkMode 
+                                  ? Colors.white.withOpacity(0.05)
+                                  : Colors.white.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isDarkMode 
+                                    ? Colors.white.withOpacity(0.1)
+                                    : Colors.black.withOpacity(0.05),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isDarkMode ? Colors.orange.shade800 : Colors.orange.shade100,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          Icons.lightbulb_outline,
+                                          color: isDarkMode ? Colors.orange.shade300 : Colors.orange.shade700,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        AppLocalizations.of(context).voiceCommandsExamples,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: isDarkMode ? Colors.orange.shade300 : Colors.orange.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _buildExampleItem(AppLocalizations.of(context).voiceExample1),
+                                  _buildExampleItem(AppLocalizations.of(context).voiceExample2),
+                                  _buildExampleItem(AppLocalizations.of(context).voiceExample3),
+                                  _buildExampleItem(AppLocalizations.of(context).voiceExample4),
+                                  _buildExampleItem(AppLocalizations.of(context).voiceExample5),
+                                  // Reminder examples
+                                  _buildExampleItem("\"Call mom tomorrow and remind me at 3pm\""),
+                                  _buildExampleItem("\"Buy groceries today, set reminder 30 minutes before\""),
+                                  _buildExampleItem("\"Meeting with client, notify me 1 hour before\""),
+                                  _buildExampleItem("\"Take medicine daily, remind me every morning\""),
+                                  // Description examples
+                                  _buildExampleItem("\"Finish project with description prepare presentation slides\""),
+                                  _buildExampleItem("\"Doctor appointment with notes bring insurance card\""),
+                                  // Color examples
+                                  _buildExampleItem("\"Urgent task in red color\""),
+                                  _buildExampleItem("\"Work meeting in blue color\""),
+                                  // Repeat days examples
+                                  _buildExampleItem("\"Exercise weekly on Monday Wednesday Friday\""),
+                                  _buildExampleItem("\"Team meeting every Tuesday and Thursday\""),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Status text
-                Text(
-                  voiceProvider.isListening 
-                      ? AppLocalizations.of(context).listeningSpeak
-                      : voiceProvider.isInitialized 
-                          ? AppLocalizations.of(context).tapToSpeak 
-                          : AppLocalizations.of(context).initializing,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: voiceProvider.isListening ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Error message
-                if (voiceProvider.errorMessage.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Theme.of(context).colorScheme.error),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            voiceProvider.errorMessage,
-                            style: TextStyle(color: Theme.of(context).colorScheme.error),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                
-                // Recognized text
-                if (voiceProvider.recognizedText.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context).youSaid,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          voiceProvider.recognizedText,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                ],
-                
-                // Task preview
-                if (voiceProvider.previewTask != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context).taskPreview,
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTaskPreview(voiceProvider.previewTask!),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Action buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: voiceProvider.clearSession,
-                          icon: const Icon(Icons.clear),
-                          label: Text(AppLocalizations.of(context).clear),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.secondary,
-                            foregroundColor: Theme.of(context).colorScheme.onSecondary,
-                          ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: voiceProvider.isCurrentTaskValid() ? _saveTask : null,
-                          icon: const Icon(Icons.save),
-                          label: Text(AppLocalizations.of(context).saveTask),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                
-                const Spacer(),
-                
-                // Instructions
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context).voiceCommandsExamples,
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(AppLocalizations.of(context).voiceExample1),
-                      Text(AppLocalizations.of(context).voiceExample2),
-                      Text(AppLocalizations.of(context).voiceExample3),
-                      Text(AppLocalizations.of(context).voiceExample4),
-                      Text(AppLocalizations.of(context).voiceExample5),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExampleItem(String text) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 6, right: 12),
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.orange.shade400 : Colors.orange.shade600,
+              shape: BoxShape.circle,
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                height: 1.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTaskPreview(Task task) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.task_alt, color: Colors.green, size: 20),
-            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.task_alt, color: Colors.green, size: 18),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 task.title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 16,
+                  fontSize: 18,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         Wrap(
-          spacing: 8,
-          runSpacing: 4,
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            _buildPreviewChip(AppLocalizations.of(context).category, task.category, Theme.of(context).colorScheme.primary),
+            _buildPreviewChip(AppLocalizations.of(context).category, task.category, theme.colorScheme.primary),
             _buildPreviewChip(AppLocalizations.of(context).priority, task.priority, _getPriorityColor(task.priority)),
             if (task.isRecurring && task.recurringPattern != null)
-              _buildPreviewChip(AppLocalizations.of(context).recurring, task.recurringPattern!, Theme.of(context).colorScheme.secondary),
+              _buildPreviewChip(
+                AppLocalizations.of(context).recurring, 
+                '${task.recurringPattern}${task.recurringInterval != null && task.recurringInterval! > 1 ? ' (every ${task.recurringInterval})' : ''}', 
+                Colors.purple
+              ),
+            if (task.hasReminder && task.reminderTime != null)
+              _buildPreviewChip(
+                'Reminder', 
+                '${_formatDateTime(task.reminderTime!)} (${task.reminderType})', 
+                Colors.amber
+              ),
           ],
         ),
         if (task.dueDate != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.schedule, color: Theme.of(context).colorScheme.secondary, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${AppLocalizations.of(context).due}: ${_formatDateTime(task.dueDate!)}',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                  fontSize: 12,
-                ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.indigo.shade900.withOpacity(0.3) : Colors.indigo.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.indigo.shade400.withOpacity(0.3) : Colors.indigo.shade200,
               ),
-            ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.schedule_rounded,
+                  color: isDarkMode ? Colors.indigo.shade300 : Colors.indigo.shade600,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${AppLocalizations.of(context).due}: ${_formatDateTime(task.dueDate!)}',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.indigo.shade300 : Colors.indigo.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ],
@@ -444,21 +830,26 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   }
 
   Widget _buildPreviewChip(String label, String value, Color color) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        // ignore: deprecated_member_use
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-        // ignore: deprecated_member_use
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(isDarkMode ? 0.2 : 0.1),
+            color.withOpacity(isDarkMode ? 0.3 : 0.15),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
         '$label: $value',
         style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
+          color: isDarkMode ? color.withOpacity(0.8) : color,
           fontSize: 12,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -491,38 +882,303 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
   }
 
   void _showHelpDialog() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).voiceInputHelp),
-        content: SingleChildScrollView(
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDarkMode
+                  ? [
+                      const Color(0xFF1a1a2e),
+                      const Color(0xFF16213e),
+                    ]
+                  : [
+                      const Color(0xFFF8FAFC),
+                      const Color(0xFFE2E8F0),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 40,
+                offset: const Offset(0, 20),
+              ),
+            ],
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(AppLocalizations.of(context).howToUseVoiceInput, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(AppLocalizations.of(context).voiceStep1),
-              Text(AppLocalizations.of(context).voiceStep2),
-              Text(AppLocalizations.of(context).voiceStep3),
-              Text(AppLocalizations.of(context).voiceStep4),
-              const SizedBox(height: 16),
-              Text(AppLocalizations.of(context).voiceFeatures, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(AppLocalizations.of(context).voiceFeatureTime),
-              Text(AppLocalizations.of(context).voiceFeaturePriority),
-              Text(AppLocalizations.of(context).voiceFeatureRecurring),
-              Text(AppLocalizations.of(context).voiceFeatureCategories),
+              // Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isDarkMode 
+                      ? [Colors.cyan.shade400, Colors.cyan.shade600]
+                      : [theme.colorScheme.primary.withOpacity(0.9), theme.colorScheme.primary],
+                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.help_outline, color: theme.colorScheme.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).voiceInputHelp,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // How to use section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    size: 16,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  AppLocalizations.of(context).howToUseVoiceInput,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildHelpStep("1", AppLocalizations.of(context).voiceStep1),
+                            _buildHelpStep("2", AppLocalizations.of(context).voiceStep2),
+                            _buildHelpStep("3", AppLocalizations.of(context).voiceStep3),
+                            _buildHelpStep("4", AppLocalizations.of(context).voiceStep4),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Features section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? Colors.purple.shade800 : Colors.purple.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.auto_awesome,
+                                    size: 16,
+                                    color: isDarkMode ? Colors.purple.shade300 : Colors.purple.shade700,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  AppLocalizations.of(context).voiceFeatures,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isDarkMode ? Colors.purple.shade300 : Colors.purple.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildFeatureItem(Icons.schedule, AppLocalizations.of(context).voiceFeatureTime),
+                            _buildFeatureItem(Icons.priority_high, AppLocalizations.of(context).voiceFeaturePriority),
+                            _buildFeatureItem(Icons.repeat, AppLocalizations.of(context).voiceFeatureRecurring),
+                            _buildFeatureItem(Icons.category, AppLocalizations.of(context).voiceFeatureCategories),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Footer
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.cyan.shade600 : theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      AppLocalizations.of(context).gotIt,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context).gotIt),
+      ),
+    );
+  }
+
+  Widget _buildHelpStep(String stepNumber, String text) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDarkMode 
+                  ? [Colors.cyan.shade400, Colors.cyan.shade600]
+                  : [theme.colorScheme.primary.withOpacity(0.8), theme.colorScheme.primary],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                stepNumber,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                height: 1.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.purple.shade800.withOpacity(0.3) : Colors.purple.shade100,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: isDarkMode ? Colors.purple.shade300 : Colors.purple.shade700,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                height: 1.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 }

@@ -97,7 +97,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                   const Icon(Icons.tune, color: Colors.white, size: 24),
                   const SizedBox(width: 12),
                   Text(
-                    'Filter Tasks',
+                    AppLocalizations.of(context).filterTasks,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -107,7 +107,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                   IconButton(
                     onPressed: _clearAllFilters,
                     icon: const Icon(Icons.clear_all, color: Colors.white),
-                    tooltip: 'Clear All Filters',
+                    tooltip: AppLocalizations.of(context).clearAllFilters,
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -139,7 +139,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                     TextButton(
                       onPressed: _clearAllFilters,
                       child: Text(
-                        'Clear All',
+                        AppLocalizations.of(context).clearAll,
                         style: TextStyle(
                           color: Colors.amber[700],
                           fontSize: 11,
@@ -154,11 +154,11 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             // Tabs
             TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(icon: Icon(Icons.category), text: 'Categories'),
-                Tab(icon: Icon(Icons.flag), text: 'Properties'),
-                Tab(icon: Icon(Icons.calendar_today), text: 'Dates'),
-                Tab(icon: Icon(Icons.color_lens), text: 'Colors'),
+              tabs: [
+                Tab(icon: const Icon(Icons.category), text: AppLocalizations.of(context).categories),
+                Tab(icon: const Icon(Icons.flag), text: AppLocalizations.of(context).properties),
+                Tab(icon: const Icon(Icons.calendar_today), text: AppLocalizations.of(context).dates),
+                Tab(icon: const Icon(Icons.color_lens), text: AppLocalizations.of(context).colors),
               ],
               labelColor: Colors.blue[600],
               unselectedLabelColor: Colors.grey[600],
@@ -212,7 +212,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(
-                      'Cancel',
+                      AppLocalizations.of(context).cancel,
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ),
@@ -252,7 +252,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Select Categories',
+            AppLocalizations.of(context).selectCategories,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.grey[700],
@@ -344,7 +344,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
           children: [
             // Priority section
             _buildPropertySection(
-              title: 'Priority',
+              title: AppLocalizations.of(context).priority,
               icon: Icons.flag,
               items: ['high', 'medium', 'low'],
               selectedItems: _selectedPriorities,
@@ -357,7 +357,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             
             // Status section
             _buildPropertySection(
-              title: 'Status',
+              title: AppLocalizations.of(context).status,
               icon: Icons.assignment_turned_in,
               items: ['pending', 'completed'],
               selectedItems: _selectedStatuses,
@@ -370,7 +370,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             
             // Special filters
             Text(
-              'Special Filters',
+              AppLocalizations.of(context).specialFilters,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Colors.grey[700],
@@ -380,8 +380,8 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             
             // Special filter switches
             _buildFilterSwitch(
-              title: 'Recurring Tasks Only',
-              subtitle: 'Show only tasks that repeat',
+              title: AppLocalizations.of(context).recurringTasksOnly,
+              subtitle: AppLocalizations.of(context).showOnlyTasksRepeat,
               icon: Icons.repeat,
               value: _showRecurringOnly,
               onChanged: (value) => setState(() => _showRecurringOnly = value),
@@ -389,8 +389,8 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             ),
             
             _buildFilterSwitch(
-              title: 'Tasks with Reminders Only',
-              subtitle: 'Show only tasks with active reminders',
+              title: AppLocalizations.of(context).tasksWithRemindersOnly,
+              subtitle: AppLocalizations.of(context).showOnlyTasksReminders,
               icon: Icons.notifications_active,
               value: _showReminderOnly,
               onChanged: (value) => setState(() => _showReminderOnly = value),
@@ -398,8 +398,8 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             ),
             
             _buildFilterSwitch(
-              title: 'Overdue Tasks Only',
-              subtitle: 'Show only tasks past their due date',
+              title: AppLocalizations.of(context).overdueTasksOnly,
+              subtitle: AppLocalizations.of(context).showOnlyTasksPastDue,
               icon: Icons.warning,
               value: _showOverdueOnly,
               onChanged: (value) => setState(() => _showOverdueOnly = value),
@@ -419,7 +419,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Due Date Range',
+            AppLocalizations.of(context).dueDateRange,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.grey[700],
@@ -432,11 +432,11 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildQuickDateChip('Today', () => _setQuickDateFilter('today')),
-              _buildQuickDateChip('Tomorrow', () => _setQuickDateFilter('tomorrow')),
-              _buildQuickDateChip('This Week', () => _setQuickDateFilter('week')),
-              _buildQuickDateChip('Next Week', () => _setQuickDateFilter('next_week')),
-              _buildQuickDateChip('This Month', () => _setQuickDateFilter('month')),
+              _buildQuickDateChip(AppLocalizations.of(context).today, () => _setQuickDateFilter('today')),
+              _buildQuickDateChip(AppLocalizations.of(context).tomorrow, () => _setQuickDateFilter('tomorrow')),
+              _buildQuickDateChip(AppLocalizations.of(context).thisWeek, () => _setQuickDateFilter('week')),
+              _buildQuickDateChip(AppLocalizations.of(context).nextWeek, () => _setQuickDateFilter('next_week')),
+              _buildQuickDateChip(AppLocalizations.of(context).thisMonth, () => _setQuickDateFilter('month')),
             ],
           ),
           
@@ -444,7 +444,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
           
           // Custom date range
           Text(
-            'Custom Date Range',
+            AppLocalizations.of(context).customDateRange,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
@@ -454,7 +454,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
           
           // Start date picker
           _buildDatePickerTile(
-            title: 'Start Date',
+            title: AppLocalizations.of(context).startDate,
             date: _dueDateStart,
             onTap: () => _selectDate(context, true),
             icon: Icons.calendar_today,
@@ -464,7 +464,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
           
           // End date picker
           _buildDatePickerTile(
-            title: 'End Date',
+            title: AppLocalizations.of(context).endDate,
             date: _dueDateEnd,
             onTap: () => _selectDate(context, false),
             icon: Icons.event,
@@ -503,7 +503,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             // Colors section
             if (availableColors.isNotEmpty) ...[
               Text(
-                'Colors',
+                AppLocalizations.of(context).colors,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[700],
@@ -774,7 +774,7 @@ class _FilterDialogState extends State<FilterDialog> with SingleTickerProviderSt
             Text(
               date != null 
                   ? '${date.day}/${date.month}/${date.year}'
-                  : 'Select Date',
+                  : AppLocalizations.of(context).selectDate,
               style: TextStyle(
                 color: date != null ? Colors.blue[600] : Colors.grey[500],
                 fontWeight: date != null ? FontWeight.w600 : FontWeight.normal,

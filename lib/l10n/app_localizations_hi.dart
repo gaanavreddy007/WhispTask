@@ -48,6 +48,52 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get dontHaveAccount => 'खाता नहीं है?';
 
+  // Permission related strings
+  @override
+  String get requestingMicrophonePermission => 'माइक्रोफोन अनुमति का अनुरोध कर रहे हैं...';
+
+  @override
+  String get requestingNotificationPermission => 'सूचना अनुमति का अनुरोध कर रहे हैं...';
+
+  @override
+  String get requestingStoragePermission => 'स्टोरेज अनुमति का अनुरोध कर रहे हैं...';
+
+  @override
+  String get requestingCameraPermission => 'कैमरा अनुमति का अनुरोध कर रहे हैं...';
+
+  @override
+  String get requestingPermissions => 'अनुमतियों का अनुरोध कर रहे हैं...';
+
+  @override
+  String get microphonePermissionRequired => 'माइक्रोफोन अनुमति आवश्यक';
+
+  @override
+  String get microphonePermissionDescription => 'व्हिस्पटास्क को वॉयस कमांड और टास्क बनाने के लिए माइक्रोफोन एक्सेस की आवश्यकता है। कृपया सेटिंग्स में अनुमति दें।';
+
+  @override
+  String get microphonePermissionDenied => 'माइक्रोफोन अनुमति अस्वीकृत';
+
+  @override
+  String get microphonePermissionDeniedDescription => 'माइक्रोफोन अनुमति के बिना वॉयस फीचर काम नहीं करेंगे। आप इसे बाद में सेटिंग्स में सक्षम कर सकते हैं।';
+
+  @override
+  String get notificationPermissionRequired => 'सूचना अनुमति आवश्यक';
+
+  @override
+  String get notificationPermissionDescription => 'व्हिस्पटास्क को टास्क की याद दिलाने के लिए सूचना एक्सेस की आवश्यकता है। कृपया सेटिंग्स में अनुमति दें।';
+
+  @override
+  String get storagePermissionRequired => 'स्टोरेज अनुमति आवश्यक';
+
+  @override
+  String get storagePermissionDescription => 'व्हिस्पटास्क को वॉयस रिकॉर्डिंग और टास्क अटैचमेंट सेव करने के लिए स्टोरेज एक्सेस की आवश्यकता है। कृपया सेटिंग्स में अनुमति दें।';
+
+  @override
+  String get cameraPermissionRequired => 'कैमरा अनुमति आवश्यक';
+
+  @override
+  String get cameraPermissionDescription => 'व्हिस्पटास्क को टास्क में फोटो जोड़ने के लिए कैमरा एक्सेस की आवश्यकता है। कृपया सेटिंग्स में अनुमति दें।';
+
   @override
   String get tasks => 'कार्य';
 
@@ -547,6 +593,149 @@ class AppLocalizationsHi extends AppLocalizations {
   
   @override
   String get keepGoing => 'जारी रखें!';
+
+  // Provider error messages
+  @override
+  String get userNotAuthenticated => 'उपयोगकर्ता प्रमाणित नहीं है';
+  
+  @override
+  String get dailyTaskLimitReached => 'दैनिक कार्य सीमा पहुंच गई (20 कार्य)। असीमित कार्यों के लिए प्रो में अपग्रेड करें!';
+  
+  @override
+  String get failedToLoadTasks => 'कार्य लोड करने में विफल';
+  
+  @override
+  String get failedToAddTask => 'कार्य जोड़ने में विफल';
+  
+  @override
+  String get failedToUpdateTask => 'कार्य अपडेट करने में विफल';
+  
+  @override
+  String get failedToDeleteTask => 'कार्य हटाने में विफल';
+  
+  @override
+  String get failedToToggleTaskCompletion => 'कार्य पूर्णता टॉगल करने में विफल';
+  
+  @override
+  String get failedToUpdateTasks => 'कार्य अपडेट करने में विफल';
+  
+  @override
+  String get failedToDeleteAllTasks => 'सभी कार्य हटाने में विफल';
+  
+  @override
+  String get failedToSnoozeReminder => 'रिमाइंडर स्नूज़ करने में विफल';
+  
+  @override
+  String get failedToCancelReminder => 'रिमाइंडर रद्द करने में विफल';
+  
+  @override
+  String get failedToInitializeAuth => 'प्रमाणीकरण प्रारंभ करने में विफल';
+  
+  @override
+  String get purchaseFailed => 'खरीदारी विफल';
+  
+  @override
+  String get restoreFailed => 'पुनर्स्थापना विफल';
+  
+  @override
+  String get pleaseEnterValidEmail => 'कृपया एक वैध ईमेल पता दर्ज करें';
+  
+  @override
+  String get passwordMustBe6Characters => 'पासवर्ड कम से कम 6 अक्षर लंबा होना चाहिए';
+  
+  @override
+  String get pleaseEnterYourName => 'कृपया अपना नाम दर्ज करें';
+  
+  @override
+  String get failedToRegister => 'पंजीकरण में विफल';
+  
+  @override
+  String get pleaseEnterYourPassword => 'कृपया अपना पासवर्ड दर्ज करें';
+  
+  @override
+  String get failedToSignIn => 'साइन इन करने में विफल';
+  
+  @override
+  String get currentUserNotAnonymous => 'वर्तमान उपयोगकर्ता अनाम नहीं है';
+  
+  @override
+  String get failedToLinkAnonymousAccount => 'अनाम खाता लिंक करने में विफल';
+  
+  @override
+  String get failedToResetPassword => 'पासवर्ड रीसेट करने में विफल';
+  
+  @override
+  String get nameCannotBeEmpty => 'नाम खाली नहीं हो सकता';
+  
+  @override
+  String get failedToUpdateProfile => 'प्रोफ़ाइल अपडेट करने में विफल';
+  
+  @override
+  String get failedToUpdatePreferences => 'प्राथमिकताएं अपडेट करने में विफल';
+  
+  @override
+  String get failedToUpdateNotificationSettings => 'सूचना सेटिंग्स अपडेट करने में विफल';
+  
+  @override
+  String get failedToUpdateDisplaySettings => 'डिस्प्ले सेटिंग्स अपडेट करने में विफल';
+  
+  @override
+  String get failedToUpdateVoiceSettings => 'वॉयस सेटिंग्स अपडेट करने में विफल';
+  
+  @override
+  String get failedToUpdatePrivacySettings => 'गोपनीयता सेटिंग्स अपडेट करने में विफल';
+  
+  @override
+  String get failedToResetPreferences => 'प्राथमिकताएं रीसेट करने में विफल';
+  
+  @override
+  String get failedToSyncPreferences => 'प्राथमिकताएं सिंक करने में विफल';
+  
+  @override
+  String get failedToExportUserData => 'उपयोगकर्ता डेटा निर्यात करने में विफल';
+  
+  @override
+  String get failedToImportUserData => 'उपयोगकर्ता डेटा आयात करने में विफल';
+  
+  @override
+  String get failedToClearCache => 'कैश साफ़ करने में विफल';
+  
+  @override
+  String get failedToCreateBackup => 'बैकअप बनाने में विफल';
+  
+  @override
+  String get failedToGetBackups => 'बैकअप प्राप्त करने में विफल';
+  
+  @override
+  String get failedToRestoreFromBackup => 'बैकअप से पुनर्स्थापित करने में विफल';
+  
+  @override
+  String get failedToSyncUserData => 'उपयोगकर्ता डेटा सिंक करने में विफल';
+  
+  @override
+  String get failedToSyncAcrossDevices => 'डिवाइसेस में सिंक करने में विफल';
+  
+  @override
+  String get failedToResolveSyncConflicts => 'सिंक संघर्ष हल करने में विफल';
+  
+  @override
+  String get failedToGetSyncStatistics => 'सिंक आंकड़े प्राप्त करने में विफल';
+
+  // Date filter labels
+  @override
+  String get onDate => 'पर';
+  
+  @override
+  String get fromDateToDate => 'से';
+  
+  @override
+  String get afterDate => 'के बाद';
+  
+  @override
+  String get beforeDate => 'से पहले';
+  
+  @override
+  String get notSet => 'सेट नहीं';
   
   @override
   String get premiumFeaturesList => '• कस्टम वॉइस पैक\n• ऑफ़लाइन मोड\n• स्मार्ट टैग\n• कस्टम थीम\n• उन्नत एनालिटिक्स\n• कोई विज्ञापन नहीं';
@@ -616,6 +805,224 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noAdsDesc => 'विज्ञापन-मुक्त अनुभव का आनंद लें';
   
   @override
+  String get choose => 'चुनें';
+
+  // Additional Task List Screen localization keys
+  @override
+  String get processing => 'प्रसंस्करण';
+
+  @override
+  String get listening => 'सुन रहा है';
+
+  @override
+  String get voiceServiceUnavailable => 'वॉयस सेवा अनुपलब्ध';
+
+  @override
+  String get supportTheAppWithPremium => 'प्रीमियम के साथ ऐप का समर्थन करें';
+
+  @override
+  String get activeReminders => 'सक्रिय अनुस्मारक';
+
+  @override
+  String get snooze5Min => '5 मिनट स्नूज़';
+
+  @override
+  String get reminderSnoozedFor5Minutes => '5 मिनट के लिए अनुस्मारक स्नूज़ किया गया';
+
+  @override
+  String get taskDetails => 'कार्य विवरण';
+
+  @override
+  String get status => 'स्थिति';
+
+  @override
+  String get markPending => 'लंबित चिह्नित करें';
+
+  @override
+  String get markDone => 'पूर्ण चिह्नित करें';
+
+  @override
+  String get snooze15m => '15 मिनट स्नूज़';
+
+  @override
+  String get reminderSnoozedFor15Minutes => '15 मिनट के लिए अनुस्मारक स्नूज़ किया गया';
+
+  @override
+  String get taskHasActiveReminder => 'इस कार्य में एक सक्रिय अनुस्मारक है। इसे हटाने से अनुस्मारक भी रद्द हो जाएगा।';
+
+  @override
+  String get areYouSureDeleteTask => 'क्या आप वाकई इस कार्य को हटाना चाहते हैं?';
+
+  @override
+  String get taskAndReminderDeletedSuccessfully => 'कार्य और अनुस्मारक सफलतापूर्वक हटा दिया गया';
+
+  @override
+  String get taskDeletedSuccessfully => 'कार्य सफलतापूर्वक हटा दिया गया';
+
+  @override
+  String get copy => 'कॉपी';
+
+  @override
+  String get reminderNeedsAttention => 'ध्यान चाहिए';
+
+  @override
+  String get reminderSet => 'सेट';
+
+  @override
+  String get reminders => 'अनुस्मारक';
+
+  @override
+  String get cancelReminder => 'अनुस्मारक रद्द करें';
+
+  @override
+  String get taskHasActiveReminderDeleteWarning => 'इस कार्य में एक सक्रिय अनुस्मारक है। इसे हटाने से अनुस्मारक भी रद्द हो जाएगा।';
+
+  @override
+  String get yes => 'हाँ';
+
+  @override
+  String get cancelReminderButton => 'अनुस्मारक रद्द करें';
+
+  @override
+  String get no => 'नहीं';
+
+  @override
+  String get reminderNeedAttention => 'आपका ध्यान चाहिए';
+
+  @override
+  String get soon => 'जल्द';
+
+  @override
+  String get updated => 'अपडेट किया गया';
+
+  @override
+  String get yesterday => 'कल';
+
+  @override
+  String get justNow => 'अभी';
+
+  @override
+  String get ago => 'पहले';
+
+  @override
+  String get inTime => 'में';
+
+  @override
+  String get filterTasks => 'कार्य फ़िल्टर करें';
+
+  @override
+  String get clearAllFilters => 'सभी फ़िल्टर साफ़ करें';
+
+  @override
+  String get selectCategories => 'श्रेणियां चुनें';
+
+  @override
+  String get properties => 'गुण';
+
+  @override
+  String get dates => 'तारीखें';
+
+  @override
+  String get specialFilters => 'विशेष फ़िल्टर';
+
+  @override
+  String get recurringTasksOnly => 'केवल आवर्ती कार्य';
+
+  @override
+  String get showOnlyTasksRepeat => 'केवल दोहराए जाने वाले कार्य दिखाएं';
+
+  @override
+  String get tasksWithRemindersOnly => 'केवल अनुस्मारक वाले कार्य';
+
+  @override
+  String get showOnlyTasksReminders => 'केवल सक्रिय अनुस्मारक वाले कार्य दिखाएं';
+
+  @override
+  String get overdueTasksOnly => 'केवल देर से किए गए कार्य';
+
+  @override
+  String get showOnlyTasksPastDue => 'केवल निर्धारित तिथि बीत चुके कार्य दिखाएं';
+
+  @override
+  String get dueDateRange => 'नियत तिथि सीमा';
+
+  @override
+  String get nextWeek => 'अगला सप्ताह';
+
+  @override
+  String get customDateRange => 'कस्टम दिनांक सीमा';
+
+  @override
+  String get startDate => 'प्रारंभ तिथि';
+
+  @override
+  String get endDate => 'समाप्ति तिथि';
+
+  @override
+  String get selectDate => 'तारीख चुनें';
+
+  @override
+  String get categories => 'श्रेणियां';
+
+  @override
+  String get colors => 'रंग';
+
+  @override
+  String get thisMonth => 'इस महीने';
+
+  @override
+  String get taskMarkedIncomplete => 'कार्य अधूरे के रूप में चिह्नित किया गया';
+
+  @override
+  String get taskCompletedNextOccurrence => 'कार्य पूरा हो गया! अगली घटना बनाई गई';
+
+  @override
+  String get taskDuplicatedSuccess => 'कार्य सफलतापूर्वक डुप्लिकेट किया गया!';
+
+  @override
+  String get failedToDuplicateTask => 'कार्य डुप्लिकेट करने में विफल';
+
+  @override
+  String get reminderSnoozedMinutes => 'अनुस्मारक को स्नूज किया गया';
+
+  @override
+  String get confirmDeleteTask => 'क्या आप वाकई हटाना चाहते हैं';
+
+  @override
+  String get willCancelActiveReminder => 'यह सक्रिय अनुस्मारक को भी रद्द कर देगा।';
+
+  @override
+  String get willStopFutureRecurring => 'यह सभी भविष्य की आवर्ती घटनाओं को रोक देगा।';
+
+  @override
+  String get taskDeletedSuccess => 'कार्य सफलतापूर्वक डिलीट किया गया!';
+
+
+  @override
+  String get selectTime => 'समय चुनें';
+
+  @override
+  String get reminderSetFor => 'अनुस्मारक सेट किया गया';
+
+  @override
+  String get failedToSetReminder => 'अनुस्मारक सेट करने में विफल';
+
+  @override
+  String get passwordStrength => 'पासवर्ड की मजबूती';
+
+  @override
+  String get passwordRequirements => 'पासवर्ड आवश्यकताएं';
+
+  @override
+  String get strong => 'मजबूत';
+
+  @override
+  String get user => 'उपयोगकर्ता';
+
+  @override
+  String get minutes => 'मिनट';
+  
+  @override
   String get chooseYourPlan => 'अपना प्लान चुनें';
   
   @override
@@ -673,9 +1080,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get yearlyPremiumActivated => 'वार्षिक प्रीमियम सक्रिय! 🎉';
   
   @override
-  String get purchaseFailed => 'खरीदारी विफल। कृपया पुनः प्रयास करें।';
-  
-  @override
   String get purchasesRestored => 'खरीदारी सफलतापूर्वक पुनर्स्थापित!';
   
   @override
@@ -687,9 +1091,18 @@ class AppLocalizationsHi extends AppLocalizations {
   
   @override
   String get continueAsGuest => 'अतिथि के रूप में जारी रखें';
-  
+
   @override
-  String get byContingTermsPrivacy => 'जारी रखकर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं';
+  String get continueWithGoogle => 'Google के साथ जारी रखें';
+
+  @override
+  String get signInWithGoogle => 'Google से साइन इन करें';
+
+  @override
+  String get linkWithGoogle => 'Google से जोड़ें';
+
+  @override
+  String get byContingTermsPrivacy => 'जारी रखकर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।';
   
   @override
   String get forgotPasswordTitle => 'पासवर्ड भूल गए?';
@@ -1187,4 +1600,171 @@ class AppLocalizationsHi extends AppLocalizations {
   
   @override
   String get cancelReminderAction => 'रिमाइंडर रद्द करें';
+
+  // Add Task Screen additional strings
+  @override
+  String get dueDateAndTime => 'देय तिथि और समय';
+
+  @override
+  String get saving => 'सहेजा जा रहा है...';
+
+  @override
+  String get repeatEvery => 'दोहराएं हर';
+
+  @override
+  String get pleaseEnterValidInterval => 'कृपया एक वैध अंतराल (1 या अधिक) दर्ज करें';
+
+  @override
+  String get reminderTimeInPast => 'रिमाइंडर समय अतीत में है';
+
+  @override
+  String get reminderIn => 'रिमाइंडर में';
+
+  @override
+  String get selectDueDateFirst => 'पहले देय तिथि चुनें';
+
+  @override
+  String get dueDateCannotBeInPast => 'देय तिथि अतीत में नहीं हो सकती';
+
+  @override
+  String get reminderCannotBeInPast => 'रिमाइंडर अतीत में नहीं हो सकता';
+
+  @override
+  String get fileAttachments => 'फ़ाइल अटैचमेंट';
+
+  @override
+  String get attachFilesAndPhotos => 'अपने कार्य में फ़ाइलें और फ़ोटो संलग्न करें';
+
+  @override
+  String get repeatEveryHelperText => 'उदा., हर 2 दिन/सप्ताह/महीने के लिए 2';
+
+  @override
+  String get pleaseSelectRecurringPattern => 'कृपया एक आवर्ती पैटर्न चुनें';
+
+  @override
+  String get recurringTaskMessage => 'यह कार्य स्वचालित रूप से दोहराया जाएगा';
+
+  @override
+  String get repeatEveryNumber => 'दोहराएं हर (संख्या)';
+
+  @override
+  String get repeatEveryHelper => 'उदा., हर 2 दिन/सप्ताह/महीने के लिए 2';
+
+  @override
+  String get selectedColon => 'चयनित:';
+
+  @override
+  String get dangerZone => 'खतरा क्षेत्र';
+
+  @override
+  String get deleteAllTasksDescription => 'स्थायी रूप से अपने सभी कार्य हटाएं (खाता बना रहेगा)';
+
+  @override
+  String get deleteAccountDescription => 'स्थायी रूप से अपना खाता और सभी संबंधित डेटा हटाएं';
+
+  @override
+  String get testCrash => 'टेस्ट क्रैश';
+
+  @override
+  String get testCrashDescription => 'Sentry एकीकरण सत्यापित करने के लिए एक परीक्षण त्रुटि ट्रिगर करें';
+
+  @override
+  String get contactSupport => 'सहायता से संपर्क करें';
+
+  @override
+  String get accountSecurity => 'खाता सुरक्षा';
+
+  @override
+  String get securityOptions => 'सुरक्षा विकल्प';
+
+  @override
+  String get accountType => 'खाता प्रकार';
+
+  @override
+  String get emailVerified => 'ईमेल सत्यापित';
+
+  @override
+  String get lastSignIn => 'अंतिम साइन इन';
+
+  @override
+  String get loginAlerts => 'लॉगिन अलर्ट';
+
+  @override
+  String get loginAlertsDescription => 'नए साइन-इन की सूचना प्राप्त करें';
+
+  @override
+  String get confirmAccountDeletion => 'खाता हटाने की पुष्टि करें';
+
+  @override
+  String get enterPasswordToConfirm => 'खाता हटाने की पुष्टि के लिए अपना पासवर्ड दर्ज करें:';
+
+  @override
+  String get needHelpContactUs => 'सहायता चाहिए? चुनें कि आप हमसे कैसे संपर्क करना चाहते हैं:';
+
+  @override
+  String get emailSupport => 'ईमेल सहायता';
+
+  @override
+  String get liveChat => 'लाइव चैट';
+
+  @override
+  String get availableHours => 'उपलब्ध सुबह 9 बजे - शाम 5 बजे';
+
+  @override
+  String get deleteAllTasksConfirmation => 'यह स्थायी रूप से आपके सभी कार्यों को हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता। क्या आप सुनिश्चित हैं?';
+
+  @override
+  String get deleteAccountConfirmation => 'यह स्थायी रूप से आपका खाता और सभी संबंधित डेटा हटा देगा। इस क्रिया को पूर्ववत नहीं किया जा सकता। क्या आप बिल्कुल सुनिश्चित हैं?';
+
+  @override
+  String get accountDeletedSuccessfully => 'खाता सफलतापूर्वक हटा दिया गया';
+
+  @override
+  String get exportCompleteDescription => 'आपका खाता डेटा सफलतापूर्वक निर्यात हो गया है!';
+
+  @override
+  String get exportFailed => 'निर्यात असफल';
+
+  @override
+  String get failedToDeleteTasks => 'कार्य हटाने में असफल';
+
+  @override
+  String get biometricUpdatedSuccessfully => 'बायोमेट्रिक प्रमाणीकरण सफलतापूर्वक अपडेट किया गया';
+
+  @override
+  String get loginAlertsComingSoon => 'लॉगिन अलर्ट सुविधा जल्द आ रही है!';
+
+  @override
+  String get sentryTestCompleted => 'Sentry परीक्षण पूर्ण - इवेंट ID के लिए लॉग जांचें';
+
+  @override
+  String get sentryTestFailed => 'Sentry परीक्षण असफल';
+
+  @override
+  String get downloadAccountData => 'खाता डेटा डाउनलोड करें';
+
+  @override
+  String get downloadAccountDataDescription => 'अपना सभी खाता डेटा और कार्य निर्यात करें';
+
+  @override
+  String get getHelpDescription => 'अपने खाते के लिए सहायता और समर्थन प्राप्त करें';
+
+  @override
+  String get biometricAuthenticationDescription => 'फिंगरप्रिंट या चेहरे की पहचान का उपयोग करें';
+
+  @override
+  String get analyticsDataDescription => 'उपयोग एनालिटिक्स साझा करके ऐप को बेहतर बनाने में मदद करें';
+
+  @override
+  String get analyticsSettingsUpdated => 'एनालिटिक्स सेटिंग्स अपडेट की गईं';
+
+  @override
+  String get crashReportSettingsUpdated => 'क्रैश रिपोर्ट सेटिंग्स अपडेट की गईं';
+
+  @override
+  String get enjoyingPremiumFeatures => 'सभी प्रीमियम सुविधाओं का आनंद ले रहे हैं';
+
+  @override
+  String get unlockPremiumDescription => 'असीमित कार्य, कस्टम आवाज़ें, और कोई विज्ञापन नहीं अनलॉक करें';
+
 }
