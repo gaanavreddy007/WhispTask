@@ -769,132 +769,60 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                 ),
-              ],
-            ),
-            
-<<<<<<< HEAD
-            const SizedBox(height: 24),
-            
-            // Enhanced Google Sign-In Button
-            Container(
-              height: 56,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
-                icon: Container(
-                  width: 24,
-                  height: 24,
-=======
-            const SizedBox(height: 20),
-            
-            // Google Sign-In Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
-                icon: Container(
-                  width: 20,
-                  height: 20,
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        'https://developers.google.com/identity/images/g-logo.png',
+                Expanded(
+                  child: Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withOpacity(0.3),
+                          Colors.transparent,
+                        ],
                       ),
-                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
-                label: Text(
-                  AppLocalizations.of(context).continueWithGoogle,
-<<<<<<< HEAD
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                    letterSpacing: 0.3,
-=======
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
+              ],
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Google Sign-In Button
+            ElevatedButton.icon(
+              onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
+              icon: Container(
+                width: 20,
+                height: 20,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      'https://developers.google.com/identity/images/g-logo.png',
+                    ),
+                    fit: BoxFit.contain,
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-<<<<<<< HEAD
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-=======
-                  foregroundColor: Colors.black87,
-                  side: BorderSide(color: Colors.grey[300]!),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 1,
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
+              ),
+              label: Text(
+                AppLocalizations.of(context).continueWithGoogle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
                 ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
+                side: BorderSide(color: Colors.grey[300]!),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 1,
               ),
             ),
             
-<<<<<<< HEAD
-            const SizedBox(height: 16),
-            
-            // Enhanced Continue as Guest Button
-            Container(
-              height: 56,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
-                  width: 2,
-                ),
-                color: Colors.black.withOpacity(0.3),
-              ),
-              child: OutlinedButton.icon(
-                onPressed: authProvider.isLoading ? null : _handleGuestLogin,
-                icon: Icon(
-                  Icons.person_outline,
-                  color: Colors.white,
-                ),
-                label: Text(
-                  AppLocalizations.of(context).continueAsGuest,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.5),
-                        offset: const Offset(0, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  side: BorderSide.none,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-=======
             const SizedBox(height: 12),
             
             // Continue as Guest Button
@@ -910,7 +838,6 @@ class _LoginScreenState extends State<LoginScreen>
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
                   ),
                 ),
               ),
@@ -1190,34 +1117,15 @@ class _LoginScreenState extends State<LoginScreen>
         SentryService.logUserAction('google_login_attempt');
         
         // Add haptic feedback
-        HapticFeedback.lightImpact();
-        
         // Clear any existing errors
         context.read<AuthProvider>().clearError();
 
         // Hide keyboard
         FocusScope.of(context).unfocus();
 
-<<<<<<< HEAD
-        // Show splash screen during Google sign in
-        SplashOverlay.show(
-          context,
-          message: AppLocalizations.of(context).loading,
-          showMessage: true,
-        );
-
-=======
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
         final authProvider = context.read<AuthProvider>();
         
         final bool success = await authProvider.signInWithGoogle();
-
-<<<<<<< HEAD
-        // Hide splash screen
-        SplashOverlay.hide();
-
-=======
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
         if (success) {
           SentryService.logUserAction('google_login_success');
           
@@ -1234,11 +1142,8 @@ class _LoginScreenState extends State<LoginScreen>
             },
           );
           
-<<<<<<< HEAD
           HapticFeedback.heavyImpact();
           
-=======
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
           // Show error if not canceled by user
           if (mounted && authProvider.errorMessage.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1246,13 +1151,10 @@ class _LoginScreenState extends State<LoginScreen>
                 content: Text(authProvider.errorMessage),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
-<<<<<<< HEAD
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 margin: const EdgeInsets.all(16),
-=======
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
               ),
             );
           }

@@ -69,20 +69,15 @@ dependencies:
   purchases_flutter: ^9.4.0
   google_mobile_ads: ^5.3.1
   
-<<<<<<< HEAD
-  # Additional dependencies that were missing
+  # Additional dependencies
   http: ^0.13.6
   device_info_plus: ^9.1.0
   package_info_plus: ^4.2.0
-  google_sign_in: ^6.1.5
+  google_sign_in: ^6.2.1
   flutter_background_service: ^5.1.0
   geolocator: ^9.0.2
   webview_flutter: ^4.4.2
   vosk_flutter: ^0.3.4
-=======
-  # Google Sign-In
-  google_sign_in: ^6.2.1
->>>>>>> 5ac30cf626b6ee7e74be0bfc47a06d8a8c9de874
 
 dev_dependencies:
   sentry_dart_plugin: ^3.1.1
