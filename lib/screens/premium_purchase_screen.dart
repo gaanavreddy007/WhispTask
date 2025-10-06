@@ -286,90 +286,132 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     if (_isPremium) {
       return _buildPremiumActiveScreen();
     }
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: const [
-              Color(0xFFFFB300),
-              Color(0xFFF57C00),
-              Color(0xFFFF6F00),
-              Color(0xFFE65100),
+      backgroundColor: theme.colorScheme.surface,
+      appBar: _buildProfileStyleAppBar(theme),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              _buildHeroSection(),
+              _buildFeaturesSection(),
+              _buildPricingSection(),
+              _buildFooterSection(),
             ],
-            stops: const [0.0, 0.3, 0.7, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  _buildEnhancedAppBar(),
-                  _buildHeroSection(),
-                  _buildFeaturesSection(),
-                  _buildPricingSection(),
-                  _buildFooterSection(),
-                ],
-              ),
-            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildEnhancedAppBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
+  PreferredSizeWidget _buildProfileStyleAppBar(ThemeData theme) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: const Color(0xFF1976D2), // Blue header
+      surfaceTintColor: Colors.transparent,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).pop(),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: Colors.white,
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: Colors.white.withOpacity(0.2),
                 width: 1,
               ),
             ),
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(
-                Icons.arrow_back_ios_new,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Container(
                 color: Colors.white,
+                child: Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Text(
             AppLocalizations.of(context).upgradeToPremium,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+              fontSize: 22,
+              color: Colors.white,
             ),
           ),
         ],
       ),
+      centerTitle: false,
     );
   }
 
   Widget _buildHeroSection() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return AnimatedBuilder(
       animation: Listenable.merge([_floatingAnimation, _shimmerAnimation]),
       builder: (context, child) {
         return Container(
           width: double.infinity,
+          margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDarkMode
+                  ? [
+                      const Color(0xFF1976D2).withOpacity(0.8),
+                      const Color(0xFF1565C0).withOpacity(0.6),
+                    ]
+                  : [
+                      const Color(0xFFFFB300).withOpacity(0.8),
+                      const Color(0xFFF57C00).withOpacity(0.6),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.shadow.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           child: Column(
             children: [
               // Floating premium icon
@@ -485,14 +527,19 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
   }
 
   Widget _buildFeaturesSection() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode 
+            ? theme.colorScheme.surfaceVariant
+            : Colors.white,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: theme.colorScheme.shadow.withOpacity(0.15),
             blurRadius: 40,
             offset: const Offset(0, 20),
             spreadRadius: -5,
@@ -529,7 +576,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Colors.grey[800],
+                    color: isDarkMode 
+                        ? theme.colorScheme.onSurfaceVariant
+                        : Colors.grey[800],
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -586,6 +635,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
     String description,
     Color color,
   ) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
@@ -633,7 +685,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Colors.grey[800],
+                    color: isDarkMode 
+                        ? theme.colorScheme.onSurfaceVariant
+                        : Colors.grey[800],
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -642,7 +696,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
                   description,
                   style: TextStyle(
                     fontSize: 15,
-                    color: Colors.grey[600],
+                    color: isDarkMode 
+                        ? theme.colorScheme.onSurfaceVariant.withOpacity(0.8)
+                        : Colors.grey[600],
                     height: 1.4,
                   ),
                 ),
@@ -655,6 +711,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
   }
 
   Widget _buildPricingSection() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.all(24),
       child: Column(
@@ -662,19 +721,25 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: isDarkMode 
+                  ? Colors.white.withOpacity(0.2)
+                  : theme.colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: isDarkMode 
+                    ? Colors.white.withOpacity(0.3)
+                    : theme.colorScheme.primary.withOpacity(0.3),
                 width: 1,
               ),
             ),
             child: Text(
               AppLocalizations.of(context).chooseYourPlan,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: isDarkMode 
+                    ? Colors.white
+                    : theme.colorScheme.primary,
                 letterSpacing: 0.5,
               ),
             ),
@@ -702,7 +767,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           
           const SizedBox(height: 20),
           
-          // Yearly Plan (Most Popular)
+          // Yearly Plan
           _buildEnhancedPricingCard(
             title: AppLocalizations.of(context).yearly,
             price: '₹1,199',
@@ -715,7 +780,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
               AppLocalizations.of(context).earlyAccess,
             ],
             onTap: _purchaseYearly,
-            isPopular: true,
+            isPopular: false,
             gradientColors: [
               const Color(0xFFFFD700),
               const Color(0xFFFFB300),
@@ -1025,6 +1090,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
   }
 
   Widget _buildFooterSection() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -1032,10 +1100,14 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           // Restore Purchases Button
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: isDarkMode 
+                  ? Colors.white.withOpacity(0.2)
+                  : theme.colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.white.withOpacity(0.3),
+                color: isDarkMode 
+                    ? Colors.white.withOpacity(0.3)
+                    : theme.colorScheme.primary.withOpacity(0.3),
                 width: 1,
               ),
             ),
@@ -1046,13 +1118,17 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
               },
               icon: Icon(
                 Icons.restore,
-                color: Colors.white.withOpacity(0.9),
+                color: isDarkMode 
+                    ? Colors.white.withOpacity(0.9)
+                    : theme.colorScheme.primary,
                 size: 20,
               ),
               label: Text(
                 AppLocalizations.of(context).restorePurchases,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: isDarkMode 
+                      ? Colors.white.withOpacity(0.9)
+                      : theme.colorScheme.primary,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1069,10 +1145,14 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: isDarkMode 
+                  ? Colors.white.withOpacity(0.1)
+                  : theme.colorScheme.surfaceVariant.withOpacity(0.5),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: isDarkMode 
+                    ? Colors.white.withOpacity(0.2)
+                    : theme.colorScheme.outline.withOpacity(0.3),
                 width: 1,
               ),
             ),
@@ -1081,7 +1161,9 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withOpacity(0.8),
+                color: isDarkMode 
+                    ? Colors.white.withOpacity(0.8)
+                    : theme.colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -1093,59 +1175,83 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
     );
   }
 
-  Widget _buildPremiumActiveScreen() {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: const [
-              Color(0xFF4CAF50),
-              Color(0xFF388E3C),
-              Color(0xFF2E7D32),
-            ],
+  PreferredSizeWidget _buildPremiumActiveAppBar(ThemeData theme) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: const Color(0xFF4CAF50), // Green header for premium active
+      surfaceTintColor: Colors.transparent,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).pop(),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: Colors.white,
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Enhanced App Bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      AppLocalizations.of(context).premiumActive,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Container(
+                color: Colors.white,
+                child: const Icon(
+                  Icons.verified_rounded,
+                  size: 20,
+                  color: Color(0xFF4CAF50),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            AppLocalizations.of(context).premiumActive,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+      centerTitle: false,
+    );
+  }
 
-              // Main Content
+  Widget _buildPremiumActiveScreen() {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      appBar: _buildPremiumActiveAppBar(theme),
+      body: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Main Content
               Expanded(
                 child: Center(
                   child: Padding(
@@ -1332,8 +1438,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
               ),
             ],
           ),
-        ),
-      ),
+      )
     );
   }
 }

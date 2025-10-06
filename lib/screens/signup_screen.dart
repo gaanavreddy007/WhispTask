@@ -238,7 +238,7 @@ class _SignupScreenState extends State<SignupScreen>
             ),
           ),
           const SizedBox(width: 20),
-          Expanded(
+          Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -266,6 +266,7 @@ class _SignupScreenState extends State<SignupScreen>
               ),
             ),
           ),
+          const SizedBox(width: 20),
         ],
       ),
     );
@@ -320,52 +321,57 @@ class _SignupScreenState extends State<SignupScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF667eea).withOpacity(0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(
-              widget.isLinkingAccount ? Icons.link : Icons.person_add,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              widget.isLinkingAccount 
-                  ? AppLocalizations.of(context).createAccount
-                  : AppLocalizations.of(context).joinWhispTask,
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    color: Colors.black.withOpacity(0.5),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1976D2).withOpacity(0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  widget.isLinkingAccount ? Icons.link : Icons.person_add,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
+              const SizedBox(width: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  widget.isLinkingAccount 
+                      ? AppLocalizations.of(context).createAccount
+                      : AppLocalizations.of(context).joinWhispTask,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.5),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Container(
@@ -453,7 +459,7 @@ class _SignupScreenState extends State<SignupScreen>
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF667eea).withOpacity(0.2),
+          color: const Color(0xFF1976D2).withOpacity(0.2),
           width: 1.5,
         ),
         boxShadow: [
@@ -472,7 +478,7 @@ class _SignupScreenState extends State<SignupScreen>
         prefixIcon: Icons.person_outline,
         validator: Validators.validateDisplayName,
         textInputAction: TextInputAction.next,
-        autofocus: true,
+        autofocus: false,
         fillColor: Colors.transparent,
       ),
     );
@@ -485,7 +491,7 @@ class _SignupScreenState extends State<SignupScreen>
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF667eea).withOpacity(0.2),
+          color: const Color(0xFF1976D2).withOpacity(0.2),
           width: 1.5,
         ),
         boxShadow: [
@@ -519,7 +525,7 @@ class _SignupScreenState extends State<SignupScreen>
             color: Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFF667eea).withOpacity(0.2),
+              color: const Color(0xFF1976D2).withOpacity(0.2),
               width: 1.5,
             ),
             boxShadow: [
@@ -705,7 +711,7 @@ class _SignupScreenState extends State<SignupScreen>
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF667eea).withOpacity(0.2),
+          color: const Color(0xFF1976D2).withOpacity(0.2),
           width: 1.5,
         ),
         boxShadow: [
@@ -755,7 +761,7 @@ class _SignupScreenState extends State<SignupScreen>
             decoration: BoxDecoration(
               gradient: _acceptTerms 
                   ? const LinearGradient(
-                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
                     )
                   : LinearGradient(
                       colors: [Colors.white.withOpacity(0.3), Colors.white.withOpacity(0.1)],
@@ -766,7 +772,7 @@ class _SignupScreenState extends State<SignupScreen>
               ),
               boxShadow: _acceptTerms ? [
                 BoxShadow(
-                  color: const Color(0xFF667eea).withOpacity(0.3),
+                  color: const Color(0xFF1976D2).withOpacity(0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -869,12 +875,12 @@ class _SignupScreenState extends State<SignupScreen>
             width: double.infinity,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF667eea).withOpacity(0.4),
+                  color: const Color(0xFF1976D2).withOpacity(0.4),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                   spreadRadius: -2,

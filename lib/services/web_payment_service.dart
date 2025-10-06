@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, deprecated_member_use, unused_field, use_build_context_synchronously
+// ignore_for_file: avoid_print, deprecated_member_use, unused_field, use_build_context_synchronously, unnecessary_import
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1307,12 +1307,34 @@ class _PaymentWebViewState extends State<PaymentWebView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: Text(widget.title),
+        elevation: 0,
+        backgroundColor: const Color(0xFF1976D2), // Blue header matching app theme
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          widget.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(
+            Icons.close_rounded,
+            color: Colors.white,
+          ),
           onPressed: () => Navigator.of(context).pop(false),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
         actions: [
           if (_isLoading)
@@ -1321,12 +1343,27 @@ class _PaymentWebViewState extends State<PaymentWebView> {
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
               ),
             ),
         ],
       ),
-      body: WebViewWidget(controller: _controller),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF1976D2).withOpacity(0.1),
+              theme.colorScheme.surface,
+            ],
+          ),
+        ),
+        child: WebViewWidget(controller: _controller),
+      ),
     );
   }
 }

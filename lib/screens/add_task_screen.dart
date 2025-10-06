@@ -200,7 +200,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> with TickerProviderStateM
               slivers: [
                 // App Bar Space
                 SliverToBoxAdapter(
-                  child: SizedBox(height: MediaQuery.of(context).padding.top + 80),
+                  child: SizedBox(height: 16),
                 ),
                 
                 // Error Message

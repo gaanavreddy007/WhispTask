@@ -465,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen>
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.validateEmail,
-                      autofocus: true,
+                      autofocus: false,
                     ),
                     
                     const SizedBox(height: 24),
@@ -788,27 +788,15 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withOpacity(0.3),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
             
             const SizedBox(height: 20),
             
             // Google Sign-In Button
-            ElevatedButton.icon(
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
               onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
               icon: SizedBox(
                 width: 20,
@@ -868,6 +856,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 elevation: 1,
               ),
+              ),
             ),
             
             const SizedBox(height: 12),
@@ -880,8 +869,8 @@ class _LoginScreenState extends State<LoginScreen>
                 icon: const Icon(Icons.person_outline),
                 label: Text(AppLocalizations.of(context).continueAsGuest),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1976D2),
-                  side: const BorderSide(color: Color(0xFF1976D2)),
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white),
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1443,7 +1432,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                                   color: Theme.of(context).colorScheme.surface,
                                                 ),
                                                 child: TextFormField(
-                                                  autofocus: true,
+                                                  autofocus: false,
                                                   controller: _emailController,
                                                   keyboardType: TextInputType.emailAddress,
                                                   validator: Validators.validateEmail,
