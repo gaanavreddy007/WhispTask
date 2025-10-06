@@ -44,193 +44,51 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 120,
-            floating: false,
-            pinned: true,
-            elevation: 0,
-            backgroundColor: colorScheme.surface,
-            foregroundColor: colorScheme.onSurface,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Transform.translate(
-                offset: const Offset(8, 0),
-                child: Material(
-                  color: colorScheme.onSurface.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colorScheme.onSurface.withOpacity(0.2)),
-                      ),
-                      child: Icon(
-                        Icons.arrow_back,
-                        color: colorScheme.onSurface,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
+      appBar: _buildProfileStyleAppBar(theme),
+      body: Column(
+        children: [
+          // Task-list-style tab bar
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: const [
+                  Color(0xFF1976D2),
+                  Color(0xFF1565C0),
+                ],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            title: Text(
-              AppLocalizations.of(context).accountSettings,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            centerTitle: false,
-            titleSpacing: 32,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary.withOpacity(0.1),
-                      colorScheme.secondary.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, _) {
-                  return StreamBuilder<SyncStatus>(
-                    stream: authProvider.syncStatusStream,
-                    builder: (context, snapshot) {
-                      final status = snapshot.data ?? SyncStatus.idle;
-                      return Container(
-                        margin: const EdgeInsets.only(right: 16, top: 8),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: status == SyncStatus.syncing ? null : () => authProvider.forceSyncUserData(),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surface.withOpacity(0.8),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: _getSyncIcon(status),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: colorScheme.onPrimary,
-                  unselectedLabelColor: colorScheme.onSurface.withOpacity(0.7),
-                  indicator: BoxDecoration(
-                    color: colorScheme.primary,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  indicatorPadding: const EdgeInsets.all(4),
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                  overlayColor: MaterialStateProperty.all(Colors.transparent),
-                  tabs: [
-                    Tab(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.security, size: 16),
-                            const SizedBox(width: 4),
-                            Text(AppLocalizations.of(context).security),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Tab(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.privacy_tip, size: 16),
-                            const SizedBox(width: 4),
-                            Text(AppLocalizations.of(context).privacy),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Tab(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.account_circle, size: 16),
-                            const SizedBox(width: 4),
-                            Text(AppLocalizations.of(context).account),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white.withOpacity(0.7),
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.label,
+              isScrollable: true,
+              dividerColor: Colors.transparent,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                _buildEnhancedTab(AppLocalizations.of(context).security, Icons.security_rounded),
+                _buildEnhancedTab(AppLocalizations.of(context).privacy, Icons.privacy_tip_outlined),
+                _buildEnhancedTab(AppLocalizations.of(context).account, Icons.account_circle_outlined),
+              ],
             ),
           ),
-          SliverFillRemaining(
+          Expanded(
             child: Consumer<AuthProvider>(
               builder: (context, authProvider, _) {
                 return TabBarView(
@@ -245,6 +103,121 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Profile-style AppBar
+  PreferredSizeWidget _buildProfileStyleAppBar(ThemeData theme) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: const Color(0xFF1976D2), // Blue header
+      surfaceTintColor: Colors.transparent,
+      leading: IconButton(
+        onPressed: () => Navigator.of(context).pop(),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: Colors.white,
+        ),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withOpacity(0.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Container(
+                color: Colors.white,
+                child: Icon(
+                  Icons.settings_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            AppLocalizations.of(context).accountSettings,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Consumer<AuthProvider>(
+            builder: (context, authProvider, _) {
+              return StreamBuilder<SyncStatus>(
+                stream: authProvider.syncStatusStream,
+                builder: (context, snapshot) {
+                  final status = snapshot.data ?? SyncStatus.idle;
+                  return FilledButton.icon(
+                    onPressed: status == SyncStatus.syncing ? null : () => authProvider.forceSyncUserData(),
+                    icon: _getSyncIcon(status),
+                    label: const Text('Sync'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF1976D2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Task-list-style enhanced tab
+  Widget _buildEnhancedTab(String text, IconData icon) {
+    return Tab(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -334,6 +334,25 @@ class _LoginScreenState extends State<LoginScreen>
                     'assets/images/app_icon.png',
                     height: 56,
                     width: 56,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.task_alt_rounded,
+                          size: 28,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -577,7 +596,7 @@ class _LoginScreenState extends State<LoginScreen>
                             ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  SizedBox(
+                                  const SizedBox(
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
@@ -588,7 +607,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   const SizedBox(width: 12),
                                   Text(
                                     AppLocalizations.of(context).loading,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
@@ -791,16 +810,44 @@ class _LoginScreenState extends State<LoginScreen>
             // Google Sign-In Button
             ElevatedButton.icon(
               onPressed: authProvider.isLoading ? null : _handleGoogleSignIn,
-              icon: Container(
+              icon: SizedBox(
                 width: 20,
                 height: 20,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      'https://developers.google.com/identity/images/g-logo.png',
-                    ),
-                    fit: BoxFit.contain,
-                  ),
+                child: Image.network(
+                  'https://developers.google.com/identity/images/g-logo.png',
+                  height: 20,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.g_mobiledata,
+                        color: Colors.blue,
+                        size: 16,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  },
                 ),
               ),
               label: Text(
@@ -1452,7 +1499,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                                   ? Row(
                                                       mainAxisAlignment: MainAxisAlignment.center,
                                                       children: [
-                                                        SizedBox(
+                                                        const SizedBox(
                                                           height: 20,
                                                           width: 20,
                                                           child: CircularProgressIndicator(
@@ -1463,7 +1510,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                                         const SizedBox(width: 12),
                                                         Text(
                                                           AppLocalizations.of(context).loading,
-                                                          style: TextStyle(
+                                                          style: const TextStyle(
                                                             fontSize: 16,
                                                             fontWeight: FontWeight.w600,
                                                             color: Colors.white,

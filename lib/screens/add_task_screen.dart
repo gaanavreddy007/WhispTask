@@ -133,30 +133,29 @@ class _AddTaskScreenState extends State<AddTaskScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
           widget.taskToEdit == null ? AppLocalizations.of(context).addTask : AppLocalizations.of(context).editTask,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.5,
-            color: colorScheme.onSurface,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: colorScheme.surface,
+        backgroundColor: const Color(0xFF1976D2), // Blue header
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant.withOpacity(0.8),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.arrow_back, size: 20),
+            child: const Icon(Icons.arrow_back, size: 20, color: Colors.white),
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),

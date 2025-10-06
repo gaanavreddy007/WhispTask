@@ -205,24 +205,40 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
             (l) => l.voiceInput, 
             'Voice Input'
           ),
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: theme.colorScheme.surface,
+        backgroundColor: const Color(0xFF1976D2), // Blue header
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withOpacity(0.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
               icon: const Icon(Icons.help_outline, size: 22),
               onPressed: () => _showHelpDialog(),
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
         ],
@@ -306,37 +322,7 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
                                     builder: (context, child) {
                                       return Transform.scale(
                                         scale: voiceProvider.isListening ? _pulseAnimation.value : 1.0,
-                                        child: Container(
-                                          width: 120,
-                                          height: 120,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: voiceProvider.isListening 
-                                ? [theme.colorScheme.error.withOpacity(0.7), theme.colorScheme.error, theme.colorScheme.error.withOpacity(1.2)]
-                                                : isDarkMode 
-                                                  ? [Colors.cyan.shade300, Colors.cyan.shade500, Colors.cyan.shade700]
-                                                  : [theme.colorScheme.primary.withOpacity(0.7), theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(1.2)],
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: (voiceProvider.isListening 
-                                                  ? theme.colorScheme.error 
-                                                  : isDarkMode ? Colors.cyan : theme.colorScheme.primary).withOpacity(0.4),
-                                                blurRadius: 30,
-                                                spreadRadius: 0,
-                                                offset: const Offset(0, 8),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Icon(
-                                            voiceProvider.isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                                            size: 48,
-                                            color: theme.colorScheme.onPrimary,
-                                          ),
-                                        ),
+                                        child: _buildCustomVoiceButton(voiceProvider, theme, isDarkMode),
                                       );
                                     },
                                   ),
@@ -1177,6 +1163,89 @@ class _VoiceInputScreenState extends State<VoiceInputScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCustomVoiceButton(VoiceProvider voiceProvider, ThemeData theme, bool isDarkMode) {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: voiceProvider.isListening 
+            ? [
+                Colors.red.shade400,
+                Colors.red.shade600,
+                Colors.red.shade800,
+              ]
+            : isDarkMode 
+              ? [
+                  const Color(0xFF00BCD4), // Cyan 500
+                  const Color(0xFF0097A7), // Cyan 700
+                  const Color(0xFF006064), // Cyan 900
+                ]
+              : [
+                  const Color(0xFF2196F3), // Blue 500
+                  const Color(0xFF1976D2), // Blue 700
+                  const Color(0xFF0D47A1), // Blue 900
+                ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: voiceProvider.isListening 
+              ? Colors.red.withOpacity(0.4)
+              : (isDarkMode ? const Color(0xFF00BCD4) : const Color(0xFF2196F3)).withOpacity(0.4),
+            blurRadius: 30,
+            spreadRadius: 0,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: voiceProvider.isListening 
+              ? Colors.red.withOpacity(0.2)
+              : (isDarkMode ? const Color(0xFF00BCD4) : const Color(0xFF2196F3)).withOpacity(0.2),
+            blurRadius: 15,
+            spreadRadius: -5,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(60),
+          onTap: _toggleListening,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  voiceProvider.isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                  key: ValueKey(voiceProvider.isListening),
+                  size: 48,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.3),
+                      offset: const Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

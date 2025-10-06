@@ -27,9 +27,9 @@ dependencies:
   # Widget Support
   home_widget: ^0.6.0
   
-  # Voice Recognition and Permissions (Updated for Day 8)
+  # Voice Recognition and Permissions (Compatible with vosk_flutter)
   speech_to_text: ^7.0.0
-  permission_handler: ^10.2.0
+  permission_handler: ^10.4.5
   flutter_tts: ^4.0.2
   
   # Wake Word Detection (Temporarily disabled due to CMake path issues)
@@ -122,3 +122,10 @@ sentry:
   upload_source_maps: true
   project: flutter
   org: gaanav-reddy
+
+# Dependency overrides to fix plugin compatibility issues
+dependency_overrides:
+  # Force v2 embedding compatible permission_handler_android while keeping permission_handler compatible with vosk_flutter
+  permission_handler_android: ^12.0.0
+  # Keep platform interface compatible
+  permission_handler_platform_interface: ^4.0.0

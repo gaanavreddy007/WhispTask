@@ -37,6 +37,35 @@ subprojects {
             }
         }
         
+        // Fix permission_handler_android v1 embedding compatibility issues
+        if (project.name == "permission_handler_android") {
+            // Ensure proper namespace and compatibility
+            extensions.findByName("android")?.let { android ->
+                if (android is com.android.build.gradle.BaseExtension) {
+                    android.namespace = "com.baseflow.permissionhandler"
+                    
+                    // Force compatibility with newer AGP
+                    android.compileSdkVersion(34)
+                    android.defaultConfig {
+                        minSdk = 21
+                        targetSdk = 34
+                    }
+                }
+            }
+        }
+        
+        // Make vosk_flutter independent of other plugins
+        if (project.name == "vosk_flutter") {
+            // Isolate vosk_flutter dependencies
+            configurations.all {
+                resolutionStrategy {
+                    force("com.baseflow:permission_handler_android:12.0.0")
+                    force("androidx.core:core:1.12.0")
+                    force("androidx.appcompat:appcompat:1.6.1")
+                }
+            }
+        }
+        
         // Force all Java compilation to use Java 11
         tasks.withType<JavaCompile>().configureEach {
             sourceCompatibility = JavaVersion.VERSION_11.toString()

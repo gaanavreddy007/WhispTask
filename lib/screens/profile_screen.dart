@@ -200,28 +200,66 @@ class _ProfileScreenState extends State<ProfileScreen>
   PreferredSizeWidget _buildEnhancedAppBar(ThemeData theme) {
     return AppBar(
       elevation: 0,
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFF1976D2), // Blue header
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         onPressed: () => Navigator.of(context).pop(),
-        icon: Icon(
+        icon: const Icon(
           Icons.arrow_back_rounded,
-          color: theme.colorScheme.onSurface,
+          color: Colors.white,
         ),
         style: IconButton.styleFrom(
-          backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          backgroundColor: Colors.white.withOpacity(0.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
-      title: Text(
-        AppLocalizations.of(context).profile,
-        style: theme.textTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: theme.colorScheme.onSurface,
-        ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Container(
+                color: Colors.white,
+                child: Icon(
+                  Icons.person_rounded,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            AppLocalizations.of(context).profile,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
+      centerTitle: false,
       actions: [
         if (!_isEditing)
           Padding(
@@ -234,8 +272,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: Text(AppLocalizations.of(context).edit),
               style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF1976D2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

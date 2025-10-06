@@ -173,9 +173,9 @@ class _SignupScreenState extends State<SignupScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-              Color(0xFFf093fb),
+              Color(0xFF1976D2),
+              Color(0xFF1565C0),
+              Color(0xFF0D47A1),
             ],
             stops: [0.0, 0.5, 1.0],
           ),

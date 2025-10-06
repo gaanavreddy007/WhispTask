@@ -129,16 +129,16 @@ class _TaskCalendarState extends State<TaskCalendar> with TickerProviderStateMix
   PreferredSizeWidget _buildModernAppBar(BuildContext context, ThemeData theme) {
     return AppBar(
       elevation: 0,
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFF1976D2), // Blue header
       surfaceTintColor: Colors.transparent,
       leading: IconButton(
         onPressed: () => Navigator.of(context).pop(),
-        icon: Icon(
+        icon: const Icon(
           Icons.arrow_back_rounded,
-          color: theme.colorScheme.onSurface,
+          color: Colors.white,
         ),
         style: IconButton.styleFrom(
-          backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+          backgroundColor: Colors.white.withOpacity(0.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -148,16 +148,16 @@ class _TaskCalendarState extends State<TaskCalendar> with TickerProviderStateMix
         AppLocalizations.of(context).taskCalendar,
         style: theme.textTheme.headlineSmall?.copyWith(
           fontWeight: FontWeight.w600,
-          color: theme.colorScheme.onSurface,
+          color: Colors.white,
         ),
       ),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 16),
           child: PopupMenuButton<CalendarViewType>(
-            icon: Icon(
+            icon: const Icon(
               Icons.view_module,
-              color: theme.colorScheme.onSurface,
+              color: Colors.white,
             ),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             onSelected: (CalendarViewType type) {
