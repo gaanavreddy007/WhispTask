@@ -685,7 +685,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           // Monthly Plan
           _buildEnhancedPricingCard(
             title: AppLocalizations.of(context).monthly,
-            price: '\$4.99',
+            price: '₹149',
             period: '/${AppLocalizations.of(context).month}',
             features: [
               AppLocalizations.of(context).allPremiumFeatures,
@@ -705,12 +705,12 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
           // Yearly Plan (Most Popular)
           _buildEnhancedPricingCard(
             title: AppLocalizations.of(context).yearly,
-            price: '\$39.99',
+            price: '₹1,199',
             period: '/${AppLocalizations.of(context).year}',
-            originalPrice: '\$59.88',
+            originalPrice: '₹1,788',
             features: [
               AppLocalizations.of(context).allPremiumFeatures,
-              AppLocalizations.of(context).saveVsMonthly,
+              'Save ₹589 yearly!',
               AppLocalizations.of(context).prioritySupport,
               AppLocalizations.of(context).earlyAccess,
             ],
