@@ -594,7 +594,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
               const Color(0xFF1E88E5),
             ),
             _buildEnhancedFeatureItem(
-              Icons.cloud_off,
+              Icons.cloud_sync_rounded,
               AppLocalizations.of(context).offlineMode,
               AppLocalizations.of(context).offlineModeDesc,
               const Color(0xFF43A047),
@@ -1299,7 +1299,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
                           },
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 24),
 
                         // Title
                         TweenAnimationBuilder<double>(
@@ -1377,7 +1377,7 @@ class _PremiumPurchaseScreenState extends State<PremiumPurchaseScreen>
                           },
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 24),
 
                         // Continue Button
                         TweenAnimationBuilder<double>(

@@ -397,7 +397,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
             color: white;
             text-align: center;
             padding: 20px;
@@ -488,6 +488,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
     <title>WhispTask Premium - Payment</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://use.fontawesome.com/releases/v6.4.0/css/all.css" rel="stylesheet" crossorigin="anonymous">
     <style>
         * {
             margin: 0;
@@ -497,7 +498,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #667eea 100%);
+            background: linear-gradient(135deg, #1976D2 0%, #1565C0 30%, #0D47A1 70%, #1976D2 100%);
             background-size: 400% 400%;
             min-height: 100vh;
             display: flex;
@@ -559,13 +560,13 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         .logo {
             font-size: 3.5em;
             font-weight: 900;
-            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            background: linear-gradient(135deg, #1976D2, #1565C0, #0D47A1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 12px;
             animation: logoFloat 3s ease-in-out infinite;
-            text-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            text-shadow: 0 4px 20px rgba(25, 118, 210, 0.3);
         }
         
         @keyframes logoFloat {
@@ -586,7 +587,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
             border-radius: 24px;
             padding: 40px;
             margin: 40px 0;
-            border: 2px solid rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(25, 118, 210, 0.1);
             position: relative;
             overflow: hidden;
         }
@@ -594,7 +595,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         .plan-price {
             font-size: 3.5em;
             font-weight: 900;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #1976D2, #1565C0);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -623,19 +624,33 @@ class _PaymentWebViewState extends State<PaymentWebView> {
             background: rgba(255, 255, 255, 0.8);
             border-radius: 16px;
             transition: all 0.3s ease;
-            border: 1px solid rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(25, 118, 210, 0.1);
         }
         
         .feature-item:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 8px 25px rgba(25, 118, 210, 0.15);
         }
         
         .feature-icon {
-            color: #667eea;
+            color: #1976D2;
             font-size: 1.3em;
             margin-right: 12px;
             min-width: 20px;
+            display: inline-block;
+            text-align: center;
+            font-weight: 900;
+        }
+        
+        /* Ensure cloud icon is always visible */
+        .feature-icon.fa-cloud {
+            font-family: "Font Awesome 6 Free", Arial, sans-serif;
+        }
+        
+        /* Fallback for cloud icon if Font Awesome doesn't load */
+        .feature-icon.fa-cloud:not(:empty) {
+            font-family: Arial, sans-serif;
+            font-size: 1.5em;
         }
         
         .feature-text {
@@ -664,25 +679,25 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #1976D2, #1565C0);
             color: white;
-            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.3);
         }
         
         .btn-primary:hover {
             transform: translateY(-3px);
-            box-shadow: 0 16px 48px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 16px 48px rgba(25, 118, 210, 0.4);
         }
         
         .btn-secondary {
             background: rgba(255, 255, 255, 0.9);
             color: #64748b;
-            border: 2px solid rgba(102, 126, 234, 0.2);
+            border: 2px solid rgba(25, 118, 210, 0.2);
         }
         
         .btn-secondary:hover {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: rgba(102, 126, 234, 0.4);
+            background: rgba(25, 118, 210, 0.1);
+            border-color: rgba(25, 118, 210, 0.4);
             transform: translateY(-2px);
         }
         
@@ -777,13 +792,13 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         }
         
         .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: #1976D2;
+            border-bottom-color: #1976D2;
         }
         
         .tab-btn:hover {
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
+            color: #1976D2;
+            background: rgba(25, 118, 210, 0.05);
         }
         
         .payment-form-content {
@@ -816,8 +831,8 @@ class _PaymentWebViewState extends State<PaymentWebView> {
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #1976D2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
         }
         
         .form-row {
@@ -971,7 +986,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
                     <span class="feature-text">Advanced Analytics</span>
                 </div>
                 <div class="feature-item">
-                    <i class="fas fa-cloud-sync feature-icon"></i>
+                    <i class="fas fa-cloud feature-icon" aria-hidden="true">☁️</i>
                     <span class="feature-text">Cloud Synchronization</span>
                 </div>
                 <div class="feature-item">

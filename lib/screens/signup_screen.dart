@@ -281,7 +281,7 @@ class _SignupScreenState extends State<SignupScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildEnhancedHeader(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
             _buildEnhancedFormContainer(),
             const SizedBox(height: 24),
             _buildEnhancedSignInLink(),
@@ -441,7 +441,7 @@ class _SignupScreenState extends State<SignupScreen>
           _buildEnhancedConfirmPasswordField(),
           const SizedBox(height: 28),
           _buildEnhancedTermsCheckbox(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           _buildEnhancedSignupButton(),
           if (Provider.of<AuthProvider>(context).errorMessage.isNotEmpty) ...[
             const SizedBox(height: 20),

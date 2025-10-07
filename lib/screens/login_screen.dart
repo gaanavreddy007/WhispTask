@@ -206,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen>
                           // App Logo and Welcome
                           _buildHeader(),
                           
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 24),
                           
                           // Login Form with enhanced styling
                           AnimatedBuilder(
@@ -357,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               
               // Enhanced Welcome Text with better contrast
               Container(
@@ -555,7 +555,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ],
                     ),
                     
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     
                     // Enhanced Login Button
                     Container(
