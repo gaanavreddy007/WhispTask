@@ -1764,4 +1764,314 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String get unlockPremiumDescription => 'ಅನಿಯಮಿತ ಕಾರ್ಯಗಳು, ಕಸ್ಟಮ್ ಧ್ವನಿಗಳು ಮತ್ತು ಜಾಹೀರಾತುಗಳಿಲ್ಲದೆ ಅನ್‌ಲಾಕ್ ಮಾಡಿ';
 
+  // New feature screens localization
+  @override
+  String get achievements => 'ಸಾಧನೆಗಳು';
+
+  @override
+  String get habits => 'ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get focus => 'ಗಮನ';
+
+  @override
+  String get yourProgress => 'ನಿಮ್ಮ ಪ್ರಗತಿ';
+
+  @override
+  String get achievementCategories => 'ಸಾಧನೆ ವರ್ಗಗಳು';
+
+  @override
+  String get taskMaster => 'ಕಾರ್ಯ ಮಾಸ್ಟರ್';
+
+  @override
+  String get taskMasterDesc => '100 ಕಾರ್ಯಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ';
+
+  @override
+  String get streakWarrior => 'ಸ್ಟ್ರೀಕ್ ಯೋಧ';
+
+  @override
+  String get streakWarriorDesc => '30-ದಿನಗಳ ಸ್ಟ್ರೀಕ್ ಕಾಯ್ದುಕೊಳ್ಳಿ';
+
+  @override
+  String get earlyBird => 'ಮುಂಜಾನೆ ಪಕ್ಷಿ';
+
+  @override
+  String get earlyBirdDesc => '50 ಕಾರ್ಯಗಳನ್ನು ಬೇಗ ಪೂರ್ಣಗೊಳಿಸಿ';
+
+  @override
+  String get voiceChampion => 'ಧ್ವನಿ ಚಾಂಪಿಯನ್';
+
+  @override
+  String get voiceChampionDesc => '25 ಧ್ವನಿ ಕಾರ್ಯಗಳನ್ನು ರಚಿಸಿ';
+
+  @override
+  String get recentAchievements => 'ಇತ್ತೀಚಿನ ಸಾಧನೆಗಳು';
+
+  @override
+  String get noAchievementsYet => 'ಇನ್ನೂ ಯಾವುದೇ ಸಾಧನೆಗಳಿಲ್ಲ';
+
+  @override
+  String get completeTasksToEarn => 'ಸಾಧನೆಗಳನ್ನು ಗಳಿಸಲು ಕಾರ್ಯಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ';
+
+  @override
+  String get unlocked => 'ಅನ್‌ಲಾಕ್';
+
+  @override
+  String get firstTaskComplete => 'ಮೊದಲ ಕಾರ್ಯ ಪೂರ್ಣ';
+
+  @override
+  String get firstTaskCompleteDesc => 'ನಿಮ್ಮ ಮೊದಲ ಕಾರ್ಯವನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ';
+
+  @override
+  String get taskNovice => 'ಕಾರ್ಯ ನವಶಿಷ್ಯ';
+
+  @override
+  String get taskNoviceDesc => '5 ಕಾರ್ಯಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ';
+
+  @override
+  String get taskExplorer => 'ಕಾರ್ಯ ಎಕ್ಸ್‌ಪ್ಲೋರರ್';
+
+  @override
+  String get taskExplorerDesc => '10 ಕಾರ್ಯಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ';
+
+  @override
+  String get addHabit => 'ಅಭ್ಯಾಸ ಸೇರಿಸಿ';
+
+  @override
+  String get active => 'ಸಕ್ರಿಯ';
+
+  @override
+  String get insights => 'ಒಳನೋಟಗಳು';
+
+  @override
+  String get templates => 'ಟೆಂಪ್ಲೇಟ್‌ಗಳು';
+
+  @override
+  String get yourHabits => 'ನಿಮ್ಮ ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get activeHabits => 'ಸಕ್ರಿಯ ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get completedToday => 'ಇಂದು ಪೂರ್ಣಗೊಳಿಸಿದವು';
+
+  @override
+  String get currentStreak => 'ಪ್ರಸ್ತುತ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String get days => 'ದಿನಗಳು';
+
+  @override
+  String get frequency => 'ಆವರ್ತನೆ';
+
+  @override
+  String get weeklyProgress => 'ಸಾಪ್ತಾಹಿಕ ಪ್ರಗತಿ';
+
+  @override
+  String get noHabitsYet => 'ಇನ್ನೂ ಯಾವುದೇ ಅಭ್ಯಾಸಗಳಿಲ್ಲ';
+
+  @override
+  String get createFirstHabit => 'ಟ್ರ್ಯಾಕಿಂಗ್ ಪ್ರಾರಂಭಿಸಲು ನಿಮ್ಮ ಮೊದಲ ಅಭ್ಯಾಸವನ್ನು ರಚಿಸಿ';
+
+  @override
+  String get habitInsights => 'ಅಭ್ಯಾಸ ಒಳನೋಟಗಳು';
+
+  @override
+  String get weeklyOverview => 'ಸಾಪ್ತಾಹಿಕ ಅವಲೋಕನ';
+
+  @override
+  String get weeklyOverviewDesc => 'ನಿಮ್ಮ ಅಭ್ಯಾಸ ಪೂರ್ಣತೆಯ ಮಾದರಿಗಳನ್ನು ನೋಡಿ';
+
+  @override
+  String get bestPerformingHabits => 'ಅತ್ಯುತ್ತಮ ಪ್ರದರ್ಶನ ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get bestPerformingHabitsDesc => 'ನಿಮ್ಮ ಅತ್ಯಂತ ಸ್ಥಿರವಾದ ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get improvementAreas => 'ಸುಧಾರಣೆ ಕ್ಷೇತ್ರಗಳು';
+
+  @override
+  String get improvementAreasDesc => 'ಗಮನ ಅಗತ್ಯವಿರುವ ಅಭ್ಯಾಸಗಳು';
+
+  @override
+  String get streakAnalysis => 'ಸ್ಟ್ರೀಕ್ ವಿಶ್ಲೇಷಣೆ';
+
+  @override
+  String get streakAnalysisDesc => 'ಕಾಲಾನಂತರದಲ್ಲಿ ನಿಮ್ಮ ಸ್ಥಿರತೆಯನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ';
+
+  @override
+  String get habitTemplates => 'ಅಭ್ಯಾಸ ಟೆಂಪ್ಲೇಟ್‌ಗಳು';
+
+  @override
+  String get healthFitness => 'ಆರೋಗ್ಯ ಮತ್ತು ಫಿಟ್‌ನೆಸ್';
+
+  @override
+  String get productivity => 'ಉತ್ಪಾದಕತೆ';
+
+  @override
+  String get mindfulness => 'ಮೈಂಡ್‌ಫುಲ್‌ನೆಸ್';
+
+  @override
+  String get socialLife => 'ಸಾಮಾಜಿಕ ಜೀವನ';
+
+  @override
+  String get useTemplate => 'ಟೆಂಪ್ಲೇಟ್ ಬಳಸಿ';
+
+  @override
+  String get addNewHabit => 'ಹೊಸ ಅಭ್ಯಾಸ ಸೇರಿಸಿ';
+
+  @override
+  String get addHabitDesc => 'ಅಭ್ಯಾಸವಾಗಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಲು ಪುನರಾವರ್ತಿತ ಕಾರ್ಯವನ್ನು ರಚಿಸಿ';
+
+  @override
+  String get createHabit => 'ಅಭ್ಯಾಸ ರಚಿಸಿ';
+
+  @override
+  String get templateWillCreate => 'ಈ ಟೆಂಪ್ಲೇಟ್ ಈ ಕೆಳಗಿನ ಅಭ್ಯಾಸಗಳನ್ನು ರಚಿಸುತ್ತದೆ:';
+
+  @override
+  String get createHabits => 'ಅಭ್ಯಾಸಗಳನ್ನು ರಚಿಸಿ';
+
+  @override
+  String get focusMode => 'ಗಮನ ಮೋಡ್';
+
+  @override
+  String get pomodoro => 'ಪೊಮೊಡೊರೊ';
+
+  @override
+  String get pomodoroDesc => '25 ನಿಮಿಷ ಗಮನ';
+
+  @override
+  String get deepWork => 'ಆಳವಾದ ಕೆಲಸ';
+
+  @override
+  String get deepWorkDesc => '90 ನಿಮಿಷ ಗಮನ';
+
+  @override
+  String get breakTime => 'ವಿರಾಮ ಸಮಯ';
+
+  @override
+  String get breakTimeDesc => '5 ನಿಮಿಷ ವಿರಾಮ';
+
+  @override
+  String get custom => 'ಕಸ್ಟಮ್';
+
+  @override
+  String get customDesc => 'ನಿಮ್ಮ ಸಮಯವನ್ನು ಹೊಂದಿಸಿ';
+
+  @override
+  String get start => 'ಪ್ರಾರಂಭಿಸಿ';
+
+  @override
+  String get pause => 'ವಿರಾಮ';
+
+  @override
+  String get resume => 'ಮುಂದುವರಿಸಿ';
+
+  @override
+  String get stop => 'ನಿಲ್ಲಿಸಿ';
+
+  @override
+  String get todaysFocus => 'ಇಂದಿನ ಗಮನ';
+
+  @override
+  String get sessionsCompleted => 'ಪೂರ್ಣಗೊಳಿಸಿದ ಸೆಷನ್‌ಗಳು';
+
+  @override
+  String get totalFocusTime => 'ಒಟ್ಟು ಗಮನ ಸಮಯ';
+
+  @override
+  String get averageSession => 'ಸರಾಸರಿ ಸೆಷನ್';
+
+  @override
+  String get focusStreak => 'ಗಮನ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String get quickActions => 'ತ್ವರಿತ ಕ್ರಿಯೆಗಳು';
+
+  @override
+  String get quickFocus => 'ತ್ವರಿತ ಗಮನ';
+
+  @override
+  String get focusHistory => 'ಗಮನ ಇತಿಹಾಸ';
+
+  @override
+  String get focusGoals => 'ಗಮನ ಗುರಿಗಳು';
+
+  @override
+  String get distractionBlock => 'ವಿಚಲನ ಬ್ಲಾಕ್';
+
+  @override
+  String get sessionComplete => 'ಸೆಷನ್ ಪೂರ್ಣ!';
+
+  @override
+  String get sessionCompleteDesc => 'ಅದ್ಭುತ! ನೀವು ನಿಮ್ಮ ಗಮನ ಸೆಷನ್ ಅನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ.';
+
+  @override
+  String get startAnother => 'ಇನ್ನೊಂದನ್ನು ಪ್ರಾರಂಭಿಸಿ';
+
+  @override
+  String get focusSettings => 'ಗಮನ ಸೆಟ್ಟಿಂಗ್‌ಗಳು';
+
+  @override
+  String get focusSettingsDesc => 'ನಿಮ್ಮ ಗಮನ ಅನುಭವವನ್ನು ಕಸ್ಟಮೈಜ್ ಮಾಡಿ';
+
+  @override
+  String get close => 'ಮುಚ್ಚಿ';
+
+  @override
+  String get focusHistoryDesc => 'ನಿಮ್ಮ ಹಿಂದಿನ ಗಮನ ಸೆಷನ್‌ಗಳನ್ನು ವೀಕ್ಷಿಸಿ';
+
+  @override
+  String get focusGoalsDesc => 'ನಿಮ್ಮ ಗಮನ ಗುರಿಗಳನ್ನು ಹೊಂದಿಸಿ ಮತ್ತು ಟ್ರ್ಯಾಕ್ ಮಾಡಿ';
+
+  @override
+  String get distractionBlockDesc => 'ಗಮನದ ಸಮಯದಲ್ಲಿ ವಿಚಲನ ಅಪ್ಲಿಕೇಶನ್‌ಗಳನ್ನು ಬ್ಲಾಕ್ ಮಾಡಿ';
+
+  @override
+  String get daily => 'ದೈನಂದಿನ';
+
+  @override
+  String get weekly => 'ಸಾಪ್ತಾಹಿಕ';
+
+  @override
+  String get statistics => 'ಅಂಕಿಅಂಶಗಳು';
+
+  @override
+  String get thisYear => 'ಈ ವರ್ಷ';
+
+  @override
+  String get overview => 'ಅವಲೋಕನ';
+
+  @override
+  String get averagePerDay => 'ದಿನಕ್ಕೆ ಸರಾಸರಿ';
+
+  @override
+  String get productivityTrend => 'ಉತ್ಪಾದಕತೆ ಪ್ರವೃತ್ತಿ';
+
+  @override
+  String get categoryBreakdown => 'ವರ್ಗ ವಿಭಜನೆ';
+
+  @override
+  String get timeAnalysis => 'ಸಮಯ ವಿಶ್ಲೇಷಣೆ';
+
+  @override
+  String get mostProductiveHour => 'ಅತ್ಯಂತ ಉತ್ಪಾದಕ ಗಂಟೆ';
+
+  @override
+  String get averageCompletionTime => 'ಸರಾಸರಿ ಪೂರ್ಣಗೊಳಿಸುವ ಸಮಯ';
+
+  @override
+  String get longestStreak => 'ಅತ್ಯಂತ ಉದ್ದ ಸ್ಟ್ರೀಕ್';
+
+  @override
+  String get exportStatistics => 'ಅಂಕಿಅಂಶಗಳನ್ನು ರಫ್ತು ಮಾಡಿ';
+
+  @override
+  String get exportStatisticsDesc => 'ನಿಮ್ಮ ಅಂಕಿಅಂಶ ಡೇಟಾವನ್ನು ಫೈಲ್‌ಗೆ ರಫ್ತು ಮಾಡಿ';
+
+  @override
+  String get export => 'ರಫ್ತು';
+
 }

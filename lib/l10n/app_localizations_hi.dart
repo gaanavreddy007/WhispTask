@@ -1767,4 +1767,314 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get unlockPremiumDescription => 'असीमित कार्य, कस्टम आवाज़ें, और कोई विज्ञापन नहीं अनलॉक करें';
 
+  // New feature screens localization
+  @override
+  String get achievements => 'उपलब्धियां';
+
+  @override
+  String get habits => 'आदतें';
+
+  @override
+  String get focus => 'फोकस';
+
+  @override
+  String get yourProgress => 'आपकी प्रगति';
+
+  @override
+  String get achievementCategories => 'उपलब्धि श्रेणियां';
+
+  @override
+  String get taskMaster => 'कार्य मास्टर';
+
+  @override
+  String get taskMasterDesc => '100 कार्य पूरे करें';
+
+  @override
+  String get streakWarrior => 'स्ट्रीक योद्धा';
+
+  @override
+  String get streakWarriorDesc => '30-दिन की स्ट्रीक बनाए रखें';
+
+  @override
+  String get earlyBird => 'सुबह का पंछी';
+
+  @override
+  String get earlyBirdDesc => '50 कार्य जल्दी पूरे करें';
+
+  @override
+  String get voiceChampion => 'आवाज़ चैंपियन';
+
+  @override
+  String get voiceChampionDesc => '25 आवाज़ कार्य बनाएं';
+
+  @override
+  String get recentAchievements => 'हाल की उपलब्धियां';
+
+  @override
+  String get noAchievementsYet => 'अभी तक कोई उपलब्धि नहीं';
+
+  @override
+  String get completeTasksToEarn => 'उपलब्धियां अर्जित करने के लिए कार्य पूरे करें';
+
+  @override
+  String get unlocked => 'अनलॉक';
+
+  @override
+  String get firstTaskComplete => 'पहला कार्य पूरा';
+
+  @override
+  String get firstTaskCompleteDesc => 'आपका पहला कार्य पूरा किया';
+
+  @override
+  String get taskNovice => 'कार्य नौसिखिया';
+
+  @override
+  String get taskNoviceDesc => '5 कार्य पूरे किए';
+
+  @override
+  String get taskExplorer => 'कार्य एक्सप्लोरर';
+
+  @override
+  String get taskExplorerDesc => '10 कार्य पूरे किए';
+
+  @override
+  String get addHabit => 'आदत जोड़ें';
+
+  @override
+  String get active => 'सक्रिय';
+
+  @override
+  String get insights => 'अंतर्दृष्टि';
+
+  @override
+  String get templates => 'टेम्प्लेट';
+
+  @override
+  String get yourHabits => 'आपकी आदतें';
+
+  @override
+  String get activeHabits => 'सक्रिय आदतें';
+
+  @override
+  String get completedToday => 'आज पूरे किए';
+
+  @override
+  String get currentStreak => 'वर्तमान स्ट्रीक';
+
+  @override
+  String get days => 'दिन';
+
+  @override
+  String get frequency => 'आवृत्ति';
+
+  @override
+  String get weeklyProgress => 'साप्ताहिक प्रगति';
+
+  @override
+  String get noHabitsYet => 'अभी तक कोई आदत नहीं';
+
+  @override
+  String get createFirstHabit => 'ट्रैकिंग शुरू करने के लिए अपनी पहली आदत बनाएं';
+
+  @override
+  String get habitInsights => 'आदत अंतर्दृष्टि';
+
+  @override
+  String get weeklyOverview => 'साप्ताहिक अवलोकन';
+
+  @override
+  String get weeklyOverviewDesc => 'अपने आदत पूर्णता पैटर्न देखें';
+
+  @override
+  String get bestPerformingHabits => 'सर्वोत्तम प्रदर्शन आदतें';
+
+  @override
+  String get bestPerformingHabitsDesc => 'आपकी सबसे निरंतर आदतें';
+
+  @override
+  String get improvementAreas => 'सुधार क्षेत्र';
+
+  @override
+  String get improvementAreasDesc => 'ध्यान देने वाली आदतें';
+
+  @override
+  String get streakAnalysis => 'स्ट्रीक विश्लेषण';
+
+  @override
+  String get streakAnalysisDesc => 'समय के साथ अपनी निरंतरता ट्रैक करें';
+
+  @override
+  String get habitTemplates => 'आदत टेम्प्लेट';
+
+  @override
+  String get healthFitness => 'स्वास्थ्य और फिटनेस';
+
+  @override
+  String get productivity => 'उत्पादकता';
+
+  @override
+  String get mindfulness => 'माइंडफुलनेस';
+
+  @override
+  String get socialLife => 'सामाजिक जीवन';
+
+  @override
+  String get useTemplate => 'टेम्प्लेट का उपयोग करें';
+
+  @override
+  String get addNewHabit => 'नई आदत जोड़ें';
+
+  @override
+  String get addHabitDesc => 'आदत के रूप में ट्रैक करने के लिए एक आवर्ती कार्य बनाएं';
+
+  @override
+  String get createHabit => 'आदत बनाएं';
+
+  @override
+  String get templateWillCreate => 'यह टेम्प्लेट निम्नलिखित आदतें बनाएगा:';
+
+  @override
+  String get createHabits => 'आदतें बनाएं';
+
+  @override
+  String get focusMode => 'फोकस मोड';
+
+  @override
+  String get pomodoro => 'पोमोडोरो';
+
+  @override
+  String get pomodoroDesc => '25 मिनट फोकस';
+
+  @override
+  String get deepWork => 'गहरा काम';
+
+  @override
+  String get deepWorkDesc => '90 मिनट फोकस';
+
+  @override
+  String get breakTime => 'ब्रेक टाइम';
+
+  @override
+  String get breakTimeDesc => '5 मिनट ब्रेक';
+
+  @override
+  String get custom => 'कस्टम';
+
+  @override
+  String get customDesc => 'अपना समय सेट करें';
+
+  @override
+  String get start => 'शुरू करें';
+
+  @override
+  String get pause => 'रोकें';
+
+  @override
+  String get resume => 'फिर से शुरू करें';
+
+  @override
+  String get stop => 'बंद करें';
+
+  @override
+  String get todaysFocus => 'आज का फोकस';
+
+  @override
+  String get sessionsCompleted => 'सत्र पूरे किए';
+
+  @override
+  String get totalFocusTime => 'कुल फोकस समय';
+
+  @override
+  String get averageSession => 'औसत सत्र';
+
+  @override
+  String get focusStreak => 'फोकस स्ट्रीक';
+
+  @override
+  String get quickActions => 'त्वरित कार्य';
+
+  @override
+  String get quickFocus => 'त्वरित फोकस';
+
+  @override
+  String get focusHistory => 'फोकस इतिहास';
+
+  @override
+  String get focusGoals => 'फोकस लक्ष्य';
+
+  @override
+  String get distractionBlock => 'विकर्षण ब्लॉक';
+
+  @override
+  String get sessionComplete => 'सत्र पूरा!';
+
+  @override
+  String get sessionCompleteDesc => 'बहुत बढ़िया! आपने अपना फोकस सत्र पूरा किया।';
+
+  @override
+  String get startAnother => 'दूसरा शुरू करें';
+
+  @override
+  String get focusSettings => 'फोकस सेटिंग्स';
+
+  @override
+  String get focusSettingsDesc => 'अपने फोकस अनुभव को कस्टमाइज़ करें';
+
+  @override
+  String get close => 'बंद करें';
+
+  @override
+  String get focusHistoryDesc => 'अपने पिछले फोकस सत्र देखें';
+
+  @override
+  String get focusGoalsDesc => 'अपने फोकस लक्ष्य सेट और ट्रैक करें';
+
+  @override
+  String get distractionBlockDesc => 'फोकस के दौरान विकर्षण ऐप्स को ब्लॉक करें';
+
+  @override
+  String get daily => 'दैनिक';
+
+  @override
+  String get weekly => 'साप्ताहिक';
+
+  @override
+  String get statistics => 'आंकड़े';
+
+  @override
+  String get thisYear => 'इस साल';
+
+  @override
+  String get overview => 'अवलोकन';
+
+  @override
+  String get averagePerDay => 'प्रति दिन औसत';
+
+  @override
+  String get productivityTrend => 'उत्पादकता रुझान';
+
+  @override
+  String get categoryBreakdown => 'श्रेणी विभाजन';
+
+  @override
+  String get timeAnalysis => 'समय विश्लेषण';
+
+  @override
+  String get mostProductiveHour => 'सबसे उत्पादक घंटा';
+
+  @override
+  String get averageCompletionTime => 'औसत पूर्णता समय';
+
+  @override
+  String get longestStreak => 'सबसे लंबी स्ट्रीक';
+
+  @override
+  String get exportStatistics => 'आंकड़े निर्यात करें';
+
+  @override
+  String get exportStatisticsDesc => 'अपने आंकड़े डेटा को फ़ाइल में निर्यात करें';
+
+  @override
+  String get export => 'निर्यात';
+
 }

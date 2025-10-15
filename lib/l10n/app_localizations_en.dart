@@ -1759,5 +1759,315 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get yesterday => 'Yesterday';
-  
+
+  // New feature screens localization
+  @override
+  String get achievements => 'Achievements';
+
+  @override
+  String get habits => 'Habits';
+
+  @override
+  String get focus => 'Focus';
+
+  @override
+  String get yourProgress => 'Your Progress';
+
+  @override
+  String get achievementCategories => 'Achievement Categories';
+
+  @override
+  String get taskMaster => 'Task Master';
+
+  @override
+  String get taskMasterDesc => 'Complete 100 tasks';
+
+  @override
+  String get streakWarrior => 'Streak Warrior';
+
+  @override
+  String get streakWarriorDesc => 'Maintain 30-day streak';
+
+  @override
+  String get earlyBird => 'Early Bird';
+
+  @override
+  String get earlyBirdDesc => 'Complete 50 tasks early';
+
+  @override
+  String get voiceChampion => 'Voice Champion';
+
+  @override
+  String get voiceChampionDesc => 'Create 25 voice tasks';
+
+  @override
+  String get recentAchievements => 'Recent Achievements';
+
+  @override
+  String get noAchievementsYet => 'No achievements yet';
+
+  @override
+  String get completeTasksToEarn => 'Complete tasks to earn achievements';
+
+  @override
+  String get unlocked => 'Unlocked';
+
+  @override
+  String get firstTaskComplete => 'First Task Complete';
+
+  @override
+  String get firstTaskCompleteDesc => 'Completed your first task';
+
+  @override
+  String get taskNovice => 'Task Novice';
+
+  @override
+  String get taskNoviceDesc => 'Completed 5 tasks';
+
+  @override
+  String get taskExplorer => 'Task Explorer';
+
+  @override
+  String get taskExplorerDesc => 'Completed 10 tasks';
+
+  @override
+  String get addHabit => 'Add Habit';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get insights => 'Insights';
+
+  @override
+  String get templates => 'Templates';
+
+  @override
+  String get yourHabits => 'Your Habits';
+
+  @override
+  String get activeHabits => 'Active Habits';
+
+  @override
+  String get completedToday => 'Completed Today';
+
+  @override
+  String get currentStreak => 'Current Streak';
+
+  @override
+  String get days => 'days';
+
+  @override
+  String get frequency => 'Frequency';
+
+  @override
+  String get weeklyProgress => 'Weekly Progress';
+
+  @override
+  String get noHabitsYet => 'No habits yet';
+
+  @override
+  String get createFirstHabit => 'Create your first habit to start tracking';
+
+  @override
+  String get habitInsights => 'Habit Insights';
+
+  @override
+  String get weeklyOverview => 'Weekly Overview';
+
+  @override
+  String get weeklyOverviewDesc => 'See your habit completion patterns';
+
+  @override
+  String get bestPerformingHabits => 'Best Performing Habits';
+
+  @override
+  String get bestPerformingHabitsDesc => 'Your most consistent habits';
+
+  @override
+  String get improvementAreas => 'Improvement Areas';
+
+  @override
+  String get improvementAreasDesc => 'Habits that need attention';
+
+  @override
+  String get streakAnalysis => 'Streak Analysis';
+
+  @override
+  String get streakAnalysisDesc => 'Track your consistency over time';
+
+  @override
+  String get habitTemplates => 'Habit Templates';
+
+  @override
+  String get healthFitness => 'Health & Fitness';
+
+  @override
+  String get productivity => 'Productivity';
+
+  @override
+  String get mindfulness => 'Mindfulness';
+
+  @override
+  String get socialLife => 'Social Life';
+
+  @override
+  String get useTemplate => 'Use Template';
+
+  @override
+  String get addNewHabit => 'Add New Habit';
+
+  @override
+  String get addHabitDesc => 'Create a recurring task to track as a habit';
+
+  @override
+  String get createHabit => 'Create Habit';
+
+  @override
+  String get templateWillCreate => 'This template will create the following habits:';
+
+  @override
+  String get createHabits => 'Create Habits';
+
+  @override
+  String get focusMode => 'Focus Mode';
+
+  @override
+  String get pomodoro => 'Pomodoro';
+
+  @override
+  String get pomodoroDesc => '25 min focus';
+
+  @override
+  String get deepWork => 'Deep Work';
+
+  @override
+  String get deepWorkDesc => '90 min focus';
+
+  @override
+  String get breakTime => 'Break Time';
+
+  @override
+  String get breakTimeDesc => '5 min break';
+
+  @override
+  String get custom => 'Custom';
+
+  @override
+  String get customDesc => 'Set your time';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get stop => 'Stop';
+
+  @override
+  String get todaysFocus => 'Today\'s Focus';
+
+  @override
+  String get sessionsCompleted => 'Sessions Completed';
+
+  @override
+  String get totalFocusTime => 'Total Focus Time';
+
+  @override
+  String get averageSession => 'Average Session';
+
+  @override
+  String get focusStreak => 'Focus Streak';
+
+  @override
+  String get quickActions => 'Quick Actions';
+
+  @override
+  String get quickFocus => 'Quick Focus';
+
+  @override
+  String get focusHistory => 'Focus History';
+
+  @override
+  String get focusGoals => 'Focus Goals';
+
+  @override
+  String get distractionBlock => 'Distraction Block';
+
+  @override
+  String get sessionComplete => 'Session Complete!';
+
+  @override
+  String get sessionCompleteDesc => 'Great job! You completed your focus session.';
+
+  @override
+  String get startAnother => 'Start Another';
+
+  @override
+  String get focusSettings => 'Focus Settings';
+
+  @override
+  String get focusSettingsDesc => 'Customize your focus experience';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get focusHistoryDesc => 'View your past focus sessions';
+
+  @override
+  String get focusGoalsDesc => 'Set and track your focus goals';
+
+  @override
+  String get distractionBlockDesc => 'Block distracting apps during focus';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get statistics => 'Statistics';
+
+  @override
+  String get thisYear => 'This Year';
+
+  @override
+  String get overview => 'Overview';
+
+  @override
+  String get averagePerDay => 'Average Per Day';
+
+  @override
+  String get productivityTrend => 'Productivity Trend';
+
+  @override
+  String get categoryBreakdown => 'Category Breakdown';
+
+  @override
+  String get timeAnalysis => 'Time Analysis';
+
+  @override
+  String get mostProductiveHour => 'Most Productive Hour';
+
+  @override
+  String get averageCompletionTime => 'Average Completion Time';
+
+  @override
+  String get longestStreak => 'Longest Streak';
+
+  @override
+  String get exportStatistics => 'Export Statistics';
+
+  @override
+  String get exportStatisticsDesc => 'Export your statistics data to a file';
+
+  @override
+  String get export => 'Export';
+
 }

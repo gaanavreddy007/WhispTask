@@ -29,6 +29,10 @@ import 'screens/account_settings_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/premium_purchase_screen.dart';
+import 'screens/achievements_screen.dart';
+import 'screens/habits_screen.dart';
+import 'screens/focus_screen.dart';
+import 'screens/statistics_screen.dart';
 
 // Widgets
 import 'widgets/task_calendar.dart';
@@ -317,6 +321,10 @@ class WhispTaskApp extends StatelessWidget {
               '/change-password': (context) => const ChangePasswordScreen(),
               '/premium-purchase': (context) => const PremiumPurchaseScreen(),
               '/calendar': (context) => const TaskCalendar(),
+              '/achievements': (context) => const AchievementsScreen(),
+              '/habits': (context) => const HabitsScreen(),
+              '/focus': (context) => const FocusScreen(),
+              '/statistics': (context) => const StatisticsScreen(),
             },
             
             // Handle unknown routes

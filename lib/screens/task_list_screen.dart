@@ -13,6 +13,10 @@ import 'add_task_screen.dart';
 import '../screens/account_settings_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/premium_purchase_screen.dart';
+import '../screens/achievements_screen.dart';
+import '../screens/habits_screen.dart';
+import '../screens/focus_screen.dart';
+import '../screens/statistics_screen.dart';
 import '../widgets/task_calendar.dart';
 import '../providers/auth_provider.dart';
 import '../services/ad_service.dart';
@@ -710,6 +714,90 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           context,
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) => const AccountSettingsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'achievements':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const AchievementsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'habits':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const HabitsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'focus':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const FocusScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'statistics':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const StatisticsScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -1976,8 +2064,13 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             itemBuilder: (context) => [
               _buildPopupMenuItem('profile', Icons.person_outline_rounded, AppLocalizations.of(context).profile),
               _buildPopupMenuItem('calendar', Icons.calendar_today_rounded, AppLocalizations.of(context).calendarView),
-              _buildPopupMenuItem('settings', Icons.settings_outlined, AppLocalizations.of(context).settings),
               const PopupMenuDivider(),
+              _buildPopupMenuItem('achievements', Icons.emoji_events_outlined, AppLocalizations.of(context).achievements),
+              _buildPopupMenuItem('habits', Icons.track_changes_rounded, AppLocalizations.of(context).habits),
+              _buildPopupMenuItem('focus', Icons.center_focus_strong_rounded, AppLocalizations.of(context).focus),
+              _buildPopupMenuItem('statistics', Icons.analytics_rounded, AppLocalizations.of(context).statistics),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem('settings', Icons.settings_outlined, AppLocalizations.of(context).settings),
               _buildPopupMenuItem('logout', Icons.logout_rounded, AppLocalizations.of(context).logout, isDestructive: true),
             ],
           ),
