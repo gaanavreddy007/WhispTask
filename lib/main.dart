@@ -31,8 +31,22 @@ import 'screens/change_password_screen.dart';
 import 'screens/premium_purchase_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/habits_screen.dart';
+import 'screens/add_habit_screen.dart';
 import 'screens/focus_screen.dart';
+import 'screens/focus_settings_screen.dart';
+import 'screens/focus_history_screen.dart';
+import 'screens/focus_goals_screen.dart';
+import 'screens/distraction_block_screen.dart';
+import 'screens/task_delete_confirmation_screen.dart';
+import 'screens/logout_confirmation_screen.dart';
+import 'screens/export_statistics_screen.dart';
+import 'screens/premium_upgrade_screen.dart';
+import 'screens/habit_template_screen.dart';
 import 'screens/statistics_screen.dart';
+import 'screens/habit_insights/weekly_overview_screen.dart';
+import 'screens/habit_insights/best_performing_habits_screen.dart';
+import 'screens/habit_insights/improvement_areas_screen.dart';
+import 'screens/habit_insights/streak_analysis_screen.dart';
 
 // Widgets
 import 'widgets/task_calendar.dart';
@@ -43,7 +57,9 @@ import 'services/tts_service.dart';
 import 'services/widget_service.dart';
 import 'services/web_payment_service.dart';
 import 'services/ad_service.dart';
+import 'services/app_initialization_service.dart';
 import 'services/voice_service.dart';
+import 'services/complete_integration_service.dart';
 
 // Widgets
 import 'widgets/auth_wrapper.dart';
@@ -138,25 +154,25 @@ Future<void> main() async {
     tz.initializeTimeZones();
     print('Timezone data initialized');
     
-    // Move ALL other services to background initialization
+    // Initialize background services with delays
     Future.microtask(() async {
       try {
-        await NotificationService().initialize();
-        print('Notification service initialized');
+        await Future.delayed(const Duration(milliseconds: 500));
+        await FirebaseAppCheck.instance.activate();
+        
+        await Future.delayed(const Duration(milliseconds: 200));
+        final notificationService = NotificationService();
+        await notificationService.initialize();
+        
+        await Future.delayed(const Duration(milliseconds: 200));
+        await AdService.initialize();
+        
+        await Future.delayed(const Duration(milliseconds: 200));
+        await AppInitializationService.initializeServices();
+        
+        print('Background services initialized successfully');
       } catch (e) {
-        print('Notification service failed: $e');
-      }
-    });
-    
-    // Initialize Firebase App Check in background (not critical for startup)
-    Future.microtask(() async {
-      try {
-        await FirebaseAppCheck.instance.activate(
-          androidProvider: AndroidProvider.debug,
-        );
-        print('Firebase App Check initialized');
-      } catch (e) {
-        print('Firebase App Check initialization failed: $e');
+        print('Background service initialization error: $e');
       }
     });
 
@@ -323,8 +339,21 @@ class WhispTaskApp extends StatelessWidget {
               '/calendar': (context) => const TaskCalendar(),
               '/achievements': (context) => const AchievementsScreen(),
               '/habits': (context) => const HabitsScreen(),
+              '/add-habit': (context) => const AddHabitScreen(),
               '/focus': (context) => const FocusScreen(),
+              '/focus-settings': (context) => const FocusSettingsScreen(),
+              '/focus-history': (context) => const FocusHistoryScreen(),
+              '/focus-goals': (context) => const FocusGoalsScreen(),
+              '/distraction-block': (context) => const DistractionBlockScreen(),
+              '/logout-confirmation': (context) => const LogoutConfirmationScreen(),
+              '/export-statistics': (context) => const ExportStatisticsScreen(),
+              '/premium-upgrade': (context) => const PremiumUpgradeScreen(),
+              '/habit-templates': (context) => const HabitTemplateScreen(),
               '/statistics': (context) => const StatisticsScreen(),
+              '/weekly-overview': (context) => const WeeklyOverviewScreen(),
+              '/best-performing-habits': (context) => const BestPerformingHabitsScreen(),
+              '/improvement-areas': (context) => const ImprovementAreasScreen(),
+              '/streak-analysis': (context) => const StreakAnalysisScreen(),
             },
             
             // Handle unknown routes

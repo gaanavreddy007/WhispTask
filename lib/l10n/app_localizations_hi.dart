@@ -1769,6 +1769,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   // New feature screens localization
   @override
+  String get features => 'सुविधाएं';
+
+  @override
   String get achievements => 'उपलब्धियां';
 
   @override

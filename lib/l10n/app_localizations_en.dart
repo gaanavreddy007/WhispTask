@@ -1762,6 +1762,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   // New feature screens localization
   @override
+  String get features => 'Features';
+
+  @override
   String get achievements => 'Achievements';
 
   @override

@@ -1766,6 +1766,9 @@ class AppLocalizationsKn extends AppLocalizations {
 
   // New feature screens localization
   @override
+  String get features => 'ವೈಶಿಷ್ಟ್ಯಗಳು';
+
+  @override
   String get achievements => 'ಸಾಧನೆಗಳು';
 
   @override

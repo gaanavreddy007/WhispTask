@@ -484,24 +484,28 @@ class _HabitsScreenState extends State<HabitsScreen>
                   AppLocalizations.of(context).weeklyOverviewDesc,
                   Icons.calendar_view_week_rounded,
                   const Color(0xFF2196F3),
+                  () => _showInsightDetail('Weekly Overview'),
                 ),
                 _buildInsightCard(
                   AppLocalizations.of(context).bestPerformingHabits,
                   AppLocalizations.of(context).bestPerformingHabitsDesc,
                   Icons.trending_up_rounded,
                   const Color(0xFF4CAF50),
+                  () => _showInsightDetail('Best Performing Habits'),
                 ),
                 _buildInsightCard(
                   AppLocalizations.of(context).improvementAreas,
                   AppLocalizations.of(context).improvementAreasDesc,
                   Icons.lightbulb_outline_rounded,
                   const Color(0xFFFF9800),
+                  () => _showInsightDetail('Improvement Areas'),
                 ),
                 _buildInsightCard(
                   AppLocalizations.of(context).streakAnalysis,
                   AppLocalizations.of(context).streakAnalysisDesc,
                   Icons.local_fire_department_rounded,
                   const Color(0xFFFF5722),
+                  () => _showInsightDetail('Streak Analysis'),
                 ),
               ],
             ),
@@ -511,66 +515,69 @@ class _HabitsScreenState extends State<HabitsScreen>
     );
   }
 
-  Widget _buildInsightCard(String title, String description, IconData icon, Color color) {
+  Widget _buildInsightCard(String title, String description, IconData icon, Color color, VoidCallback onTap) {
     final theme = Theme.of(context);
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios_rounded,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
-            size: 16,
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -591,12 +598,15 @@ class _HabitsScreenState extends State<HabitsScreen>
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.1,
-              children: [
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.95,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                children: [
                 _buildTemplateCard(
                   AppLocalizations.of(context).healthFitness,
                   Icons.fitness_center_rounded,
@@ -622,6 +632,7 @@ class _HabitsScreenState extends State<HabitsScreen>
                   ['Call Family', 'Meet Friends', 'Network'],
                 ),
               ],
+              ),
             ),
           ),
         ],
@@ -633,17 +644,17 @@ class _HabitsScreenState extends State<HabitsScreen>
     final theme = Theme.of(context);
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: color.withOpacity(0.3),
         ),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -657,26 +668,30 @@ class _HabitsScreenState extends State<HabitsScreen>
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           ...habits.take(2).map((habit) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 2),
             child: Text(
               '• $habit',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           )),
           const Spacer(),
@@ -686,12 +701,15 @@ class _HabitsScreenState extends State<HabitsScreen>
               onPressed: () => _useTemplate(title, habits),
               style: OutlinedButton.styleFrom(
                 foregroundColor: color,
-                side: BorderSide(color: color),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                side: BorderSide(color: color, width: 1),
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                minimumSize: const Size(0, 28),
               ),
               child: Text(
                 AppLocalizations.of(context).useTemplate,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 10),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ),
@@ -726,26 +744,7 @@ class _HabitsScreenState extends State<HabitsScreen>
   }
 
   void _showAddHabitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).addNewHabit),
-        content: Text(AppLocalizations.of(context).addHabitDesc),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/add-task');
-            },
-            child: Text(AppLocalizations.of(context).createHabit),
-          ),
-        ],
-      ),
-    );
+    Navigator.pushNamed(context, '/add-habit');
   }
 
   void _useTemplate(String templateName, List<String> habits) {
@@ -773,13 +772,59 @@ class _HabitsScreenState extends State<HabitsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // In a real app, this would create multiple recurring tasks
-              Navigator.pushNamed(context, '/add-task');
+              // Navigate to add habit screen for habit creation
+              Navigator.pushNamed(context, '/add-habit');
             },
             child: Text(AppLocalizations.of(context).createHabits),
           ),
         ],
       ),
+    );
+  }
+
+  void _showInsightDetail(String insightType) {
+    String routeName;
+    
+    switch (insightType) {
+      case 'Weekly Overview':
+        routeName = '/weekly-overview';
+        break;
+      case 'Best Performing Habits':
+        routeName = '/best-performing-habits';
+        break;
+      case 'Improvement Areas':
+        routeName = '/improvement-areas';
+        break;
+      case 'Streak Analysis':
+        routeName = '/streak-analysis';
+        break;
+      default:
+        // Fallback to dialog for unknown types
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(insightType),
+            content: Text('This insight type is not yet implemented.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppLocalizations.of(context).close),
+              ),
+            ],
+          ),
+        );
+        return;
+    }
+    
+    Navigator.pushNamed(context, routeName);
+    
+    SentryService.addBreadcrumb(
+      message: 'habit_insight_opened',
+      category: 'navigation',
+      data: {
+        'insight_type': insightType,
+        'route': routeName,
+      },
     );
   }
 }

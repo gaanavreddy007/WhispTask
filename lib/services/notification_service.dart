@@ -584,4 +584,64 @@ class NotificationService {
     await openAppSettings();
   }
 
+  /// Show an immediate notification
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_areNotificationsEnabled()) {
+      print('NotificationService: Notifications disabled, skipping show');
+      return;
+    }
+
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'focus_timer_channel',
+        'Focus Timer',
+        channelDescription: 'Notifications for focus timer sessions',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        enableVibration: true,
+        playSound: true,
+      );
+
+      const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
+      );
+
+      await _flutterLocalNotificationsPlugin.show(
+        id,
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: payload,
+      );
+
+      print('NotificationService: Showed notification $id');
+      SentryService.addBreadcrumb(
+        message: 'notification_shown',
+        category: 'notification',
+        data: {
+          'id': id,
+          'title': title,
+        },
+      );
+    } catch (e) {
+      print('NotificationService: Error showing notification: $e');
+      SentryService.captureException(e);
+    }
+  }
+
 }

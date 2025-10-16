@@ -240,43 +240,71 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
           );
         },
       ),
-      floatingActionButton: ScaleTransition(
-        scale: _fabScaleAnimation,
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => const AddTaskScreen(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.0, 1.0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    )),
-                    child: child,
-                  );
-                },
-                transitionDuration: const Duration(milliseconds: 300),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Features button
+          ScaleTransition(
+            scale: _fabScaleAnimation,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showFeaturesBottomSheet(),
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                foregroundColor: theme.colorScheme.onSecondaryContainer,
+                elevation: 6.0,
+                extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
+                icon: const Icon(Icons.dashboard_rounded, size: 22),
+                label: Text(
+                  AppLocalizations.of(context).features,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
               ),
-            );
-          },
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          elevation: 8.0,
-          extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
-          icon: const Icon(Icons.add_rounded, size: 24),
-          label: Text(
-            AppLocalizations.of(context).addTask,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
             ),
           ),
-        ),
+          // Add task button
+          ScaleTransition(
+            scale: _fabScaleAnimation,
+            child: FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const AddTaskScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      return SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.0, 1.0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        )),
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
+                );
+              },
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              elevation: 8.0,
+              extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
+              icon: const Icon(Icons.add_rounded, size: 24),
+              label: Text(
+                AppLocalizations.of(context).addTask,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -874,6 +902,235 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
         );
       },
     );
+  }
+
+  void _showFeaturesBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Title
+            Text(
+              AppLocalizations.of(context).features,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Features grid
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.1,
+              children: [
+                _buildFeatureCard(
+                  context,
+                  Icons.emoji_events_rounded,
+                  AppLocalizations.of(context).achievements,
+                  Colors.amber,
+                  () => _navigateToFeature('achievements'),
+                ),
+                _buildFeatureCard(
+                  context,
+                  Icons.track_changes_rounded,
+                  AppLocalizations.of(context).habits,
+                  Colors.green,
+                  () => _navigateToFeature('habits'),
+                ),
+                _buildFeatureCard(
+                  context,
+                  Icons.center_focus_strong_rounded,
+                  AppLocalizations.of(context).focus,
+                  Colors.blue,
+                  () => _navigateToFeature('focus'),
+                ),
+                _buildFeatureCard(
+                  context,
+                  Icons.analytics_rounded,
+                  AppLocalizations.of(context).statistics,
+                  Colors.purple,
+                  () => _navigateToFeature('statistics'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    final theme = Theme.of(context);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 28,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToFeature(String feature) {
+    switch (feature) {
+      case 'achievements':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const AchievementsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'habits':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const HabitsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'focus':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const FocusScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+      case 'statistics':
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const StatisticsScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+        break;
+    }
   }
 
   void _initializeVoiceService() async {
@@ -2064,11 +2321,6 @@ class _TaskListScreenState extends State<TaskListScreen> with TickerProviderStat
             itemBuilder: (context) => [
               _buildPopupMenuItem('profile', Icons.person_outline_rounded, AppLocalizations.of(context).profile),
               _buildPopupMenuItem('calendar', Icons.calendar_today_rounded, AppLocalizations.of(context).calendarView),
-              const PopupMenuDivider(),
-              _buildPopupMenuItem('achievements', Icons.emoji_events_outlined, AppLocalizations.of(context).achievements),
-              _buildPopupMenuItem('habits', Icons.track_changes_rounded, AppLocalizations.of(context).habits),
-              _buildPopupMenuItem('focus', Icons.center_focus_strong_rounded, AppLocalizations.of(context).focus),
-              _buildPopupMenuItem('statistics', Icons.analytics_rounded, AppLocalizations.of(context).statistics),
               const PopupMenuDivider(),
               _buildPopupMenuItem('settings', Icons.settings_outlined, AppLocalizations.of(context).settings),
               _buildPopupMenuItem('logout', Icons.logout_rounded, AppLocalizations.of(context).logout, isDestructive: true),

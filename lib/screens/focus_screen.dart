@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/task_provider.dart';
 import '../services/sentry_service.dart';
+import '../services/focus_service.dart';
 
 class FocusScreen extends StatefulWidget {
   const FocusScreen({super.key});
@@ -672,8 +673,8 @@ class _FocusScreenState extends State<FocusScreen>
           _selectedDuration = 5;
           break;
         case 'custom':
-          _selectedDuration = 30;
-          break;
+          _showCustomTimeDialog();
+          return;
       }
       _focusDuration = Duration(minutes: _selectedDuration);
       _remainingTime = _focusDuration;
@@ -781,19 +782,7 @@ class _FocusScreenState extends State<FocusScreen>
   }
 
   void _showFocusSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).focusSettings),
-        content: Text(AppLocalizations.of(context).focusSettingsDesc),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).close),
-          ),
-        ],
-      ),
-    );
+    Navigator.pushNamed(context, '/focus-settings');
   }
 
   void _startQuickFocus() {
@@ -802,47 +791,83 @@ class _FocusScreenState extends State<FocusScreen>
   }
 
   void _showFocusHistory() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).focusHistory),
-        content: Text(AppLocalizations.of(context).focusHistoryDesc),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).close),
-          ),
-        ],
-      ),
-    );
+    Navigator.pushNamed(context, '/focus-history');
   }
 
   void _showFocusGoals() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).focusGoals),
-        content: Text(AppLocalizations.of(context).focusGoalsDesc),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).close),
-          ),
-        ],
-      ),
-    );
+    Navigator.pushNamed(context, '/focus-goals');
   }
 
   void _showDistractionBlock() {
+    Navigator.pushNamed(context, '/distraction-block');
+  }
+
+  void _showCustomTimeDialog() {
+    final TextEditingController minutesController = TextEditingController(
+      text: _selectedDuration.toString(),
+    );
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).distractionBlock),
-        content: Text(AppLocalizations.of(context).distractionBlockDesc),
+        title: Text('Custom Focus Time'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter your custom focus duration'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: minutesController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).minutes,
+                hintText: 'Enter minutes (1-180)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                suffixText: 'min',
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).close),
+            onPressed: () {
+              Navigator.pop(context);
+              // Reset to previous mode if cancelled
+              setState(() {
+                _selectedMode = 'pomodoro';
+              });
+            },
+            child: Text(AppLocalizations.of(context).cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final minutes = int.tryParse(minutesController.text);
+              if (minutes != null && minutes > 0 && minutes <= 180) {
+                setState(() {
+                  _selectedDuration = minutes;
+                  _focusDuration = Duration(minutes: _selectedDuration);
+                  _remainingTime = _focusDuration;
+                });
+                Navigator.pop(context);
+                
+                SentryService.addBreadcrumb(
+                  message: 'custom_focus_time_set',
+                  category: 'focus',
+                  data: {'duration': _selectedDuration},
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter a valid time between 1 and 180 minutes'),
+                    backgroundColor: const Color(0xFFE53935),
+                  ),
+                );
+              }
+            },
+            child: Text('Set Time'),
           ),
         ],
       ),

@@ -757,6 +757,7 @@ abstract class AppLocalizations {
   String get unlockPremiumDescription;
 
   // New feature screens abstract getters
+  String get features;
   String get achievements;
   String get habits;
   String get focus;

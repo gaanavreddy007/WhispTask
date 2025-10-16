@@ -7,6 +7,8 @@ import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/task_provider.dart';
 import '../services/sentry_service.dart';
+import '../services/statistics_service.dart';
+import '../services/statistics_export_service.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -568,28 +570,35 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTimeMetric(
-                  AppLocalizations.of(context).mostProductiveHour,
-                  '2:00 PM',
-                  Icons.wb_sunny_rounded,
-                  const Color(0xFFFFB300),
-                  theme,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTimeMetric(
-                  AppLocalizations.of(context).averageCompletionTime,
-                  '1.5h',
-                  Icons.timer_rounded,
-                  const Color(0xFF4CAF50),
-                  theme,
-                ),
-              ),
-            ],
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              final stats = _calculateStats(taskProvider);
+              final timeAnalysis = stats['timeAnalysis'] as Map<String, dynamic>? ?? {};
+              
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildTimeMetric(
+                      AppLocalizations.of(context).mostProductiveHour,
+                      timeAnalysis['mostProductiveHour'] ?? '12:00 PM',
+                      Icons.wb_sunny_rounded,
+                      const Color(0xFFFFB300),
+                      theme,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTimeMetric(
+                      AppLocalizations.of(context).averageCompletionTime,
+                      timeAnalysis['averageCompletionTime'] ?? '0h',
+                      Icons.timer_rounded,
+                      const Color(0xFF4CAF50),
+                      theme,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -675,24 +684,31 @@ class _StatisticsScreenState extends State<StatisticsScreen>
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStreakMetric(
-                  AppLocalizations.of(context).currentStreak,
-                  '7',
-                  AppLocalizations.of(context).days,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStreakMetric(
-                  AppLocalizations.of(context).longestStreak,
-                  '15',
-                  AppLocalizations.of(context).days,
-                ),
-              ),
-            ],
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, child) {
+              final stats = _calculateStats(taskProvider);
+              final streakAnalysis = stats['streakAnalysis'] as Map<String, dynamic>? ?? {};
+              
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildStreakMetric(
+                      AppLocalizations.of(context).currentStreak,
+                      '${streakAnalysis['currentStreak'] ?? 0}',
+                      AppLocalizations.of(context).days,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStreakMetric(
+                      AppLocalizations.of(context).longestStreak,
+                      '${streakAnalysis['longestStreak'] ?? 0}',
+                      AppLocalizations.of(context).days,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -730,64 +746,19 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     );
   }
 
-  Map<String, int> _calculateStats(TaskProvider taskProvider) {
+  Map<String, dynamic> _calculateStats(TaskProvider taskProvider) {
     final tasks = taskProvider.tasks;
-    final completedTasks = tasks.where((task) => task.isCompleted).length;
-    final totalTasks = tasks.length;
-    final completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
-    final averagePerDay = totalTasks > 0 ? (totalTasks / 7).round() : 0; // Mock calculation
-    
-    return {
-      'totalTasks': totalTasks,
-      'completedTasks': completedTasks,
-      'completionRate': completionRate,
-      'averagePerDay': averagePerDay,
-    };
+    return StatisticsService.calculateStatistics(tasks, _selectedPeriod);
   }
 
   List<Map<String, dynamic>> _getChartData(TaskProvider taskProvider) {
-    // Mock data for demonstration - in a real app, this would be calculated from actual task data
-    return [
-      {'label': 'Mon', 'value': 5},
-      {'label': 'Tue', 'value': 8},
-      {'label': 'Wed', 'value': 3},
-      {'label': 'Thu', 'value': 12},
-      {'label': 'Fri', 'value': 7},
-      {'label': 'Sat', 'value': 4},
-      {'label': 'Sun', 'value': 6},
-    ];
+    final stats = _calculateStats(taskProvider);
+    return stats['productivityTrend'] as List<Map<String, dynamic>>? ?? [];
   }
 
   List<Map<String, dynamic>> _getCategoryStats(TaskProvider taskProvider) {
-    // Mock data for demonstration - in a real app, this would be calculated from actual task data
-    final totalTasks = taskProvider.tasks.length;
-    
-    return [
-      {
-        'name': 'Work',
-        'count': (totalTasks * 0.4).round(),
-        'percentage': 40,
-        'color': const Color(0xFF2196F3),
-      },
-      {
-        'name': 'Personal',
-        'count': (totalTasks * 0.3).round(),
-        'percentage': 30,
-        'color': const Color(0xFF4CAF50),
-      },
-      {
-        'name': 'Health',
-        'count': (totalTasks * 0.2).round(),
-        'percentage': 20,
-        'color': const Color(0xFFFF9800),
-      },
-      {
-        'name': 'Other',
-        'count': (totalTasks * 0.1).round(),
-        'percentage': 10,
-        'color': const Color(0xFF9C27B0),
-      },
-    ];
+    final stats = _calculateStats(taskProvider);
+    return stats['categoryBreakdown'] as List<Map<String, dynamic>>? ?? [];
   }
 
   void _selectPeriod(String period) {

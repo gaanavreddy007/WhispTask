@@ -1,11 +1,13 @@
-// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use, unused_element
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/task_provider.dart';
 import '../services/sentry_service.dart';
+import '../services/achievement_service.dart';
 
 class AchievementsScreen extends StatefulWidget {
   const AchievementsScreen({super.key});
@@ -31,12 +33,20 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
     
     _fadeController.forward();
+    _initializeAchievements();
     
     SentryService.addBreadcrumb(
       message: 'achievements_screen_opened',
       category: 'navigation',
       data: {'screen': 'achievements'},
     );
+  }
+
+  void _initializeAchievements() async {
+    await AchievementService.initialize();
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    await AchievementService.updateAchievements(taskProvider.tasks);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -245,11 +255,14 @@ class _AchievementsScreenState extends State<AchievementsScreen>
   }
 
   Widget _buildAchievementCategories(TaskProvider taskProvider, ThemeData theme) {
+    final achievements = AchievementService.achievements;
+    final categoryStats = _calculateCategoryStats(achievements);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          AppLocalizations.of(context).achievementCategories,
+          AppLocalizations.of(context).categories,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -267,34 +280,34 @@ class _AchievementsScreenState extends State<AchievementsScreen>
           children: [
             _buildAchievementCategory(
               AppLocalizations.of(context).taskMaster,
-              AppLocalizations.of(context).taskMasterDesc,
-              Icons.task_alt_rounded,
-              const Color(0xFF4CAF50),
-              _getTaskMasterProgress(taskProvider),
+              '${categoryStats['task_master']?['unlocked'] ?? 0}/${categoryStats['task_master']?['total'] ?? 0} unlocked',
+              Icons.emoji_events,
+              const Color(0xFF2196F3),
+              (categoryStats['task_master']?['unlocked'] ?? 0) / math.max(1, categoryStats['task_master']?['total'] ?? 1),
               theme,
             ),
             _buildAchievementCategory(
               AppLocalizations.of(context).streakWarrior,
-              AppLocalizations.of(context).streakWarriorDesc,
-              Icons.local_fire_department_rounded,
-              const Color(0xFFFF5722),
-              _getStreakProgress(taskProvider),
+              '${categoryStats['streak_warrior']?['unlocked'] ?? 0}/${categoryStats['streak_warrior']?['total'] ?? 0} unlocked',
+              Icons.local_fire_department,
+              const Color(0xFFE53935),
+              (categoryStats['streak_warrior']?['unlocked'] ?? 0) / math.max(1, categoryStats['streak_warrior']?['total'] ?? 1),
               theme,
             ),
             _buildAchievementCategory(
               AppLocalizations.of(context).earlyBird,
-              AppLocalizations.of(context).earlyBirdDesc,
-              Icons.wb_sunny_rounded,
+              '${categoryStats['early_bird']?['unlocked'] ?? 0}/${categoryStats['early_bird']?['total'] ?? 0} unlocked',
+              Icons.wb_sunny,
               const Color(0xFFFFB300),
-              _getEarlyBirdProgress(taskProvider),
+              (categoryStats['early_bird']?['unlocked'] ?? 0) / math.max(1, categoryStats['early_bird']?['total'] ?? 1),
               theme,
             ),
             _buildAchievementCategory(
               AppLocalizations.of(context).voiceChampion,
-              AppLocalizations.of(context).voiceChampionDesc,
-              Icons.mic_rounded,
+              '${categoryStats['voice_champion']?['unlocked'] ?? 0}/${categoryStats['voice_champion']?['total'] ?? 0} unlocked',
+              Icons.mic,
               const Color(0xFF9C27B0),
-              _getVoiceProgress(taskProvider),
+              (categoryStats['voice_champion']?['unlocked'] ?? 0) / math.max(1, categoryStats['voice_champion']?['total'] ?? 1),
               theme,
             ),
           ],
@@ -518,27 +531,26 @@ class _AchievementsScreenState extends State<AchievementsScreen>
     );
   }
 
-  double _getTaskMasterProgress(TaskProvider taskProvider) {
-    final completedTasks = taskProvider.tasks.where((task) => task.isCompleted).length;
-    return (completedTasks / 100).clamp(0.0, 1.0); // Progress towards 100 tasks
+
+  int _getVoiceProgress(TaskProvider taskProvider) {
+    // Mock calculation - in reality, you'd track voice-created tasks
+    return taskProvider.tasks.length > 10 ? 5 : 0;
   }
 
-  double _getStreakProgress(TaskProvider taskProvider) {
-    // Simple streak calculation - in a real app, this would track daily completion streaks
-    final completedTasks = taskProvider.tasks.where((task) => task.isCompleted).length;
-    return (completedTasks / 30).clamp(0.0, 1.0); // Progress towards 30-day streak
-  }
-
-  double _getEarlyBirdProgress(TaskProvider taskProvider) {
-    // Simple early completion calculation
-    final completedTasks = taskProvider.tasks.where((task) => task.isCompleted).length;
-    return (completedTasks / 50).clamp(0.0, 1.0); // Progress towards 50 early completions
-  }
-
-  double _getVoiceProgress(TaskProvider taskProvider) {
-    // Simple voice task calculation
-    final totalTasks = taskProvider.tasks.length;
-    return (totalTasks / 25).clamp(0.0, 1.0); // Progress towards 25 voice-created tasks
+  Map<String, Map<String, int>> _calculateCategoryStats(List<Achievement> achievements) {
+    final stats = <String, Map<String, int>>{};
+    
+    for (final achievement in achievements) {
+      if (!stats.containsKey(achievement.category)) {
+        stats[achievement.category] = {'total': 0, 'unlocked': 0};
+      }
+      stats[achievement.category]!['total'] = stats[achievement.category]!['total']! + 1;
+      if (achievement.isUnlocked) {
+        stats[achievement.category]!['unlocked'] = stats[achievement.category]!['unlocked']! + 1;
+      }
+    }
+    
+    return stats;
   }
 
   List<Map<String, dynamic>> _getRecentAchievements(TaskProvider taskProvider) {
