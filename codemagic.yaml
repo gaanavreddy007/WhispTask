@@ -1,0 +1,46 @@
+# Codemagic configuration for iOS build with Vosk Flutter
+workflows:
+  ios-workflow:
+    name: iOS Workflow with Vosk
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: codemagic_app_store_connect
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Flutter build ipa and automatic versioning
+        script: |
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=$(($(app-store-connect get-latest-app-store-build-number "$APP_ID") + 1))
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      # Optional: Publish to App Store Connect
+      app_store_connect:
+        auth: integration
+        
+        # Configuration related to TestFlight (optional)
+        # Note: This action is performed during post-processing.
+        submit_to_testflight: false
+        beta_groups: # Specify the names of beta tester groups that will get access to the build once it has passed beta review.
+          - group name 1
+          - group name 2
+
+        # Configuration related to App Store (optional)
+        # Note: This action is performed during post-processing.
+        submit_to_app_store: false

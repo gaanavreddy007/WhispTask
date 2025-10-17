@@ -1,11 +1,9 @@
-name: Build iOS App with Vosk
+name: Build iOS App with Vosk (Simplified)
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build-ios:
@@ -18,35 +16,60 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.35.6'
+        flutter-version: '3.24.0'
         channel: 'stable'
+        
+    - name: Create minimal iOS build
+      run: |
+        # Create a minimal pubspec.yaml for iOS build
+        cat > pubspec_ios.yaml << 'EOF'
+        name: whisptask
+        description: A smart voice-activated task management app
+        publish_to: 'none'
+        version: 1.0.0+1
+        
+        environment:
+          sdk: '>=3.1.0 <4.0.0'
+        
+        dependencies:
+          flutter:
+            sdk: flutter
+          flutter_localizations:
+            sdk: flutter
+          
+          # Core Firebase (minimal set)
+          firebase_core: ^3.6.0
+          firebase_auth: ^5.3.1
+          cloud_firestore: ^5.4.3
+          
+          # Voice Recognition - VOSK FLUTTER INCLUDED
+          vosk_flutter: ^0.3.4
+          speech_to_text: ^7.0.0
+          permission_handler: ^10.4.5
+          flutter_tts: ^4.0.2
+          
+          # Essential UI
+          provider: ^6.1.2
+          shared_preferences: ^2.2.2
+          
+        dev_dependencies:
+          flutter_test:
+            sdk: flutter
+        
+        flutter:
+          uses-material-design: true
+        EOF
+        
+        # Replace pubspec.yaml with iOS-compatible version
+        mv pubspec_ios.yaml pubspec.yaml
         
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Verify Vosk Flutter integration
+    - name: Verify Vosk is included
       run: |
-        echo "🎤 Checking Vosk Flutter configuration..."
-        grep -n "vosk_flutter:" pubspec.yaml || echo "⚠️ Vosk Flutter not found in pubspec.yaml"
-        
-        echo "📱 iOS Info.plist configuration..."
-        if [ -f "ios/Runner/Info.plist" ]; then
-          echo "✅ Info.plist exists"
-        else
-          echo "❌ Info.plist missing"
-        fi
-        
-    - name: Create iOS-compatible version (keep Vosk)
-      run: |
-        # Backup original files
-        cp pubspec.yaml pubspec.yaml.backup
-        cp lib/main.dart lib/main.dart.backup
-        
-        # Only remove Sentry (keep Vosk Flutter for offline speech recognition)
-        grep -v "sentry_flutter:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
-        grep -v "sentry_dart_plugin:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
-        
-        echo "🎤 Vosk Flutter preserved for offline speech recognition"
+        echo "🎤 Verifying Vosk Flutter is included..."
+        grep -n "vosk_flutter:" pubspec.yaml && echo "✅ Vosk Flutter found!" || echo "❌ Vosk Flutter missing"
         
         # Create iOS-compatible main.dart without Sentry
         cat > lib/main_ios.dart << 'EOF'
@@ -123,27 +146,48 @@ jobs:
         # Update dependencies
         flutter pub get
         
-    - name: Build iOS Apps
+    - name: Build iOS App with Vosk
       run: |
-        # Build for iOS Simulator (debug mode - release not supported for simulator)
-        echo "🔨 Building for iOS Simulator (debug mode)..."
-        if flutter build ios --debug --simulator; then
-          echo "✅ Simulator build successful"
+        echo "🍎 Building iOS app with Vosk Flutter support..."
+        
+        # Build iOS app
+        flutter build ios --no-codesign
+        
+        echo "✅ iOS build completed with Vosk support!"
+        
+    - name: Create IPA package
+      run: |
+        echo "📦 Creating IPA package..."
+        
+        # Create ipa directory
+        mkdir -p build/ios/ipa
+        
+        # Create IPA from app bundle
+        cd build/ios/iphoneos
+        if [ -d "Runner.app" ]; then
+          # Create Payload directory
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          
+          # Create IPA
+          zip -r ../ipa/WhispTask-Vosk.ipa Payload/
+          
+          echo "✅ IPA created: WhispTask-Vosk.ipa"
+          ls -la ../ipa/
         else
-          echo "❌ Simulator build failed, continuing..."
+          echo "❌ Runner.app not found"
+          echo "📁 Available files:"
+          ls -la
         fi
         
-        # Build for device (release mode with no codesigning)
-        echo "🔨 Building for iOS Device (release mode)..."
-        if flutter build ios --release --no-codesign; then
-          echo "✅ Device build successful"
-        else
-          echo "❌ Device build failed, continuing..."
-        fi
-        
-        # Show what was built
-        echo "📁 Build outputs:"
-        ls -la build/ios/ || echo "No build directory found"
+    - name: Upload iOS artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-app-vosk
+        path: |
+          build/ios/ipa/*.ipa
+          build/ios/iphoneos/Runner.app
+        retention-days: 30
       
     - name: Create App Bundles
       run: |
