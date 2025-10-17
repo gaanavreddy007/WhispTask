@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS App with Vosk
 
 on:
   push:
@@ -24,15 +24,29 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Create iOS-compatible version
+    - name: Verify Vosk Flutter integration
+      run: |
+        echo "🎤 Checking Vosk Flutter configuration..."
+        grep -n "vosk_flutter:" pubspec.yaml || echo "⚠️ Vosk Flutter not found in pubspec.yaml"
+        
+        echo "📱 iOS Info.plist configuration..."
+        if [ -f "ios/Runner/Info.plist" ]; then
+          echo "✅ Info.plist exists"
+        else
+          echo "❌ Info.plist missing"
+        fi
+        
+    - name: Create iOS-compatible version (keep Vosk)
       run: |
         # Backup original files
         cp pubspec.yaml pubspec.yaml.backup
         cp lib/main.dart lib/main.dart.backup
         
-        # Remove Sentry from pubspec.yaml using grep and awk (more reliable)
+        # Only remove Sentry (keep Vosk Flutter for offline speech recognition)
         grep -v "sentry_flutter:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
         grep -v "sentry_dart_plugin:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
+        
+        echo "🎤 Vosk Flutter preserved for offline speech recognition"
         
         # Create iOS-compatible main.dart without Sentry
         cat > lib/main_ios.dart << 'EOF'
