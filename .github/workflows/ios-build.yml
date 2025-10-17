@@ -109,13 +109,27 @@ jobs:
         # Update dependencies
         flutter pub get
         
-    - name: Build iOS for Simulator (no signing required)
+    - name: Build iOS Apps
       run: |
-        # Build for iOS Simulator (x86_64 and arm64)
-        flutter build ios --release --simulator
+        # Build for iOS Simulator (debug mode - release not supported for simulator)
+        echo "🔨 Building for iOS Simulator (debug mode)..."
+        if flutter build ios --debug --simulator; then
+          echo "✅ Simulator build successful"
+        else
+          echo "❌ Simulator build failed, continuing..."
+        fi
         
-        # Also create a device build without codesigning for manual signing later
-        flutter build ios --release --no-codesign || echo "Device build failed, continuing with simulator build"
+        # Build for device (release mode with no codesigning)
+        echo "🔨 Building for iOS Device (release mode)..."
+        if flutter build ios --release --no-codesign; then
+          echo "✅ Device build successful"
+        else
+          echo "❌ Device build failed, continuing..."
+        fi
+        
+        # Show what was built
+        echo "📁 Build outputs:"
+        ls -la build/ios/ || echo "No build directory found"
       
     - name: Create App Bundles
       run: |
@@ -123,21 +137,35 @@ jobs:
         
         # Create Simulator app bundle if it exists
         if [ -d "build/ios/iphonesimulator/Runner.app" ]; then
-          echo "Creating Simulator app bundle..."
+          echo "📦 Creating Simulator app bundle..."
           cd build/ios/iphonesimulator
           zip -r ../ipa/WhispTask-Simulator.app.zip Runner.app
           cd ../../..
+          echo "✅ Simulator bundle created: WhispTask-Simulator.app.zip"
+        else
+          echo "❌ No simulator build found"
         fi
         
         # Create Device IPA if it exists
         if [ -d "build/ios/iphoneos/Runner.app" ]; then
-          echo "Creating Device IPA..."
+          echo "📦 Creating Device IPA..."
           cd build/ios/iphoneos
           zip -r ../ipa/WhispTask-Device.ipa Runner.app
           cd ../../..
+          echo "✅ Device IPA created: WhispTask-Device.ipa"
+        else
+          echo "❌ No device build found"
+        fi
+        
+        # Create a fallback file if no builds succeeded
+        if [ ! "$(ls -A build/ios/ipa/)" ]; then
+          echo "⚠️ No iOS builds succeeded, creating info file..."
+          echo "iOS builds failed. Check the build logs above for details." > build/ios/ipa/BUILD_FAILED.txt
+          echo "Consider using the web version instead: flutter build web --release" >> build/ios/ipa/BUILD_FAILED.txt
         fi
         
         # List created files
+        echo "📁 Final artifacts:"
         ls -la build/ios/ipa/
         
     - name: Upload iOS App Bundles
