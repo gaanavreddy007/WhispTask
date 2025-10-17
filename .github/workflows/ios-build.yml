@@ -24,6 +24,91 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
       
+    - name: Create iOS-compatible version
+      run: |
+        # Backup original files
+        cp pubspec.yaml pubspec.yaml.backup
+        cp lib/main.dart lib/main.dart.backup
+        
+        # Remove Sentry from pubspec.yaml
+        sed -i 's/sentry_flutter: ^7.14.0/# sentry_flutter: ^7.14.0/' pubspec.yaml
+        sed -i 's/sentry_dart_plugin: ^3.1.1/# sentry_dart_plugin: ^3.1.1/' pubspec.yaml
+        
+        # Create iOS-compatible main.dart without Sentry
+        cat > lib/main_ios.dart << 'EOF'
+        import 'package:flutter/material.dart';
+        import 'package:flutter/foundation.dart';
+        import 'package:firebase_core/firebase_core.dart';
+        import 'package:provider/provider.dart';
+        import 'package:flutter_localizations/flutter_localizations.dart';
+        
+        import 'package:whisptask/providers/auth_provider.dart';
+        import 'package:whisptask/providers/task_provider.dart';
+        import 'package:whisptask/providers/theme_provider.dart';
+        import 'package:whisptask/providers/voice_provider.dart';
+        import 'package:whisptask/providers/language_provider.dart';
+        import 'package:whisptask/widgets/auth_wrapper.dart';
+        import 'package:whisptask/l10n/app_localizations.dart';
+        import 'firebase_options.dart';
+        
+        void main() async {
+          WidgetsFlutterBinding.ensureInitialized();
+          
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+          
+          runApp(const WhispTaskApp());
+        }
+        
+        class WhispTaskApp extends StatelessWidget {
+          const WhispTaskApp({super.key});
+        
+          @override
+          Widget build(BuildContext context) {
+            return MultiProvider(
+              providers: [
+                ChangeNotifierProvider(create: (_) => AuthProvider()),
+                ChangeNotifierProvider(create: (_) => TaskProvider()),
+                ChangeNotifierProvider(create: (_) => ThemeProvider()),
+                ChangeNotifierProvider(create: (_) => VoiceProvider()),
+                ChangeNotifierProvider(create: (_) => LanguageProvider()),
+              ],
+              child: Consumer2<ThemeProvider, LanguageProvider>(
+                builder: (context, themeProvider, languageProvider, child) {
+                  return MaterialApp(
+                    title: 'WhispTask',
+                    debugShowCheckedModeBanner: false,
+                    theme: ThemeData.light(),
+                    darkTheme: ThemeData.dark(),
+                    themeMode: ThemeMode.system,
+                    locale: languageProvider.currentLocale,
+                    localizationsDelegates: const [
+                      AppLocalizations.delegate,
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: const [
+                      Locale('en', ''),
+                      Locale('hi', ''),
+                      Locale('kn', ''),
+                    ],
+                    home: const AuthWrapper(),
+                  );
+                },
+              ),
+            );
+          }
+        }
+        EOF
+        
+        # Replace main.dart with iOS version
+        mv lib/main_ios.dart lib/main.dart
+        
+        # Update dependencies
+        flutter pub get
+        
     - name: Build iOS (no signing)
       run: flutter build ios --release --no-codesign
       

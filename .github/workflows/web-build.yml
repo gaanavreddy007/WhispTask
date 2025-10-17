@@ -1,0 +1,73 @@
+name: Build Web App
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.35.6'
+        channel: 'stable'
+        
+    - name: Enable Flutter Web
+      run: flutter config --enable-web
+      
+    - name: Create web-compatible pubspec.yaml
+      run: |
+        # Backup original pubspec.yaml
+        cp pubspec.yaml pubspec.yaml.backup
+        
+        # Remove web-incompatible packages
+        sed -i '/vosk_flutter:/d' pubspec.yaml
+        sed -i '/flutter_local_notifications:/d' pubspec.yaml
+        sed -i '/permission_handler:/d' pubspec.yaml
+        sed -i '/speech_to_text:/d' pubspec.yaml
+        sed -i '/flutter_tts:/d' pubspec.yaml
+        sed -i '/audioplayers:/d' pubspec.yaml
+        sed -i '/record:/d' pubspec.yaml
+        sed -i '/just_audio:/d' pubspec.yaml
+        sed -i '/home_widget:/d' pubspec.yaml
+        sed -i '/local_auth:/d' pubspec.yaml
+        sed -i '/image_picker:/d' pubspec.yaml
+        sed -i '/geolocator:/d' pubspec.yaml
+        sed -i '/flutter_background_service:/d' pubspec.yaml
+        sed -i '/purchases_flutter:/d' pubspec.yaml
+        sed -i '/google_mobile_ads:/d' pubspec.yaml
+        
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Build Web App
+      run: flutter build web --release --web-renderer html
+      
+    - name: Create deployment package
+      run: |
+        cd build/web
+        tar -czf ../../whisptask-web.tar.gz .
+        
+    - name: Upload Web App artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-app
+        path: whisptask-web.tar.gz
+        retention-days: 30
+        
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./build/web
+        cname: whisptask.app
