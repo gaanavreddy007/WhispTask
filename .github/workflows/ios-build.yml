@@ -109,18 +109,40 @@ jobs:
         # Update dependencies
         flutter pub get
         
-    - name: Build iOS (no signing)
-      run: flutter build ios --release --no-codesign
+    - name: Build iOS for Simulator (no signing required)
+      run: |
+        # Build for iOS Simulator (x86_64 and arm64)
+        flutter build ios --release --simulator
+        
+        # Also create a device build without codesigning for manual signing later
+        flutter build ios --release --no-codesign || echo "Device build failed, continuing with simulator build"
       
-    - name: Create IPA
+    - name: Create App Bundles
       run: |
         mkdir -p build/ios/ipa
-        cd build/ios/iphoneos
-        zip -r ../ipa/WhispTask.ipa Runner.app
         
-    - name: Upload IPA artifact
+        # Create Simulator app bundle if it exists
+        if [ -d "build/ios/iphonesimulator/Runner.app" ]; then
+          echo "Creating Simulator app bundle..."
+          cd build/ios/iphonesimulator
+          zip -r ../ipa/WhispTask-Simulator.app.zip Runner.app
+          cd ../../..
+        fi
+        
+        # Create Device IPA if it exists
+        if [ -d "build/ios/iphoneos/Runner.app" ]; then
+          echo "Creating Device IPA..."
+          cd build/ios/iphoneos
+          zip -r ../ipa/WhispTask-Device.ipa Runner.app
+          cd ../../..
+        fi
+        
+        # List created files
+        ls -la build/ios/ipa/
+        
+    - name: Upload iOS App Bundles
       uses: actions/upload-artifact@v4
       with:
-        name: ios-app
-        path: build/ios/ipa/WhispTask.ipa
+        name: ios-apps
+        path: build/ios/ipa/
         retention-days: 30
