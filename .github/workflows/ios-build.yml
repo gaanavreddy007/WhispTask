@@ -30,9 +30,9 @@ jobs:
         cp pubspec.yaml pubspec.yaml.backup
         cp lib/main.dart lib/main.dart.backup
         
-        # Remove Sentry from pubspec.yaml
-        sed -i 's/sentry_flutter: ^7.14.0/# sentry_flutter: ^7.14.0/' pubspec.yaml
-        sed -i 's/sentry_dart_plugin: ^3.1.1/# sentry_dart_plugin: ^3.1.1/' pubspec.yaml
+        # Remove Sentry from pubspec.yaml using grep and awk (more reliable)
+        grep -v "sentry_flutter:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
+        grep -v "sentry_dart_plugin:" pubspec.yaml > temp_pubspec.yaml && mv temp_pubspec.yaml pubspec.yaml
         
         # Create iOS-compatible main.dart without Sentry
         cat > lib/main_ios.dart << 'EOF'
