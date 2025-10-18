@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -58,7 +59,7 @@ import 'services/widget_service.dart';
 import 'services/web_payment_service.dart';
 import 'services/ad_service.dart';
 import 'services/app_initialization_service.dart';
-import 'services/voice_service.dart';
+import 'services/voice_service_platform.dart';
 import 'services/complete_integration_service.dart';
 
 // Widgets
@@ -147,7 +148,9 @@ Future<void> main() async {
 
   try {
     // Initialize Firebase first (required for other services)
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     print('Firebase initialized successfully');
 
     // Initialize only timezone data synchronously (ultra-lightweight)

@@ -1,0 +1,21 @@
+name: vosk_flutter
+description: Stub package for vosk_flutter on iOS builds
+version: 0.3.4
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: VoskFlutterPlugin
+      android:
+        package: org.vosk.libvosk
+        pluginClass: VoskFlutterPlugin

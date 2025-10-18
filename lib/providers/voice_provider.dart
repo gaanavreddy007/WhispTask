@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
-import '../services/voice_service.dart';
+import '../services/voice_service_platform.dart';
 import '../services/voice_parser.dart';
 import '../services/sentry_service.dart';
 import '../providers/auth_provider.dart';
@@ -57,7 +57,7 @@ class VoiceProvider extends ChangeNotifier {
     await SentryService.wrapWithComprehensiveTracking(
       () async {
         SentryService.logVoiceOperation('voice_provider_initialization_start');
-        await _voiceService.initialize(authProvider);
+        await _voiceService.initialize();
         _isInitialized = true;
         _errorMessage = '';
         SentryService.logVoiceOperation('voice_provider_initialization_success');
@@ -96,12 +96,14 @@ class VoiceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _voiceService.startListening(
-        onResult: (text) {
-          _recognizedText = text;
-          if (text.isNotEmpty) {
-            _previewTask = VoiceParser.createTaskFromSpeech(text);
-          }
+      await _voiceService.startListening();
+      
+      // Listen to speech results stream
+      _voiceService.speechResultsStream.listen((text) {
+        _recognizedText = text;
+        if (text.isNotEmpty) {
+          _previewTask = VoiceParser.createTaskFromSpeech(text);
+        }
           notifyListeners();
         },
       );
@@ -168,7 +170,7 @@ class VoiceProvider extends ChangeNotifier {
         SentryService.logVoiceOperation('enhanced_voice_initialization_start');
         print('VoiceProvider: Initializing enhanced voice...');
         
-        await _voiceService.initialize(authProvider);
+        await _voiceService.initialize();
         SentryService.logVoiceOperation('voice_service_initialized');
         
         await _voiceService.startWakeWordListening();
@@ -187,7 +189,7 @@ class VoiceProvider extends ChangeNotifier {
         });
         
         // Listen for voice command stream
-        _voiceService.voiceCommandStream?.listen(
+        _voiceService.voiceCommandStream.listen(
           (command) {
             SentryService.logVoiceOperation('stream_command_received', data: {
               'command_length': command.length.toString(),
@@ -213,7 +215,7 @@ class VoiceProvider extends ChangeNotifier {
         );
 
         // Listen for live speech results
-        _voiceService.speechResultsStream?.listen(
+        _voiceService.speechResultsStream.listen(
           (text) {
             SentryService.logVoiceOperation('speech_results_received', data: {
               'text_length': text.length.toString(),

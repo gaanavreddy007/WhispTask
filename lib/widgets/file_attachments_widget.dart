@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/file_attachment_service.dart';
+import '../services/file_attachment_service_platform.dart';
 import '../l10n/app_localizations.dart';
 import '../models/task.dart';
 
@@ -258,9 +258,19 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
       );
 
       if (result != null && result.files.single.path != null) {
-        final attachment = await _fileService.pickFile(widget.taskId);
+        final attachmentData = await _fileService.pickFile();
         
-        if (attachment != null) {
+        if (attachmentData != null) {
+          // Convert Map to TaskAttachment
+          final attachment = TaskAttachment(
+            id: attachmentData['id'] ?? '',
+            taskId: widget.taskId,
+            fileName: attachmentData['fileName'] ?? 'file',
+            filePath: attachmentData['filePath'] ?? '',
+            fileType: attachmentData['fileType'] ?? 'other',
+            fileSize: (attachmentData['fileSize'] ?? 0).toDouble(),
+            attachedAt: DateTime.now(),
+          );
           widget.onAttachmentAdded(attachment);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -336,9 +346,19 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
         );
 
         if (pickedFile != null) {
-          final attachment = await _fileService.pickImage(widget.taskId);
+          final attachmentData = await _fileService.pickImage();
           
-          if (attachment != null) {
+          if (attachmentData != null) {
+            // Convert Map to TaskAttachment
+            final attachment = TaskAttachment(
+              id: attachmentData['id'] ?? '',
+              taskId: widget.taskId,
+              fileName: attachmentData['fileName'] ?? 'image',
+              filePath: attachmentData['filePath'] ?? '',
+              fileType: attachmentData['fileType'] ?? 'image',
+              fileSize: (attachmentData['fileSize'] ?? 0).toDouble(),
+              attachedAt: DateTime.now(),
+            );
             widget.onAttachmentAdded(attachment);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -363,8 +383,8 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
 
   Future<void> _viewAttachment(TaskAttachment attachment) async {
     try {
-      final success = await _fileService.openAttachment(attachment);
-      if (!success && mounted) {
+      await _fileService.openAttachment(attachment.cloudUrl ?? attachment.filePath);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to open file')),
         );
@@ -380,8 +400,8 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
 
   Future<void> _shareAttachment(TaskAttachment attachment) async {
     try {
-      final success = await _fileService.openAttachment(attachment);
-      if (!success && mounted) {
+      await _fileService.openAttachment(attachment.cloudUrl ?? attachment.filePath);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to share file')),
         );
@@ -421,7 +441,7 @@ class _FileAttachmentsWidgetState extends State<FileAttachmentsWidget> {
 
   Future<void> _deleteAttachment(TaskAttachment attachment) async {
     try {
-      final success = await _fileService.deleteAttachment(attachment);
+      final success = await _fileService.deleteAttachment(attachment.cloudUrl ?? attachment.filePath);
       if (success) {
         widget.onAttachmentDeleted(attachment.id);
         if (mounted) {

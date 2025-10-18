@@ -9,7 +9,7 @@ import '../services/task_service.dart';
 import '../services/notification_service.dart';
 import '../utils/notification_helper.dart';
 import '../providers/auth_provider.dart';
-import '../services/voice_service.dart';
+import '../services/voice_service_platform.dart';
 import '../services/voice_parser.dart';
 import '../services/background_voice_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -1018,7 +1018,7 @@ class TaskProvider extends ChangeNotifier {
       }
       
       _voiceService = VoiceService();
-      await _voiceService!.initialize(_authProvider!);
+      await _voiceService!.initialize();
       
       // Set up direct callback as backup
       _voiceService!.setDirectCommandCallback((command) {
@@ -1031,8 +1031,8 @@ class TaskProvider extends ChangeNotifier {
       
       // Set up voice command stream listener
       print('TaskProvider: Setting up voice command stream listener...');
-      print('TaskProvider: Voice command stream available: ${_voiceService!.voiceCommandStream != null}');
-      _voiceCommandSubscription = _voiceService!.voiceCommandStream?.listen(
+      print('TaskProvider: Voice command stream available: ${_voiceService!.voiceCommandStream}');
+      _voiceCommandSubscription = _voiceService!.voiceCommandStream.listen(
         (command) {
           print('TaskProvider: ✅ Voice command received from stream: "$command"');
           print('TaskProvider: About to process command...');
@@ -1045,7 +1045,7 @@ class TaskProvider extends ChangeNotifier {
       );
 
       // Set up live speech results stream for transcript display
-      _voiceService!.speechResultsStream?.listen(
+      _voiceService!.speechResultsStream.listen(
         (liveText) {
           print('TaskProvider: Live speech result: "$liveText"');
           // Update VoiceProvider with live transcript

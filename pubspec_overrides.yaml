@@ -1,0 +1,7 @@
+# Override dependencies for web builds
+dependency_overrides:
+  # Exclude native-only packages for web builds
+  vosk_flutter: 
+    path: ./lib/stubs/vosk_flutter_stub
+  flutter_background_service:
+    path: ./lib/stubs/flutter_background_service_stub

@@ -14,7 +14,12 @@ import 'sentry_service.dart';
 class AuthService with ChangeNotifier {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'profile',
+    ],
+  );
 
   UserPreferencesService? _preferencesService;
   DataSyncService? _dataSyncService;
