@@ -19,7 +19,6 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0'
         channel: 'stable'
         cache: true
         
@@ -54,7 +53,7 @@ jobs:
         version: 1.0.0+1
         
         environment:
-          sdk: '>=3.1.0 <4.0.0'
+          sdk: '>=3.0.0 <4.0.0'
         
         dependencies:
           flutter:
@@ -93,8 +92,8 @@ jobs:
           package_info_plus: ^4.2.0
           google_sign_in: ^6.2.1
           local_auth: ^2.1.6
-          image_picker: ^1.2.0
-          file_picker: ^10.3.2
+          image_picker: ^1.0.8
+          file_picker: ^8.1.2
           path_provider: ^2.1.5
           
         dev_dependencies:
